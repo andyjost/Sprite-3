@@ -19,5 +19,5 @@ clean :
 	$(CC) -MM $(CFLAGS) $< > $(@:.o=.d)
 
 $(STATICLIB) : $(OBJECTS)
-	ar rcs $@ $<
+	ar rcs $@ $(OBJECTS)
 
