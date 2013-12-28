@@ -1,0 +1,16 @@
+TOPDIR := $(dir $(lastword $(MAKEFILE_LIST)))
+LLVM_CFLAGS = $(shell llvm-config --cppflags --libs core)
+LLVM_LDFLAGS = $(shell llvm-config --ldflags --libs core)
+CFLAGS = -O0 -ggdb -std=c++11 -Wall $(LLVM_CFLAGS) -I$(TOPDIR)include -Werror
+LDFLAGS = -Wall $(LLVM_LDFLAGS)
+CC=g++
+
+# Target programs can depend on this variable to get the Sprite LLVM runtime
+# library made, when needed.
+SPRITE_RT_LIB = $(TOPDIR)lib/sprite-llvm.a
+
+.PHONY : $(SPRITE_RT_LIB)
+
+$(SPRITE_RT_LIB) :
+	cd ../lib; $(MAKE) sprite-llvm.a
+

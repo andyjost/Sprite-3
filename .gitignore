@@ -1,0 +1,11 @@
+*.d
+*.o
+*.test
+*.a
+*.exe
+*log
+sandbox/*
+dev/*
+doxygen-out/*
+tags
+.lvimrc

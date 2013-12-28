@@ -1,0 +1,12 @@
+#!/bin/bash
+
+set +e
+
+CTAGS='/depot/ctag-5.5.4/bin/ctags'
+find . -name "*.[ch]pp"                                                | \
+  $CTAGS --language-force=c++ --c-types=+cdefgmnpstuvx -o ./tags -L - && \
+echo "Done creating tags"                                             && \
+exit 0
+
+echo "Error creating tags"
+exit 1

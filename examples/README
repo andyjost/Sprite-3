@@ -1,0 +1,8 @@
+This directory contains example code.  Many of the examples are referenced from
+the main library using the Doxygen "snippet" command.  Snippets are tagged by
+lines beginning with the three-character sequence "///" followed by a
+square-bracket-enclosed string.
+
+The Makefile is set up to check that these files compile without any errors or
+warnings and that the resulting executables run through wihout tripping any
+asserts.
