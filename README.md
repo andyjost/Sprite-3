@@ -1,4 +1,4 @@
 Sprite-3
 ========
 
-Sprite Currty Compiler (Version 3)
+Sprite Curty Compiler (Version 3)
