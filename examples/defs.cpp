@@ -16,15 +16,15 @@ int main()
 
   {
     /// [Global definitions with linkage]
-    TypeFactory const types;
+    type_factory const types;
 
     // Creates an external function named myfunction, taking no arguments and returning void.
     auto const void_ = types.void_();
-    auto const myfunction = def(llvm_::GlobalValue::ExternalLinkage, void_(), "myfunction");
+    auto const myfunction = def(GlobalValue::ExternalLinkage, void_(), "myfunction");
 
     // Creates a static array, ga, of three int32 values with no initializer.
     auto const i32 = types.int_(32);
-    auto const ga = def(llvm_::GlobalValue::InternalLinkage, i32[3], "ga");
+    auto const ga = def(GlobalValue::InternalLinkage, i32[3], "ga");
 
     // Creates an external array, ga2, of three int32 values with an initializer.
     auto const ga2 =
@@ -38,7 +38,7 @@ int main()
   {
     /// [Initializing a global from a value]
     // Create a global integer variable initialized to the value 5.
-    TypeFactory const types;
+    type_factory const types;
     auto const i32 = types.int_(32);
     extern_(i32) = 5;
     /// [Initializing a global from a value]
@@ -47,7 +47,7 @@ int main()
   {
     /// [Initializing a global from an aggregate]
     // Create a global array variable initialized to the value {1, 2}.
-    TypeFactory const types;
+    type_factory const types;
     auto const i32 = types.int_(32);
     extern_(i32[2]) = {1, 2};
     /// [Initializing a global from an aggregate]
@@ -56,7 +56,7 @@ int main()
   {
     /// [Initializing a global from heterogeneous data]
     // Create a global array varible initialized to the value {1.0, 3.14, 97.0}.
-    TypeFactory const types;
+    type_factory const types;
     auto const double_ = types.double_();
     extern_(double_[3]) = _t(1, 3.14, 'a');
     /// [Initializing a global from heterogeneous data]
@@ -64,7 +64,7 @@ int main()
 
   {
     /// [Using extern_]
-    TypeFactory const types;
+    type_factory const types;
 
     // Creates an external function named myfunction, taking no arguments and returning void.
     auto const void_ = types.void_();
@@ -95,7 +95,7 @@ int main()
 
   {
     /// [Using static_]
-    TypeFactory const types;
+    type_factory const types;
 
     // Creates an internal function named myfunction, taking no arguments and returning void.
     auto const void_ = types.void_();
@@ -113,7 +113,7 @@ int main()
   {
     /// [Using inline_]
     // Creates an inline function named myfunction, taking no arguments and returning void.
-    TypeFactory const types;
+    type_factory const types;
     auto const void_ = types.void_();
     auto const myfunction = inline_(void_(), "myfunction");
     /// [Using inline_]

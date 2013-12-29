@@ -4,14 +4,14 @@
 
 namespace sprite { namespace llvm
 {
-  struct Label
+  struct label
   {
-    Label(llvm_::Twine const & name = "");
+    label(llvm_::Twine const & name = "");
 
-    BasicBlockWrapper<TypeFactory> block() const { return m_block; }
+    basic_block<type_factory> block() const { return m_block; }
 
   private:
 
-    BasicBlockWrapper<TypeFactory> m_block;
+    basic_block<type_factory> m_block;
   };
 }}

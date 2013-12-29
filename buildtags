@@ -8,5 +8,5 @@ find . -name "*.[ch]pp"                                                | \
 echo "Done creating tags"                                             && \
 exit 0
 
-echo "Error creating tags"
+echo "error creating tags"
 exit 1

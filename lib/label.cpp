@@ -5,10 +5,10 @@ using namespace sprite::llvm;
 
 namespace
 {
-  BasicBlockWrapper<TypeFactory> new_block(llvm_::Twine const & name)
+  basic_block<type_factory> new_block(llvm_::Twine const & name)
   {
-    auto const & cxt = activeContext();
-    llvm_::Function * parent = cxt.builder().GetInsertBlock()->getParent();
+    auto const & cxt = active_context();
+    Function * parent = cxt.builder().GetInsertBlock()->getParent();
     return wrap(
         cxt.factory()
       , llvm_::BasicBlock::Create(cxt.context(), name, parent)
@@ -18,7 +18,7 @@ namespace
 
 namespace sprite { namespace llvm
 {
-  Label::Label(llvm_::Twine const & name)
+  label::label(llvm_::Twine const & name)
     : m_block(new_block(name))
   {
   }

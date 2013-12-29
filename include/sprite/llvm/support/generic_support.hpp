@@ -11,7 +11,7 @@
 namespace sprite { namespace llvm { namespace generics
 {
   /**
-   * @brief Used to specify one case for @p GenericHandler.
+   * @brief Used to specify one case for @p generic_handler.
    *
    * @param[in] Lhs
    *     The type to match in the LHS position.
@@ -19,77 +19,77 @@ namespace sprite { namespace llvm { namespace generics
    *     the RHS types that are allows if the LHS matches.
    */
   template<typename Lhs, typename...Us>
-  struct Case
+  struct case_
   {
     /// The target type for LHS conversion.
     typedef Lhs Target;
 
     /// The dispatcher type to call when the LHS matches.
     template<template<typename...> class What>
-    struct Dispatcher { typedef What<Lhs, Us...> type;
+    struct dispatcher { typedef What<Lhs, Us...> type;
     };
   };
 
   namespace aux
   {
     /// A dummy return value that converts to anything (to fool the type-checker).
-    struct WeakReturn
+    struct weak_return
     {
       /// Converts to anything (for type-checking; cannot actually be called).
       template<typename T> operator T() const
-        { throw RuntimeError("Illegal conversion of WeakReturn"); }
+        { throw runtime_error("Illegal conversion of weak_return"); }
     };
 
     /// Implements the generic modulo (%) operator.
-    template<typename EH, typename Lhs, typename...Us> struct ModuloImpl;
+    template<typename EH, typename Lhs, typename...Us> struct modulo_impl;
     
     /// Iterating specialization.
     template<typename EH, typename Lhs, typename U, typename...Us>
-    struct ModuloImpl<EH, Lhs, U, Us...> : ModuloImpl<EH, Lhs, Us...>
+    struct modulo_impl<EH, Lhs, U, Us...> : modulo_impl<EH, Lhs, Us...>
     {
-      using ModuloImpl<EH, Lhs, Us...>::operator();
+      using modulo_impl<EH, Lhs, Us...>::operator();
     
       auto operator()(
-          TypeWrapper<Lhs> const & lhs, U const & arg
+          typeobj<Lhs> const & lhs, U const & arg
         ) const -> decltype(lhs % arg)
       { return lhs % arg; }
     };
     
     /// Terminal specialization.
-    template<typename EH, typename Lhs> struct ModuloImpl<EH, Lhs>
+    template<typename EH, typename Lhs> struct modulo_impl<EH, Lhs>
     {
       // Called when no other case (above) matches.
       template<typename V>
-      typename std::enable_if<EH::template MatchErrors<V>::value, WeakReturn>::type
-      operator()(TypeWrapper<Lhs> const & lhs, V const & arg) const
+      typename std::enable_if<EH::template MatchErrors<V>::value, weak_return>::type
+      operator()(typeobj<Lhs> const & lhs, V const & arg) const
         { throw EH::error(lhs, arg); }
     };
 
     // True when T cannot convert to anything in Args...
-    template<typename T, typename...Args> struct ConvertsToNone;
-    template<typename T> struct ConvertsToNone<T> : std::true_type {};
+    template<typename T, typename...Args> struct converts_to_none;
+    template<typename T> struct converts_to_none<T> : std::true_type {};
     template<typename T, typename Arg, typename...Args>
-      struct ConvertsToNone<T,Arg,Args...>
-      { enum { value = !std::is_convertible<T, Arg>::value && ConvertsToNone<T,Args...>::value }; };
+      struct converts_to_none<T,Arg,Args...>
+      { enum { value = !std::is_convertible<T, Arg>::value && converts_to_none<T,Args...>::value }; };
 
     /**
      * @brief Prepares a nice error message when generic modulo fails to make a
      * match.
      */
-    template<typename...Us> struct ModuloEH
+    template<typename...Us> struct modulo_eh
     {
       // The predicate to use when enabling the error catcher.
-      template<typename T> using MatchErrors = ConvertsToNone<T, Us...>;
+      template<typename T> using MatchErrors = converts_to_none<T, Us...>;
 
       template<typename Lhs, typename T>
-      static TypeError error(Wrapper<Lhs> const &, T const & arg)
+      static type_error error(object<Lhs> const &, T const & arg)
       {
         std::stringstream ss;
         ss << "While dispatching generic operator % for LHS match of type "
-           << Typename<Lhs>::name() << ", expecting RHS of type ";
+           << typename_impl<Lhs>::name() << ", expecting RHS of type ";
         append_typenames<Us...>(ss);
         ss << ", but got " + typename_(arg);
-        return TypeError(ss.str());
+        return type_error(ss.str());
       }
 
     private:
@@ -97,15 +97,15 @@ namespace sprite { namespace llvm { namespace generics
       // One U.
       template<typename U, typename Os>
       static void append_typenames(Os & os)
-        { os << Typename<U>::name(); }
+        { os << typename_impl<U>::name(); }
 
       // Two Us.
       template<typename U0, typename U1, typename Os>
       static void append_typenames(Os & os)
       {
-        os  << Typename<U0>::name()
+        os  << typename_impl<U0>::name()
             << ", or "
-            << Typename<U1>::name()
+            << typename_impl<U1>::name()
           ;
       }
 
@@ -116,7 +116,7 @@ namespace sprite { namespace llvm { namespace generics
         >
       static void append_typenames(Os & os)
       {
-        os << Typename<U0>::name() << ", ";
+        os << typename_impl<U0>::name() << ", ";
         append_typenames<U1, U2, Us_...>(os);
       }
     };
@@ -124,76 +124,76 @@ namespace sprite { namespace llvm { namespace generics
   
   /**
    * @brief Dispatches to the modulo (@p %) operator.  Used in conjunction with
-   * @p GenericHandler.
+   * @p generic_handler.
    */
   template<typename Lhs, typename...Us>
-  struct Modulo
-    : aux::ModuloImpl<aux::ModuloEH<Us...>, Lhs, Us...>
+  struct modulo
+    : aux::modulo_impl<aux::modulo_eh<Us...>, Lhs, Us...>
   {
   };
 
   namespace aux
   {
     template<typename EH, typename ReturnType, template<typename...> class What, typename...Cases>
-    struct GenericHandlerImpl;
+    struct generic_handler_impl;
     
     /// Iterating specialization.
-    template<typename EH, typename ReturnType, template<typename...> class What, typename Case, typename...Cases>
-    struct GenericHandlerImpl<EH, ReturnType, What, Case, Cases...>
+    template<typename EH, typename ReturnType, template<typename...> class What, typename case_, typename...Cases>
+    struct generic_handler_impl<EH, ReturnType, What, case_, Cases...>
     {
       template<typename T, typename U>
       ReturnType operator()(T const & lhs, U const & arg) const
       {
         // If the generic LHS argument can be cast to the target type, then
         // dispatch the operation.
-        if(auto const p = dyn_cast<typename Case::Target>(lhs))
+        if(auto const p = dyn_cast<typename case_::Target>(lhs))
         {
-          static typename Case::template Dispatcher<What>::type const dispatcher;
+          static typename case_::template dispatcher<What>::type const dispatcher;
           return dispatcher(p, arg);
         }
     
         // Otherwise, try the next case.
-        static GenericHandlerImpl<EH, ReturnType, What, Cases...> const next;
+        static generic_handler_impl<EH, ReturnType, What, Cases...> const next;
         return next(lhs, arg);
       }
     };
     
     /// Terminal specialization.
     template<typename EH, typename ReturnType, template<typename...> class What>
-    struct GenericHandlerImpl<EH, ReturnType, What>
+    struct generic_handler_impl<EH, ReturnType, What>
     {
       template<typename T, typename U>
       ReturnType operator()(T const & badtype, U const &) const
         { throw EH::error(badtype); }
     };
 
-    /// Generates a good error message for @p GenericHandler.
-    template<typename...Cases> struct GenericHandlerEH
+    /// Generates a good error message for @p generic_handler.
+    template<typename...Cases> struct generic_handler_eh
     {
       template<typename T>
-      static TypeError error(Wrapper<T> const & arg)
+      static type_error error(object<T> const & arg)
       {
         std::stringstream ss;
         ss << "Expecting LHS of type ";
         append_typenames<Cases...>(ss);
         ss << ", but got " + typename_(*arg.ptr());
-        return TypeError(ss.str());
+        return type_error(ss.str());
       }
 
     private:
 
       // One case.
-      template<typename Case, typename Os>
+      template<typename case_, typename Os>
       static void append_typenames(Os & os)
-        { os << Typename<typename Case::Target>::name(); }
+        { os << typename_impl<typename case_::Target>::name(); }
 
       // Two cases.
       template<typename Case0, typename Case1, typename Os>
       static void append_typenames(Os & os)
       {
-        os  << Typename<typename Case0::Target>::name()
+        os  << typename_impl<typename Case0::Target>::name()
             << ", or "
-            << Typename<typename Case1::Target>::name()
+            << typename_impl<typename Case1::Target>::name()
           ;
       }
 
@@ -204,7 +204,7 @@ namespace sprite { namespace llvm { namespace generics
         >
       static void append_typenames(Os & os)
       {
-        os << Typename<typename Case0::Target>::name() << ", ";
+        os << typename_impl<typename Case0::Target>::name() << ", ";
         append_typenames<Case1, Case2, Cases_...>(os);
       }
     };
@@ -216,7 +216,7 @@ namespace sprite { namespace llvm { namespace generics
    * Used to dispatch operators based on generic types, when the implementation
    * is provided by more specific versions.
    *
-   * For example, consider type instantiation using the module (@p %) operator.
+   * For example, consider type instantiation using the modulo (@p %) operator.
    * Each LHS type has a set of allowed RHS types.  @p IntegerType may be
    * instantiated with an @p int, @p FPType may be instantiated with a @p
    * double, and @p ArrayType may be instantiated with an @p ArrayRef, just to
@@ -226,9 +226,9 @@ namespace sprite { namespace llvm { namespace generics
    * the types are compatible, or rasies an error otherwise.
    */
   template<typename ReturnType, template<typename...> class What, typename...Cases>
-  struct GenericHandler
-    : aux::GenericHandlerImpl<
-          aux::GenericHandlerEH<Cases...>, ReturnType, What, Cases...
+  struct generic_handler
+    : aux::generic_handler_impl<
+          aux::generic_handler_eh<Cases...>, ReturnType, What, Cases...
         >
   {
   };

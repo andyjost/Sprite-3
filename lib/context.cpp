@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Implements class Context.
+ * @brief Implements class context.
  */
 
 #include "sprite/llvm/core/context.hpp"
@@ -19,12 +19,12 @@ namespace
    * stack, but a user could concievably deallocate them out of order, so
    * deletions in the middle of the list are possible.
    */
-  std::list<ContextFrame<>> g_context_list;
+  std::list<context_frame<>> g_context_list;
 }
 
 namespace sprite { namespace llvm
 {
-  Context::Context(BasicBlockWrapper<TypeFactory> const & block)
+  context::context(basic_block<type_factory> const & block)
   {
     g_context_list.emplace_front(
         llvm_::IRBuilder<>(block.ptr()), block.factory()
@@ -32,19 +32,19 @@ namespace sprite { namespace llvm
     frame = g_context_list.begin();
   }
 
-  Context::Context(Context && arg) : frame(arg.frame)
+  context::context(context && arg) : frame(arg.frame)
     { arg.frame = g_context_list.end(); }
 
-  Context::~Context()
+  context::~context()
   {
     if(frame != g_context_list.end())
       g_context_list.erase(frame);
   }
 
-  ContextFrame<> const & activeContext()
+  context_frame<> const & active_context()
   {
     if(g_context_list.empty())
-      throw RuntimeError("No active context.");
+      throw runtime_error("No active context.");
     return g_context_list.front();
   }
 }}

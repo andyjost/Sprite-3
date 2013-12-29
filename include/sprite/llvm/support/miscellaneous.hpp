@@ -14,7 +14,7 @@ namespace sprite { namespace llvm
       case Type::X86_FP80TyID: return 80;
       case Type::FP128TyID: return 128;
       case Type::PPC_FP128TyID: return 128;
-      default: throw TypeError("Expected floating-point type");
+      default: throw type_error("Expected floating-point type");
     }
   }
 }}

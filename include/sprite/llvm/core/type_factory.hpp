@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Defines the TypeFactory class.
+ * @brief Defines the type_factory class.
  */
 
 #pragma once
@@ -25,7 +25,7 @@ namespace sprite { namespace llvm
    *
    * @snippet types.cpp Creating basic types
    */
-  class TypeFactory
+  class type_factory
   {
     /// The module that types will be gotten from.
     llvm_::Module * _module; 
@@ -36,11 +36,11 @@ namespace sprite { namespace llvm
   public:
 
     /**
-     * @brief Creates a new TypeFactory.
+     * @brief Creates a new type_factory.
      *
      * If the module is NULL, then a new module is created.
      */
-    explicit TypeFactory(llvm_::Module * module=0, unsigned addrSpace=0);
+    explicit type_factory(llvm_::Module * module=0, unsigned addrSpace=0);
 
     // Default copy, assignment, and destructor are fine.
 
@@ -54,34 +54,34 @@ namespace sprite { namespace llvm
     llvm_::LLVMContext & context() const
       { return this->module()->getContext(); }
 
-    friend bool operator==(TypeFactory const & lhs, TypeFactory const & rhs)
+    friend bool operator==(type_factory const & lhs, type_factory const & rhs)
     {
       return lhs.module() == rhs.module()
         && lhs.addrSpace() == rhs.addrSpace();
     }
 
-    friend bool operator!=(TypeFactory const & lhs, TypeFactory const & rhs)
+    friend bool operator!=(type_factory const & lhs, type_factory const & rhs)
       { return !(lhs == rhs); }
 
     // ====== Type-Creation Methods.
 
     /// Creates an integer type.
-    TypeWrapper<llvm_::IntegerType> int_(unsigned numBits) const;
+    integer_type int_(unsigned numBits) const;
 
     /// Creates a bool type.
-    TypeWrapper<llvm_::IntegerType> bool_() const { return this->int_(1); }
+    integer_type bool_() const { return this->int_(1); }
 
     /// Creates a char type.
-    TypeWrapper<llvm_::IntegerType> char_() const { return this->int_(8); }
+    integer_type char_() const { return this->int_(8); }
 
     /// Creates the 32-bit float type.
-    TypeWrapper<FPType> float_() const;
+    fp_type float_() const;
 
     /// Creates the 64-bit float type.
-    TypeWrapper<FPType> double_() const;
+    fp_type double_() const;
 
     /// Creates the void type.
-    TypeWrapper<llvm_::Type> void_() const;
+    type void_() const;
 
     // ====== Type-Inspection Methods.
 
@@ -94,15 +94,15 @@ namespace sprite { namespace llvm
 
     /// Freestanding @p sizeof_ function for wrapper objects.
     template<typename T>
-    friend uint64_t sizeof_(TypeWrapper<T> const & wrapper);
+    friend uint64_t sizeof_(typeobj<T> const & wrapper);
 
     /** 
      * @brief Creates an anonymous struct (uniqued by structural equivalence).
      *
      * @snippet types.cpp Creating an anonymous struct
      */
-    TypeWrapper<llvm_::StructType>
-    struct_(ArrayRef<TypeWrapper<llvm_::Type>> const & elements) const;
+    struct_type
+    struct_(ArrayRef<type> const & elements) const;
 
     /**
      * @brief Gets a struct by name.
@@ -111,7 +111,7 @@ namespace sprite { namespace llvm
      *
      * @snippet types.cpp Creating opaque structs
      */
-    TypeWrapper<llvm_::StructType>
+    struct_type
     struct_(llvm_::StringRef const & name) const;
 
     /**
@@ -122,10 +122,10 @@ namespace sprite { namespace llvm
      *
      * @snippet types.cpp Creating structs
      */
-    TypeWrapper<llvm_::StructType>
+    struct_type
     struct_(
         llvm_::StringRef const & name
-      , ArrayRef<TypeWrapper<llvm_::Type>> const & elements
+      , ArrayRef<type> const & elements
       ) const;
   };
 }}

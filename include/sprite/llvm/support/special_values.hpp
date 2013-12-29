@@ -8,23 +8,23 @@
 namespace sprite { namespace llvm
 {
   /// Represents the ... token in function type definitions.
-  struct Ellipsis {};
+  struct ellipsis {};
 
   /// May be used to refer to an ellipsis in a function type declaration.
-  Ellipsis const dots;
+  ellipsis const dots;
 
   /// Represents the value of a NULL pointer.
-  struct Null {};
+  struct null_arg {};
   /// May be used to refer to a NULL pointer value.
-  Null const null;
+  null_arg const null;
 
   /// Used to construct non-finite floating-point values.
-  struct NonFiniteValue
+  struct non_finite_value
   {
     enum Kind { Inf, Nan, Qnan, Snan };
 
     /// Constructor.
-    NonFiniteValue(Kind kind, bool negative = false)
+    non_finite_value(Kind kind, bool negative = false)
       : m_kind(kind), m_negative(negative) {}
 
     /// Returns the kind of non-finite value.
@@ -34,10 +34,10 @@ namespace sprite { namespace llvm
     bool negative() const { return m_negative; }
 
     /// Indicates a positive sign.
-    NonFiniteValue operator+() const { return NonFiniteValue(kind(), false); }
+    non_finite_value operator+() const { return non_finite_value(kind(), false); }
 
     /// Indicates a negative sign.
-    NonFiniteValue operator-() const { return NonFiniteValue(kind(), true); }
+    non_finite_value operator-() const { return non_finite_value(kind(), true); }
 
   private:
 
@@ -46,15 +46,15 @@ namespace sprite { namespace llvm
   };
 
   /// Used to construct infinite floating-point values.
-  NonFiniteValue const inf_ = NonFiniteValue::Inf;
+  non_finite_value const inf_ = non_finite_value::Inf;
 
   /// Used to construct NaN floating-point values.
-  NonFiniteValue const nan_ = NonFiniteValue::Nan;
+  non_finite_value const nan_ = non_finite_value::Nan;
 
   /// Used to construct quiet NaN floating-point values.
-  NonFiniteValue const qnan_ = NonFiniteValue::Qnan;
+  non_finite_value const qnan_ = non_finite_value::Qnan;
 
   /// Used to construct signaling NaN floating-point values.
-  NonFiniteValue const snan_ = NonFiniteValue::Snan;
+  non_finite_value const snan_ = non_finite_value::Snan;
 
 }}

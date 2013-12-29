@@ -17,7 +17,7 @@ int main()
   {
     /// [Instantiating a NULL pointer]
     // Instantiate a null pointer.
-    TypeFactory const types;
+    type_factory const types;
     auto const i32 = types.int_(32);
     auto const null_i32_p = *i32 % null;
     /// [Instantiating a NULL pointer]
@@ -27,7 +27,7 @@ int main()
   {
     /// [Instantiating a NULL struct]
     // Instantiate a null struct.
-    TypeFactory const types;
+    type_factory const types;
     auto const i32 = types.int_(32);
     auto const tp = types.struct_("mystruct.1", {i32, i32, i32});
     auto const null_struct = tp % null;
@@ -38,7 +38,7 @@ int main()
   {
     /// [Instantiating a NULL integer]
     // Instantiate a null array.
-    TypeFactory const types;
+    type_factory const types;
     auto const i32 = types.int_(32);
     auto const null_int = i32 % null;
     /// [Instantiating a NULL integer]
@@ -48,7 +48,7 @@ int main()
   {
     /// [Instantiating a NULL array]
     // Instantiate a null array.
-    TypeFactory const types;
+    type_factory const types;
     auto const i32 = types.int_(32);
     auto const null_array = i32[2] % null;
     /// [Instantiating a NULL array]
@@ -57,7 +57,7 @@ int main()
 
   {
     /// [Instantiating simple types]
-    TypeFactory const types;
+    type_factory const types;
     auto const bool_ = types.int_(1);
     auto const char_ = types.int_(8);
     auto const i32 = types.int_(32);
@@ -92,7 +92,7 @@ int main()
 
   {
     /// [Instantiating non-finite floating-point types]
-    TypeFactory const types;
+    type_factory const types;
     auto const float_ = types.float_();
     auto const double_ = types.double_();
 
@@ -118,7 +118,7 @@ int main()
 
   {
     /// [Instantiating integer types from strings]
-    TypeFactory const types;
+    type_factory const types;
     auto const i32 = types.int_(32);
 
     auto const decimal = i32 % "197";
@@ -134,7 +134,7 @@ int main()
 
   {
     /// [Instantiating types]
-    TypeFactory const types;
+    type_factory const types;
     auto const char_ = types.int_(8);
     auto const i32 = types.int_(32);
     auto const float_ = types.float_();
@@ -154,7 +154,7 @@ int main()
 
   {
     /// [Instantiating an array from a sequence]
-    TypeFactory const types;
+    type_factory const types;
     auto const i32 = types.int_(32);
     auto const one_two = i32[2] % (i32 % 1, i32 % 2);
     /// [Instantiating an array from a sequence]
@@ -163,7 +163,7 @@ int main()
 
   {
     /// [Instantiating arrays as aggregates]
-    TypeFactory const types;
+    type_factory const types;
     auto const char_ = types.int_(8);
     auto const ab = char_[2] % _a{'a', 'b'}; // same as char_[2] % (char_ % 'a', char_ % 'b');
     /// [Instantiating arrays as aggregates]
@@ -172,7 +172,7 @@ int main()
 
   {
     /// [Instantiating arrays from tuples]
-    TypeFactory const types;
+    type_factory const types;
     auto const double_ = types.double_();
     auto const doubles = double_[2] % _t(1.0f, 2.0);
     /// [Instantiating arrays from tuples]
@@ -185,7 +185,7 @@ int main()
     #define NELEM(arg) \
         cast<llvm_::GlobalVariable>(arg->stripPointerCasts())->getInitializer()->getType()->getArrayNumElements() \
       /**/
-    TypeFactory const types;
+    type_factory const types;
     auto const char_ = types.int_(8);
     // A null-terminated string.
     auto const hello = *char_ % "hello world"; // length: 12
@@ -216,7 +216,7 @@ int main()
 
   {
     /// [Instantiating pointers as global arrays]
-    TypeFactory const types;
+    type_factory const types;
     auto const i32 = types.int_(32);
     auto const double_ = types.double_();
 
@@ -231,7 +231,7 @@ int main()
 
   {
     /// [Instantiating constant data arrays]
-    TypeFactory const types;
+    type_factory const types;
     auto a = types % ArrayRef<uint8_t>{'a', 'b', 'c'};
     auto b = types % ArrayRef<uint16_t>{1, 2, 3, 4};
     auto c = types % ArrayRef<uint32_t>{1, 2, 3, 4};

@@ -12,13 +12,13 @@
 /**
  * @brief Checks thet only the expected flags are set.
  *
- * The first argument is an instance of @p ArgWithFlags.
+ * The first argument is an instance of @p arg_with_flags.
  */
 #define SPRITE_ALLOW_FLAGS(arg, what, allowed)                  \
     {                                                           \
       using namespace aux;                                      \
       if(arg.flags().value & ~(allowed))                        \
-        { throw ParameterError("Unexpected flags for " what); } \
+        { throw parameter_error("Unexpected flags for " what); } \
     }                                                           \
   /**/
 
@@ -26,25 +26,25 @@ namespace sprite { namespace llvm
 {
   namespace aux
   {
-    struct Flags;
+    struct operator_flags;
 
     template<typename Arg>
-    struct ArgWithFlags : std::tuple<Arg, Flags>
+    struct arg_with_flags : std::tuple<Arg, operator_flags>
     {
-      using std::tuple<Arg, Flags>::tuple;
-      ArgWithFlags(Arg const & arg) : std::tuple<Arg, Flags>(arg, Flags()) {}
+      using std::tuple<Arg, operator_flags>::tuple;
+      arg_with_flags(Arg const & arg) : std::tuple<Arg, operator_flags>(arg, operator_flags()) {}
       Arg const & arg() const { return std::get<0>(*this); }
-      Flags const & flags() const { return std::get<1>(*this); }
+      operator_flags const & flags() const { return std::get<1>(*this); }
     };
 
-    struct Flags
+    struct operator_flags
     {
       enum Values { NUW = 1, NSW = 2, EXACT = 4, SIGNED = 8, UNSIGNED = 16
         , ARITHMETIC = 32, LOGICAL = 64
         };
       int value;
 
-      Flags(int v=0) : value(v) {}
+      operator_flags(int v=0) : value(v) {}
 
       bool nuw() const { return value & NUW; }
       bool nsw() const { return value & NSW; }
@@ -54,51 +54,51 @@ namespace sprite { namespace llvm
       bool arithmetic() const { return value & ARITHMETIC; }
       bool logical() const { return value & LOGICAL; }
 
-      friend Flags operator,(Flags const & lhs, Flags const & rhs)
+      friend operator_flags operator,(operator_flags const & lhs, operator_flags const & rhs)
       {
-        Flags tmp;
+        operator_flags tmp;
         tmp.value = lhs.value | rhs.value;
         return tmp;
       }
 
       template<typename T>
-      ArgWithFlags<ConstantWrapper<T>> operator()(ConstantWrapper<T> const & arg) const
+      arg_with_flags<constantobj<T>> operator()(constantobj<T> const & arg) const
         { return std::make_tuple(arg, *this); }
     };
 
     inline void check_for_exactly_one_signed_flag(
-        Flags const & flags, StringRef const & what
+        operator_flags const & flags, StringRef const & what
       )
     {
       if(flags.signed_() && flags.unsigned_())
       {
-        throw ParameterError(
+        throw parameter_error(
             "Got both signed_ and unsigned_ flags for " + what
           );
       }
 
       if(!flags.signed_() && !flags.unsigned_())
       {
-        throw ParameterError(
+        throw parameter_error(
             "Need the signed_ or unsigned_ flag for " + what
           );
       }
     }
 
     inline void check_for_exactly_one_arithmetic_flag(
-        Flags const & flags, StringRef const & what
+        operator_flags const & flags, StringRef const & what
       )
     {
       if(flags.arithmetic() && flags.logical())
       {
-        throw ParameterError(
+        throw parameter_error(
             "Got both arithmetic and logical flags for " + what
           );
       }
 
       if(!flags.arithmetic() && !flags.logical())
       {
-        throw ParameterError(
+        throw parameter_error(
             "Need the arithmetic or logical flag for " + what
           );
       }
@@ -113,21 +113,21 @@ namespace sprite { namespace llvm
       { return has_arg_types<Type>(lhs) && has_arg_types<Type>(rhs); }
   }
 
-  aux::Flags const nuw = aux::Flags(aux::Flags::NUW);
-  aux::Flags const nsw = aux::Flags(aux::Flags::NSW);
-  aux::Flags const exact = aux::Flags(aux::Flags::EXACT);
-  aux::Flags const signed_ = aux::Flags(aux::Flags::SIGNED);
-  aux::Flags const unsigned_ = aux::Flags(aux::Flags::UNSIGNED);
-  aux::Flags const arithmetic = aux::Flags(aux::Flags::ARITHMETIC);
-  aux::Flags const logical = aux::Flags(aux::Flags::LOGICAL);
+  aux::operator_flags const nuw = aux::operator_flags(aux::operator_flags::NUW);
+  aux::operator_flags const nsw = aux::operator_flags(aux::operator_flags::NSW);
+  aux::operator_flags const exact = aux::operator_flags(aux::operator_flags::EXACT);
+  aux::operator_flags const signed_ = aux::operator_flags(aux::operator_flags::SIGNED);
+  aux::operator_flags const unsigned_ = aux::operator_flags(aux::operator_flags::UNSIGNED);
+  aux::operator_flags const arithmetic = aux::operator_flags(aux::operator_flags::ARITHMETIC);
+  aux::operator_flags const logical = aux::operator_flags(aux::operator_flags::LOGICAL);
 
   /**
    * @brief Computes the alignment of a type.
    *
    * @snippet constexprs.cpp alignof_
    */
-  inline ConstantWrapper<Constant>
-  alignof_(TypeWrapper<Type> const & tp)
+  inline constantobj<Constant>
+  alignof_(type const & tp)
     { return wrap(tp.factory(), llvm_::ConstantExpr::getAlignOf(tp.ptr())); }
 
   // No wrapper for constant expression getSizeOf.  Use i64 % sizeof_(ty)
@@ -138,8 +138,8 @@ namespace sprite { namespace llvm
    *
    * @snippet constexprs.cpp offsetof_
    */
-  inline ConstantWrapper<Constant>
-  offsetof_(TypeWrapper<Type> const & tp, unsigned FieldNo)
+  inline constantobj<Constant>
+  offsetof_(type const & tp, unsigned FieldNo)
   {
     auto const p = dyn_cast<StructType>(tp);
     return wrap(tp.factory(), llvm_::ConstantExpr::getOffsetOf(p.ptr(), FieldNo));
@@ -150,8 +150,8 @@ namespace sprite { namespace llvm
    *
    * @snippet constexprs.cpp offsetof_
    */
-  inline ConstantWrapper<Constant>
-  offsetof_(TypeWrapper<Type> const & tp, Constant * FieldNo)
+  inline constantobj<Constant>
+  offsetof_(type const & tp, Constant * FieldNo)
   {
     return wrap(tp.factory(), llvm_::ConstantExpr::getOffsetOf(tp.ptr(), FieldNo));
   }
@@ -162,11 +162,11 @@ namespace sprite { namespace llvm
    * @snippet constexprs.cpp neg
    */
   template<typename Arg>
-  inline ConstantWrapper<Constant> operator-(aux::ArgWithFlags<Arg> const & c)
+  inline constantobj<Constant> operator-(aux::arg_with_flags<Arg> const & c)
   {
     if(aux::has_arg_types<ConstantInt>(c))
     {
-      SPRITE_ALLOW_FLAGS(c, "negation", Flags::NUW | Flags::NSW)
+      SPRITE_ALLOW_FLAGS(c, "negation", operator_flags::NUW | operator_flags::NSW)
       return wrap(
           c.arg().factory()
         , llvm_::ConstantExpr::getNeg(
@@ -176,12 +176,12 @@ namespace sprite { namespace llvm
     }
     else if(aux::has_arg_types<ConstantFP>(c))
     {
-      SPRITE_ALLOW_FLAGS(c, "negation", Flags::SIGNED)
+      SPRITE_ALLOW_FLAGS(c, "negation", operator_flags::SIGNED)
       return wrap(
           c.arg().factory(), llvm_::ConstantExpr::getFNeg(ptr(c))
         );
     }
-    throw TypeError("Expected ConstantInt or ConstantFP for negation");
+    throw type_error("Expected ConstantInt or ConstantFP for negation");
   }
 
   /**
@@ -189,19 +189,19 @@ namespace sprite { namespace llvm
    *
    * @snippet constexprs.cpp neg
    */
-  inline ConstantWrapper<Constant> operator-(ConstantWrapper<Constant> const & c)
-    { return -aux::Flags()(c); }
+  inline constantobj<Constant> operator-(constantobj<Constant> const & c)
+    { return -aux::operator_flags()(c); }
 
   /**
    * @brief Bitwise inversion.
    *
    * @snippet constexprs.cpp inv
    */
-  inline ConstantWrapper<Constant> operator~(ConstantWrapper<Constant> const & c)
+  inline constantobj<Constant> operator~(constantobj<Constant> const & c)
   {
     if(aux::has_arg_types<ConstantInt>(c))
       return wrap(c.factory(), llvm_::ConstantExpr::getNot(ptr(c)));
-    throw TypeError("Expected ConstantInt for bitwise inversion");
+    throw type_error("Expected ConstantInt for bitwise inversion");
   }
 
   /**
@@ -209,49 +209,49 @@ namespace sprite { namespace llvm
    *
    * @snippet constexprs.cpp pos
    */
-  inline ConstantWrapper<Constant> operator+(ConstantWrapper<Constant> const & c)
+  inline constantobj<Constant> operator+(constantobj<Constant> const & c)
     { return c; }
 
   namespace aux
   {
     // These functions help binary operators accept any combination of Constant
-    // * and ConstantWrapper, so long as at least one argument is a wrapper.
-    inline ConstantWrapper<Constant>
-    getlhs(ConstantWrapper<Constant> const & lhs, void *)
+    // * and constantobj, so long as at least one argument is a wrapper.
+    inline constantobj<Constant>
+    getlhs(constantobj<Constant> const & lhs, void *)
       { return lhs; }
 
     template<typename T>
-    inline ConstantWrapper<Constant>
-    getlhs(ConstantWrapper<Constant> const & lhs, Wrapper<T> const &)
+    inline constantobj<Constant>
+    getlhs(constantobj<Constant> const & lhs, object<T> const &)
       { return lhs; }
 
     template<typename T>
-    inline ConstantWrapper<Constant>
-    getlhs(Constant * lhs, Wrapper<T> const & rhs)
+    inline constantobj<Constant>
+    getlhs(Constant * lhs, object<T> const & rhs)
       { return wrap(rhs.factory(), lhs); }
 
-    inline ConstantWrapper<Constant>
-    getrhs(ConstantWrapper<Constant> const & lhs, Constant * rhs)
+    inline constantobj<Constant>
+    getrhs(constantobj<Constant> const & lhs, Constant * rhs)
       { return wrap(lhs.factory(), rhs); }
 
-    inline TypeWrapper<Type>
-    getrhs(ConstantWrapper<Constant> const & lhs, Type * rhs)
+    inline type
+    getrhs(constantobj<Constant> const & lhs, Type * rhs)
       { return wrap(lhs.factory(), rhs); }
 
-    inline ConstantWrapper<Constant>
-    getrhs(ConstantWrapper<Constant> const &, ConstantWrapper<Constant> const & rhs)
+    inline constantobj<Constant>
+    getrhs(constantobj<Constant> const &, constantobj<Constant> const & rhs)
       { return rhs; }
 
-    inline TypeWrapper<Type>
-    getrhs(ConstantWrapper<Constant> const &, TypeWrapper<Type> const & rhs)
+    inline type
+    getrhs(constantobj<Constant> const &, type const & rhs)
       { return rhs; }
 
-    inline ConstantWrapper<Constant>
-    getrhs(Constant *, ConstantWrapper<Constant> const & rhs)
+    inline constantobj<Constant>
+    getrhs(Constant *, constantobj<Constant> const & rhs)
       { return rhs; }
 
-    inline TypeWrapper<Type>
-    getrhs(Constant *, TypeWrapper<Type> const & rhs)
+    inline type
+    getrhs(Constant *, type const & rhs)
       { return rhs; }
   }
 
@@ -262,13 +262,13 @@ namespace sprite { namespace llvm
    */
   template<typename Lhs, typename Arg>
   inline typename std::enable_if<
-      aux::is_constarg<Lhs>(), ConstantWrapper<Constant>
+      aux::is_constarg<Lhs>(), constantobj<Constant>
     >::type
-  operator+(Lhs const & lhs, aux::ArgWithFlags<Arg> const & rhs)
+  operator+(Lhs const & lhs, aux::arg_with_flags<Arg> const & rhs)
   {
     if(aux::has_arg_types<ConstantInt>(lhs, rhs))
     {
-      SPRITE_ALLOW_FLAGS(rhs, "addition", Flags::NUW | Flags::NSW)
+      SPRITE_ALLOW_FLAGS(rhs, "addition", operator_flags::NUW | operator_flags::NSW)
       return wrap(
           rhs.arg().factory()
         , llvm_::ConstantExpr::getAdd(
@@ -278,13 +278,13 @@ namespace sprite { namespace llvm
     }
     else if(aux::has_arg_types<ConstantFP>(lhs, rhs))
     {
-      SPRITE_ALLOW_FLAGS(rhs, "addition", Flags::SIGNED)
+      SPRITE_ALLOW_FLAGS(rhs, "addition", operator_flags::SIGNED)
       return wrap(
           rhs.arg().factory()
         , llvm_::ConstantExpr::getFAdd(ptr(lhs), ptr(rhs))
         );
     }
-    throw TypeError("Expected ConstantInt or ConstantFP for addition");
+    throw type_error("Expected ConstantInt or ConstantFP for addition");
   }
 
   /**
@@ -294,13 +294,13 @@ namespace sprite { namespace llvm
    */
   template<typename Lhs, typename Rhs>
   inline typename std::enable_if<
-      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), ConstantWrapper<Constant>
+      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), constantobj<Constant>
     >::type
   operator+(Lhs const & lhs, Rhs const & rhs)
   {
-    ConstantWrapper<Constant> lhs_ = aux::getlhs(lhs, rhs);
-    ConstantWrapper<Constant> rhs_ = aux::getrhs(lhs, rhs);
-    return lhs_ +aux::Flags() (rhs_);
+    constantobj<Constant> lhs_ = aux::getlhs(lhs, rhs);
+    constantobj<Constant> rhs_ = aux::getrhs(lhs, rhs);
+    return lhs_ +aux::operator_flags() (rhs_);
   }
 
   /**
@@ -310,13 +310,13 @@ namespace sprite { namespace llvm
    */
   template<typename Lhs, typename Arg>
   inline typename std::enable_if<
-      aux::is_constarg<Lhs>(), ConstantWrapper<Constant>
+      aux::is_constarg<Lhs>(), constantobj<Constant>
     >::type
-  operator-(Lhs const & lhs, aux::ArgWithFlags<Arg> const & rhs)
+  operator-(Lhs const & lhs, aux::arg_with_flags<Arg> const & rhs)
   {
     if(aux::has_arg_types<ConstantInt>(lhs, rhs))
     {
-      SPRITE_ALLOW_FLAGS(rhs, "subtraction", Flags::NUW | Flags::NSW)
+      SPRITE_ALLOW_FLAGS(rhs, "subtraction", operator_flags::NUW | operator_flags::NSW)
       return wrap(
           rhs.arg().factory()
         , llvm_::ConstantExpr::getSub(
@@ -326,13 +326,13 @@ namespace sprite { namespace llvm
     }
     else if(aux::has_arg_types<ConstantFP>(lhs, rhs))
     {
-      SPRITE_ALLOW_FLAGS(rhs, "subtraction", Flags::SIGNED)
+      SPRITE_ALLOW_FLAGS(rhs, "subtraction", operator_flags::SIGNED)
       return wrap(
           rhs.arg().factory()
         , llvm_::ConstantExpr::getFSub(ptr(lhs), ptr(rhs))
         );
     }
-    throw TypeError("Expected ConstantInt or ConstantFP for subtraction");
+    throw type_error("Expected ConstantInt or ConstantFP for subtraction");
   }
 
   /**
@@ -342,13 +342,13 @@ namespace sprite { namespace llvm
    */
   template<typename Lhs, typename Rhs>
   inline typename std::enable_if<
-      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), ConstantWrapper<Constant>
+      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), constantobj<Constant>
     >::type
   operator-(Lhs const & lhs, Rhs const & rhs)
   {
-    ConstantWrapper<Constant> lhs_ = aux::getlhs(lhs, rhs);
-    ConstantWrapper<Constant> rhs_ = aux::getrhs(lhs, rhs);
-    return lhs_ -aux::Flags() (rhs_);
+    constantobj<Constant> lhs_ = aux::getlhs(lhs, rhs);
+    constantobj<Constant> rhs_ = aux::getrhs(lhs, rhs);
+    return lhs_ -aux::operator_flags() (rhs_);
   }
 
   /**
@@ -358,13 +358,13 @@ namespace sprite { namespace llvm
    */
   template<typename Lhs, typename Arg>
   inline typename std::enable_if<
-      aux::is_constarg<Lhs>(), ConstantWrapper<Constant>
+      aux::is_constarg<Lhs>(), constantobj<Constant>
     >::type
-  operator*(Lhs const & lhs, aux::ArgWithFlags<Arg> const & rhs)
+  operator*(Lhs const & lhs, aux::arg_with_flags<Arg> const & rhs)
   {
     if(aux::has_arg_types<ConstantInt>(lhs, rhs))
     {
-      SPRITE_ALLOW_FLAGS(rhs, "multiplication", Flags::NUW | Flags::NSW)
+      SPRITE_ALLOW_FLAGS(rhs, "multiplication", operator_flags::NUW | operator_flags::NSW)
       return wrap(
           rhs.arg().factory()
         , llvm_::ConstantExpr::getMul(
@@ -374,13 +374,13 @@ namespace sprite { namespace llvm
     }
     else if(aux::has_arg_types<ConstantFP>(lhs, rhs))
     {
-      SPRITE_ALLOW_FLAGS(rhs, "multiplication", Flags::SIGNED)
+      SPRITE_ALLOW_FLAGS(rhs, "multiplication", operator_flags::SIGNED)
       return wrap(
           rhs.arg().factory()
         , llvm_::ConstantExpr::getFMul(ptr(lhs), ptr(rhs))
         );
     }
-    throw TypeError("Expected ConstantInt or ConstantFP for multiplication");
+    throw type_error("Expected ConstantInt or ConstantFP for multiplication");
   }
 
   /**
@@ -390,13 +390,13 @@ namespace sprite { namespace llvm
    */
   template<typename Lhs, typename Rhs>
   inline typename std::enable_if<
-      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), ConstantWrapper<Constant>
+      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), constantobj<Constant>
     >::type
   operator*(Lhs const & lhs, Rhs const & rhs)
   {
-    ConstantWrapper<Constant> lhs_ = aux::getlhs(lhs, rhs);
-    ConstantWrapper<Constant> rhs_ = aux::getrhs(lhs, rhs);
-    return lhs_ *aux::Flags() (rhs_);
+    constantobj<Constant> lhs_ = aux::getlhs(lhs, rhs);
+    constantobj<Constant> rhs_ = aux::getrhs(lhs, rhs);
+    return lhs_ *aux::operator_flags() (rhs_);
   }
 
   /**
@@ -406,14 +406,14 @@ namespace sprite { namespace llvm
    */
   template<typename Lhs, typename Arg>
   typename std::enable_if<
-      aux::is_constarg<Lhs>(), ConstantWrapper<Constant>
+      aux::is_constarg<Lhs>(), constantobj<Constant>
     >::type
-  operator/(Lhs const & lhs, aux::ArgWithFlags<Arg> const & rhs)
+  operator/(Lhs const & lhs, aux::arg_with_flags<Arg> const & rhs)
   {
     if(aux::has_arg_types<ConstantInt>(lhs, rhs))
     {
       SPRITE_ALLOW_FLAGS(rhs, "integer division"
-        , Flags::SIGNED | Flags::UNSIGNED | Flags::EXACT
+        , operator_flags::SIGNED | operator_flags::UNSIGNED | operator_flags::EXACT
         )
       check_for_exactly_one_signed_flag(rhs.flags(), "integer division");
 
@@ -438,13 +438,13 @@ namespace sprite { namespace llvm
     }
     else if(aux::has_arg_types<ConstantFP>(lhs, rhs))
     {
-      SPRITE_ALLOW_FLAGS(rhs, "floating-point division", Flags::SIGNED)
+      SPRITE_ALLOW_FLAGS(rhs, "floating-point division", operator_flags::SIGNED)
       return wrap(
           rhs.arg().factory()
         , llvm_::ConstantExpr::getFDiv(ptr(lhs), ptr(rhs))
         );
     }
-    throw TypeError("Expected ConstantInt or ConstantFP for division");
+    throw type_error("Expected ConstantInt or ConstantFP for division");
   }
 
   /**
@@ -454,13 +454,13 @@ namespace sprite { namespace llvm
    */
   template<typename Lhs, typename Rhs>
   inline typename std::enable_if<
-      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), ConstantWrapper<Constant>
+      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), constantobj<Constant>
     >::type
   operator/(Lhs const & lhs, Rhs const & rhs)
   {
-    ConstantWrapper<Constant> lhs_ = aux::getlhs(lhs, rhs);
-    ConstantWrapper<Constant> rhs_ = aux::getrhs(lhs, rhs);
-    return lhs_ /aux::Flags() (rhs_);
+    constantobj<Constant> lhs_ = aux::getlhs(lhs, rhs);
+    constantobj<Constant> rhs_ = aux::getrhs(lhs, rhs);
+    return lhs_ /aux::operator_flags() (rhs_);
   }
 
   /**
@@ -470,14 +470,14 @@ namespace sprite { namespace llvm
    */
   template<typename Lhs, typename Arg>
   typename std::enable_if<
-      aux::is_constarg<Lhs>(), ConstantWrapper<Constant>
+      aux::is_constarg<Lhs>(), constantobj<Constant>
     >::type
-  operator%(Lhs const & lhs, aux::ArgWithFlags<Arg> const & rhs)
+  operator%(Lhs const & lhs, aux::arg_with_flags<Arg> const & rhs)
   {
     if(aux::has_arg_types<ConstantInt>(lhs, rhs))
     {
       SPRITE_ALLOW_FLAGS(rhs, "integer remainder"
-        , Flags::SIGNED | Flags::UNSIGNED
+        , operator_flags::SIGNED | operator_flags::UNSIGNED
         )
       check_for_exactly_one_signed_flag(rhs.flags(), "integer remainder");
 
@@ -498,13 +498,13 @@ namespace sprite { namespace llvm
     }
     else if(aux::has_arg_types<ConstantFP>(lhs, rhs))
     {
-      SPRITE_ALLOW_FLAGS(rhs, "floating-point remainder", Flags::SIGNED)
+      SPRITE_ALLOW_FLAGS(rhs, "floating-point remainder", operator_flags::SIGNED)
       return wrap(
           rhs.arg().factory()
         , llvm_::ConstantExpr::getFRem(ptr(lhs), ptr(rhs))
         );
     }
-    throw TypeError("Expected ConstantInt or ConstantFP for remainder");
+    throw type_error("Expected ConstantInt or ConstantFP for remainder");
   }
 
   /**
@@ -514,13 +514,13 @@ namespace sprite { namespace llvm
    */
   template<typename Lhs, typename Rhs>
   inline typename std::enable_if<
-      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), ConstantWrapper<Constant>
+      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), constantobj<Constant>
     >::type
   operator%(Lhs const & lhs, Rhs const & rhs)
   {
-    ConstantWrapper<Constant> lhs_ = aux::getlhs(lhs, rhs);
-    ConstantWrapper<Constant> rhs_ = aux::getrhs(lhs, rhs);
-    return lhs_ %aux::Flags() (rhs_);
+    constantobj<Constant> lhs_ = aux::getlhs(lhs, rhs);
+    constantobj<Constant> rhs_ = aux::getrhs(lhs, rhs);
+    return lhs_ %aux::operator_flags() (rhs_);
   }
 
   /**
@@ -530,12 +530,12 @@ namespace sprite { namespace llvm
    */
   template<typename Lhs, typename Rhs>
   inline typename std::enable_if<
-      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), ConstantWrapper<Constant>
+      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), constantobj<Constant>
     >::type
   operator&(Lhs const & lhs, Rhs const & rhs)
   {
-    ConstantWrapper<Constant> lhs_ = aux::getlhs(lhs, rhs);
-    ConstantWrapper<Constant> rhs_ = aux::getrhs(lhs, rhs);
+    constantobj<Constant> lhs_ = aux::getlhs(lhs, rhs);
+    constantobj<Constant> rhs_ = aux::getrhs(lhs, rhs);
 
     if(aux::has_arg_types<ConstantInt>(lhs_, rhs_))
     {
@@ -544,7 +544,7 @@ namespace sprite { namespace llvm
         , llvm_::ConstantExpr::getAnd(ptr(lhs_), ptr(rhs_))
         );
     }
-    throw TypeError("Expected ConstantInt for bitwise AND");
+    throw type_error("Expected ConstantInt for bitwise AND");
   }
 
   /**
@@ -554,12 +554,12 @@ namespace sprite { namespace llvm
    */
   template<typename Lhs, typename Rhs>
   inline typename std::enable_if<
-      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), ConstantWrapper<Constant>
+      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), constantobj<Constant>
     >::type
   operator|(Lhs const & lhs, Rhs const & rhs)
   {
-    ConstantWrapper<Constant> lhs_ = aux::getlhs(lhs, rhs);
-    ConstantWrapper<Constant> rhs_ = aux::getrhs(lhs, rhs);
+    constantobj<Constant> lhs_ = aux::getlhs(lhs, rhs);
+    constantobj<Constant> rhs_ = aux::getrhs(lhs, rhs);
 
     if(aux::has_arg_types<ConstantInt>(lhs_, rhs_))
     {
@@ -568,7 +568,7 @@ namespace sprite { namespace llvm
         , llvm_::ConstantExpr::getOr(ptr(lhs_), ptr(rhs_))
         );
     }
-    throw TypeError("Expected ConstantInt for bitwise OR");
+    throw type_error("Expected ConstantInt for bitwise OR");
   }
 
   /**
@@ -578,12 +578,12 @@ namespace sprite { namespace llvm
    */
   template<typename Lhs, typename Rhs>
   inline typename std::enable_if<
-      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), ConstantWrapper<Constant>
+      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), constantobj<Constant>
     >::type
   operator^(Lhs const & lhs, Rhs const & rhs)
   {
-    ConstantWrapper<Constant> lhs_ = aux::getlhs(lhs, rhs);
-    ConstantWrapper<Constant> rhs_ = aux::getrhs(lhs, rhs);
+    constantobj<Constant> lhs_ = aux::getlhs(lhs, rhs);
+    constantobj<Constant> rhs_ = aux::getrhs(lhs, rhs);
 
     if(aux::has_arg_types<ConstantInt>(lhs_, rhs_))
     {
@@ -592,7 +592,7 @@ namespace sprite { namespace llvm
         , llvm_::ConstantExpr::getXor(ptr(lhs_), ptr(rhs_))
         );
     }
-    throw TypeError("Expected ConstantInt for bitwise XOR");
+    throw type_error("Expected ConstantInt for bitwise XOR");
   }
 
   /**
@@ -602,13 +602,13 @@ namespace sprite { namespace llvm
    */
   template<typename Lhs, typename Arg>
   inline typename std::enable_if<
-      aux::is_constarg<Lhs>(), ConstantWrapper<Constant>
+      aux::is_constarg<Lhs>(), constantobj<Constant>
     >::type
-  operator<<(Lhs const & lhs, aux::ArgWithFlags<Arg> const & rhs)
+  operator<<(Lhs const & lhs, aux::arg_with_flags<Arg> const & rhs)
   {
     if(aux::has_arg_types<ConstantInt>(lhs, rhs))
     {
-      SPRITE_ALLOW_FLAGS(rhs, "left shift", Flags::NUW | Flags::NSW)
+      SPRITE_ALLOW_FLAGS(rhs, "left shift", operator_flags::NUW | operator_flags::NSW)
       return wrap(
           rhs.arg().factory()
         , llvm_::ConstantExpr::getShl(
@@ -616,7 +616,7 @@ namespace sprite { namespace llvm
             )
         );
     }
-    throw TypeError("Expected ConstantInt for left shift");
+    throw type_error("Expected ConstantInt for left shift");
   }
 
   /**
@@ -626,13 +626,13 @@ namespace sprite { namespace llvm
    */
   template<typename Lhs, typename Rhs>
   inline typename std::enable_if<
-      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), ConstantWrapper<Constant>
+      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), constantobj<Constant>
     >::type
   operator<<(Lhs const & lhs, Rhs const & rhs)
   {
-    ConstantWrapper<Constant> lhs_ = aux::getlhs(lhs, rhs);
-    ConstantWrapper<Constant> rhs_ = aux::getrhs(lhs, rhs);
-    return lhs_ <<aux::Flags() (rhs_);
+    constantobj<Constant> lhs_ = aux::getlhs(lhs, rhs);
+    constantobj<Constant> rhs_ = aux::getrhs(lhs, rhs);
+    return lhs_ <<aux::operator_flags() (rhs_);
   }
 
   /**
@@ -642,14 +642,14 @@ namespace sprite { namespace llvm
    */
   template<typename Lhs, typename Arg>
   inline typename std::enable_if<
-      aux::is_constarg<Lhs>(), ConstantWrapper<Constant>
+      aux::is_constarg<Lhs>(), constantobj<Constant>
     >::type
-  operator>>(Lhs const & lhs, aux::ArgWithFlags<Arg> const & rhs)
+  operator>>(Lhs const & lhs, aux::arg_with_flags<Arg> const & rhs)
   {
     if(aux::has_arg_types<ConstantInt>(lhs, rhs))
     {
       SPRITE_ALLOW_FLAGS(rhs, "right shift"
-        , Flags::EXACT | Flags::ARITHMETIC | Flags::LOGICAL
+        , operator_flags::EXACT | operator_flags::ARITHMETIC | operator_flags::LOGICAL
         );
       check_for_exactly_one_arithmetic_flag(rhs.flags(), "right shift");
 
@@ -672,7 +672,7 @@ namespace sprite { namespace llvm
           );
       }
     }
-    throw TypeError("Expected ConstantInt for right shift");
+    throw type_error("Expected ConstantInt for right shift");
   }
 
   /**
@@ -684,8 +684,8 @@ namespace sprite { namespace llvm
    * @snippet constexprs.cpp typecast
    */
   template<typename Arg, typename Rhs>
-  typename std::enable_if<aux::is_typearg<Rhs>(), ConstantWrapper<Constant>>::type
-  typecast(aux::ArgWithFlags<Arg> const & lhs, Rhs const & rhs)
+  typename std::enable_if<aux::is_typearg<Rhs>(), constantobj<Constant>>::type
+  typecast(aux::arg_with_flags<Arg> const & lhs, Rhs const & rhs)
   {
     Type * const type = ptr(rhs);
     assert(type);
@@ -699,7 +699,7 @@ namespace sprite { namespace llvm
         if(lhsz < rhsz)
         {
           SPRITE_ALLOW_FLAGS(
-              lhs, "integer extension", Flags::SIGNED | Flags::UNSIGNED
+              lhs, "integer extension", operator_flags::SIGNED | operator_flags::UNSIGNED
             )
           check_for_exactly_one_signed_flag(lhs.flags(), "integer extension");
 
@@ -732,7 +732,7 @@ namespace sprite { namespace llvm
       {
         SPRITE_ALLOW_FLAGS(
             lhs, "integer-to-floating-point conversion"
-          , Flags::SIGNED | Flags::UNSIGNED
+          , operator_flags::SIGNED | operator_flags::UNSIGNED
           )
         check_for_exactly_one_signed_flag(
             lhs.flags(), "integer-to-floating-point conversion"
@@ -761,7 +761,7 @@ namespace sprite { namespace llvm
           , llvm_::ConstantExpr::getIntToPtr(ptr(lhs), type)
           );
       }
-      throw TypeError(
+      throw type_error(
           "Expected integer, floating-point or pointer type as the target of "
           "typecast from an integer type"
         );
@@ -772,7 +772,7 @@ namespace sprite { namespace llvm
       {
         SPRITE_ALLOW_FLAGS(
             lhs, "floating-point-to-integer conversion"
-          , Flags::SIGNED | Flags::UNSIGNED
+          , operator_flags::SIGNED | operator_flags::UNSIGNED
           )
         check_for_exactly_one_signed_flag(
             lhs.flags(), "floating-point-to-integer conversion"
@@ -799,7 +799,7 @@ namespace sprite { namespace llvm
         unsigned const rhsz = getFPBitWidth(type);
         if(lhsz < rhsz)
         {
-          SPRITE_ALLOW_FLAGS(lhs, "floating-point extension", Flags::SIGNED)
+          SPRITE_ALLOW_FLAGS(lhs, "floating-point extension", operator_flags::SIGNED)
           return wrap(
               lhs.arg().factory()
             , llvm_::ConstantExpr::getFPExtend(ptr(lhs), type)
@@ -807,7 +807,7 @@ namespace sprite { namespace llvm
         }
         else if(rhsz < lhsz)
         {
-          SPRITE_ALLOW_FLAGS(lhs, "floating-point truncation", Flags::SIGNED)
+          SPRITE_ALLOW_FLAGS(lhs, "floating-point truncation", operator_flags::SIGNED)
           return wrap(
               lhs.arg().factory()
             , llvm_::ConstantExpr::getFPTrunc(ptr(lhs), type)
@@ -815,7 +815,7 @@ namespace sprite { namespace llvm
         }
         return lhs.arg(); // no-op
       }
-      throw TypeError(
+      throw type_error(
           "Expected integer or floating-point type as the target of typecast "
           "from a floating-point type"
         );
@@ -830,11 +830,11 @@ namespace sprite { namespace llvm
           , llvm_::ConstantExpr::getPtrToInt(ptr(lhs), type)
           );
       }
-      throw TypeError(
+      throw type_error(
           "Expected integer type as the target of typecast from integer"
         );
     }
-    throw TypeError(
+    throw type_error(
         "Expected integer, floating-point, or pointer type as the source "
         "of typecast"
       );
@@ -850,13 +850,13 @@ namespace sprite { namespace llvm
    */
   template<typename Lhs, typename Rhs>
   inline typename std::enable_if<
-      aux::is_constarg<Lhs>() && aux::is_typearg<Rhs>(), ConstantWrapper<Constant>
+      aux::is_constarg<Lhs>() && aux::is_typearg<Rhs>(), constantobj<Constant>
     >::type
   typecast(Lhs const & lhs, Rhs const & rhs)
   {
-    ConstantWrapper<Constant> lhs_ = aux::getlhs(lhs, rhs);
-    TypeWrapper<Type> rhs_ = aux::getrhs(lhs, rhs);
-    return typecast(aux::Flags()(lhs_), rhs_);
+    constantobj<Constant> lhs_ = aux::getlhs(lhs, rhs);
+    type rhs_ = aux::getrhs(lhs, rhs);
+    return typecast(aux::operator_flags()(lhs_), rhs_);
   }
 
   /**
@@ -866,11 +866,11 @@ namespace sprite { namespace llvm
    */
   template<typename Lhs, typename Rhs>
   inline typename std::enable_if<
-      aux::is_constarg<Lhs>() && aux::is_typearg<Rhs>(), ConstantWrapper<Constant>
+      aux::is_constarg<Lhs>() && aux::is_typearg<Rhs>(), constantobj<Constant>
     >::type
   bitcast(Lhs const & lhs, Rhs const & rhs)
   {
-    ConstantWrapper<Constant> lhs_ = aux::getlhs(lhs, rhs);
+    constantobj<Constant> lhs_ = aux::getlhs(lhs, rhs);
     return wrap(
         lhs_.factory()
       , llvm_::ConstantExpr::getBitCast(ptr(lhs_), ptr(rhs))
@@ -886,11 +886,11 @@ namespace sprite { namespace llvm
   inline typename std::enable_if<
       aux::is_constarg<If>() && aux::is_constarg<Then>()
         && aux::is_constarg<Else>()
-    , ConstantWrapper<Constant>
+    , constantobj<Constant>
     >::type
   select(If const & if_, Then const & then, Else const & else_)
   {
-    ConstantWrapper<Constant> if__ = aux::getlhs(aux::getlhs(if_, then), else_);
+    constantobj<Constant> if__ = aux::getlhs(aux::getlhs(if_, then), else_);
     return wrap(
         if__.factory()
       , llvm_::ConstantExpr::getSelect(ptr(if_), ptr(then), ptr(else_))
@@ -898,8 +898,8 @@ namespace sprite { namespace llvm
   }
 
   template<typename T, typename Factory>
-  inline ConstantWrapper<Constant, Factory>
-  GlobalValueProxy<T, Factory>::operator&() const
+  inline constantobj<Constant, Factory>
+  global_value_proxy<T, Factory>::operator&() const
   {
     return wrap(
         this->base.factory()
@@ -910,8 +910,8 @@ namespace sprite { namespace llvm
   }
 
   template<typename T, typename Factory>
-  inline ConstantWrapper<Constant, Factory>
-  address_inbounds(GlobalValueProxy<T, Factory> const & gvp)
+  inline constantobj<Constant, Factory>
+  address_inbounds(global_value_proxy<T, Factory> const & gvp)
   {
     return wrap(
         gvp.get_base().factory()
@@ -925,28 +925,28 @@ namespace sprite { namespace llvm
   template<typename Index>
   inline
   typename std::enable_if<
-      aux::is_constarg<Index>(), GlobalValueProxy<T, Factory>
+      aux::is_constarg<Index>(), global_value_proxy<T, Factory>
     >::type
-  GlobalValueProxy<T, Factory>::operator[](Index const & i) const
+  global_value_proxy<T, Factory>::operator[](Index const & i) const
   {
-    GlobalValueProxy tmp = *this;
+    global_value_proxy tmp = *this;
     tmp.indices.push_back(ptr(i));
     return std::move(tmp);
   }
 
   template<typename T, typename Factory>
-  inline GlobalValueProxy<T, Factory>
-  GlobalValueProxy<T, Factory>::operator[](int64_t i) const
+  inline global_value_proxy<T, Factory>
+  global_value_proxy<T, Factory>::operator[](int64_t i) const
   {
-    GlobalValueProxy<T, Factory> tmp = *this;
+    global_value_proxy<T, Factory> tmp = *this;
     auto const i64 = base.factory().int_(64);
     tmp.indices.push_back(ptr(i64 % i));
     return std::move(tmp);
   }
 
   template<typename T, typename Factory>
-  inline ConstantWrapper<Constant, Factory>
-  GlobalValueWrapper<T, Factory>::operator&() const
+  inline constantobj<Constant, Factory>
+  globalobj<T, Factory>::operator&() const
   {
     auto const i64 = this->factory().int_(64);
     return wrap(
@@ -959,23 +959,23 @@ namespace sprite { namespace llvm
   template<typename Index>
   inline
   typename std::enable_if<
-      aux::is_constarg<Index>(), GlobalValueProxy<T, Factory>
+      aux::is_constarg<Index>(), global_value_proxy<T, Factory>
     >::type
-  GlobalValueWrapper<T, Factory>::operator[](Index const & i) const
+  globalobj<T, Factory>::operator[](Index const & i) const
   {
     auto const i64 = this->factory().int_(64);
-    GlobalValueProxy<T, Factory> tmp(*this);
+    global_value_proxy<T, Factory> tmp(*this);
     tmp.indices.push_back(ptr(i64 % 0));
     tmp.indices.push_back(ptr(i));
     return std::move(tmp);
   }
 
   template<typename T, typename Factory>
-  inline GlobalValueProxy<T, Factory>
-  GlobalValueWrapper<T, Factory>::operator[](int64_t i) const
+  inline global_value_proxy<T, Factory>
+  globalobj<T, Factory>::operator[](int64_t i) const
   {
     auto const i64 = this->factory().int_(64);
-    GlobalValueProxy<T, Factory> tmp(*this);
+    global_value_proxy<T, Factory> tmp(*this);
     tmp.indices.push_back(ptr(i64 % 0));
     tmp.indices.push_back(ptr(i64 % i));
     return std::move(tmp);

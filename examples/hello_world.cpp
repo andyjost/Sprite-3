@@ -54,19 +54,19 @@ int main()
 
   llvm::Module * hello_module
     = new llvm::Module("hello", llvm::getGlobalContext());
-  TypeFactory const types(hello_module);
+  type_factory const types(hello_module);
   auto const char_ = types.char_();
   auto const i32 = types.int_(32);
   auto const puts = extern_<llvm::Function>(i32(*char_), "puts");
 
-  /// [Using Context]
+  /// [Using context]
   auto const main = extern_<llvm::Function>(i32(), "main");
   {
-    Context _ = main.entry();
+    context _ = main.entry();
     puts(*char_ % "hello world\n");
     return_(0);
   }
-  /// [Using Context]
+  /// [Using context]
   /// [Hello world]
 
   {

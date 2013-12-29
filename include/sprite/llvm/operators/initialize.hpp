@@ -6,7 +6,7 @@
  *
  * @note The assignment operator is required to be defined as a class member.
  * Setting the initializer is implemented as a named function @p
- * set_initializer that @p GlobalValueWrapper::operator= delegates to.
+ * set_initializer that @p globalobj::operator= delegates to.
  */
 
 #pragma once
@@ -19,11 +19,11 @@ namespace sprite { namespace llvm
   namespace aux
   {
     /**
-     * @brief Helper used by GlobalValueWrapper to get a global variable and
+     * @brief Helper used by globalobj to get a global variable and
      * its element type.
      */
     template<typename T, typename Factory>
-    std::pair<llvm_::GlobalVariable *, TypeWrapper<Type, Factory>>
+    std::pair<llvm_::GlobalVariable *, typeobj<Type, Factory>>
     get_global_and_type(T * arg, Factory const & f)
     {
       if(auto const global = dyn_cast<llvm_::GlobalVariable>(arg))
@@ -36,14 +36,14 @@ namespace sprite { namespace llvm
         return std::make_pair(global, ty);
       }
       else
-        throw TypeError("GlobalVariable required");
+        throw type_error("GlobalVariable required");
     }
   }
 
   template<typename T, typename Factory>
   template<typename U>
-  GlobalValueWrapper<T, Factory> &
-  GlobalValueWrapper<T, Factory>::set_initializer(U const & value)
+  globalobj<T, Factory> &
+  globalobj<T, Factory>::set_initializer(U const & value)
   {
     auto pair = aux::get_global_and_type(this->ptr(), this->factory());
     pair.first->setInitializer((pair.second % value).ptr());
@@ -57,8 +57,8 @@ namespace sprite { namespace llvm
    */
   template<typename T, typename Factory>
   template<typename U>
-  GlobalValueWrapper<T, Factory> &
-  GlobalValueWrapper<T, Factory>::set_initializer(std::initializer_list<U> const & values)
+  globalobj<T, Factory> &
+  globalobj<T, Factory>::set_initializer(std::initializer_list<U> const & values)
   {
     auto pair = aux::get_global_and_type(this->ptr(), this->factory());
     pair.first->setInitializer((pair.second % values).ptr());
@@ -72,8 +72,8 @@ namespace sprite { namespace llvm
    */
   template<typename T, typename Factory>
   template<typename...U>
-  GlobalValueWrapper<T, Factory> &
-  GlobalValueWrapper<T, Factory>::set_initializer(std::tuple<U...> const & values)
+  globalobj<T, Factory> &
+  globalobj<T, Factory>::set_initializer(std::tuple<U...> const & values)
   {
     auto pair = aux::get_global_and_type(this->ptr(), this->factory());
     pair.first->setInitializer((pair.second % values).ptr());

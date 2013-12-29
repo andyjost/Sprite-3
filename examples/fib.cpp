@@ -52,7 +52,7 @@ int main()
 
   llvm::Module * fib_module
     = new llvm::Module("fib", llvm::getGlobalContext());
-  TypeFactory const types(fib_module);
+  type_factory const types(fib_module);
   auto const char_ = types.char_();
   auto const i32 = types.int_(32);
   auto const i64 = types.int_(64);
@@ -110,17 +110,17 @@ int main()
     BasicBlock* terminateb = BasicBlock::Create(getGlobalContext(), "terminate", fib.ptr());
     BasicBlock* recurseb = BasicBlock::Create(getGlobalContext(), "recurse", fib.ptr());
 
-    // Label: entry
+    // label: entry
     IRBuilder<> entry(entryb);
     auto const n = fib->arg_begin();
     auto const test = entry.CreateICmpULT(n, (i64 % 2).ptr());
     entry.CreateCondBr(test, terminateb, recurseb);
 
-    // Label: terminate
+    // label: terminate
     IRBuilder<> terminate(terminateb);
     terminate.CreateRet((i64 % 1).ptr());
 
-    // Label: recurse
+    // label: recurse
     IRBuilder<> recurse(recurseb);
     auto const a = recurse.CreateSub(n, (i64 % 1).ptr());
     auto const b = recurse.CreateSub(n, (i64 % 2).ptr());

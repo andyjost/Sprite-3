@@ -14,15 +14,15 @@ namespace sprite { namespace llvm
   /**
    * @brief Declares a function with user-specified linkage.
    */
-  inline GlobalValueWrapper<llvm_::Function> def(
-      llvm_::GlobalValue::LinkageTypes linkage
-    , TypeWrapper<llvm_::FunctionType> const & type
+  inline globalobj<Function> def(
+      GlobalValue::LinkageTypes linkage
+    , function_type const & type
     , llvm_::Twine const & name = ""
     )
   {
     return wrap(
         type.factory()
-      , llvm_::Function::Create(
+      , Function::Create(
             type.ptr(), linkage, name, type.factory().module()
           )
       );
@@ -48,14 +48,14 @@ namespace sprite { namespace llvm
    *
    * @snippet defs.cpp Global definitions with linkage
    */
-  inline GlobalValueWrapper<llvm_::GlobalValue> def(
-      llvm_::GlobalValue::LinkageTypes linkage
-    , TypeWrapper<llvm_::Type> const & type
+  inline global def(
+      GlobalValue::LinkageTypes linkage
+    , type const & type
     , llvm_::Twine const & name = ""
     )
   {
     // Create a function for function types.
-    if(auto const ftype = dyn_cast<llvm_::FunctionType>(type))
+    if(auto const ftype = dyn_cast<FunctionType>(type))
       return def(linkage, ftype, name);
 
     // Create a global variable for other types.
@@ -80,18 +80,18 @@ namespace sprite { namespace llvm
    *
    * @snippet defs.cpp Using extern_
    */
-  inline GlobalValueWrapper<llvm_::GlobalValue> extern_(
-      TypeWrapper<llvm_::Type> const & type
+  inline global extern_(
+      type const & type
     , llvm_::Twine const & name = ""
     )
-  { return def(llvm_::GlobalValue::ExternalLinkage, type, name); }
+  { return def(GlobalValue::ExternalLinkage, type, name); }
 
   /**
    * @brief Version of extern_ that takes a return type specifier.
    */
   template<typename ReturnType>
-  inline GlobalValueWrapper<ReturnType> extern_(
-      TypeWrapper<llvm_::Type> const & type
+  inline globalobj<ReturnType> extern_(
+      type const & type
     , llvm_::Twine const & name = ""
     )
   { return dyn_cast<ReturnType>(extern_(type, name)); }
@@ -101,18 +101,18 @@ namespace sprite { namespace llvm
    *
    * @snippet defs.cpp Using static_
    */
-  inline GlobalValueWrapper<llvm_::GlobalValue> static_(
-      TypeWrapper<llvm_::Type> const & type
+  inline global static_(
+      type const & type
     , llvm_::Twine const & name = ""
     )
-  { return def(llvm_::GlobalValue::InternalLinkage, type, name); }
+  { return def(GlobalValue::InternalLinkage, type, name); }
 
   /**
    * @brief Version of static_ that takes a return type specifier.
    */
   template<typename ReturnType>
-  inline GlobalValueWrapper<ReturnType> static_(
-      TypeWrapper<llvm_::Type> const & type
+  inline globalobj<ReturnType> static_(
+      type const & type
     , llvm_::Twine const & name = ""
     )
   { return dyn_cast<ReturnType>(static_(type, name)); }
@@ -125,23 +125,23 @@ namespace sprite { namespace llvm
    *
    * @snippet defs.cpp Using inline_
    */
-  inline GlobalValueWrapper<llvm_::GlobalValue> inline_(
-      TypeWrapper<llvm_::Type> const & type
+  inline global inline_(
+      type const & type
     , llvm_::Twine const & name = ""
     )
   {
     // Only functions may be inline.
-    if(!llvm_::dyn_cast<llvm_::FunctionType>(type.ptr()))
-      throw TypeError();
-    return def(llvm_::GlobalValue::LinkOnceAnyLinkage, type, name);
+    if(!llvm_::dyn_cast<FunctionType>(type.ptr()))
+      throw type_error();
+    return def(GlobalValue::LinkOnceAnyLinkage, type, name);
   }
 
   /**
    * @brief Version of inline_ that takes a return type specifier.
    */
   template<typename ReturnType>
-  inline GlobalValueWrapper<ReturnType> inline_(
-      TypeWrapper<llvm_::Type> const & type
+  inline globalobj<ReturnType> inline_(
+      type const & type
     , llvm_::Twine const & name = ""
     )
   { return dyn_cast<ReturnType>(inline_(type, name)); }

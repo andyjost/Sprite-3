@@ -27,7 +27,7 @@ namespace sprite { namespace llvm
   template<typename Target, typename T, typename Factory>
   inline
   typename std::enable_if<aux::is_ok_integer_for_value<Target>(), Target>::type
-  value(ConstantWrapper<T, Factory> const & c)
+  value(constantobj<T, Factory> const & c)
   {
     if(ConstantInt * ci = dyn_cast<ConstantInt>(c.ptr()))
     {
@@ -38,9 +38,9 @@ namespace sprite { namespace llvm
         else
           return ci->getZExtValue();
       }
-      throw ValueError("Integer value is too large to return");
+      throw value_error("Integer value is too large to return");
     }
-    throw TypeError(
+    throw type_error(
         "Expected integer value, not " + llvm_typename(c->getType())
       );
   }
@@ -52,11 +52,11 @@ namespace sprite { namespace llvm
       std::is_constructible<Target, llvm_::APInt>::value
     , Target
     >::type
-  value(ConstantWrapper<T, Factory> const & c)
+  value(constantobj<T, Factory> const & c)
   {
     if(ConstantInt * ci = dyn_cast<ConstantInt>(c.ptr()))
       return ci->getValue();
-    throw TypeError(
+    throw type_error(
         "Expected integer value, not " + llvm_typename(c->getType())
       );
   }
@@ -67,11 +67,11 @@ namespace sprite { namespace llvm
   typename std::enable_if<
       std::is_same<Target, llvm_::APFloat>::value, Target const &
     >::type
-  value(ConstantWrapper<T, Factory> const & c)
+  value(constantobj<T, Factory> const & c)
   {
     if(ConstantFP * cfp = dyn_cast<ConstantFP>(c.ptr()))
       return cfp->getValueAPF();
-    throw TypeError("Expected floating-point value");
+    throw type_error("Expected floating-point value");
   }
 
   /// Get the value of a constant as a float.
@@ -80,7 +80,7 @@ namespace sprite { namespace llvm
   typename std::enable_if<
       std::is_same<Target, float>::value, float
     >::type
-  value(ConstantWrapper<T, Factory> const & c)
+  value(constantobj<T, Factory> const & c)
   {
     llvm_::APFloat const & val = value<llvm_::APFloat>(c);
     llvm_::fltSemantics const & sem = val.getSemantics();
@@ -88,7 +88,7 @@ namespace sprite { namespace llvm
       return val.convertToFloat();
     else if(&sem == &llvm_::APFloat::IEEEdouble)
       return static_cast<float>(val.convertToDouble());
-    throw ValueError("Unsupported float semantics");
+    throw value_error("Unsupported float semantics");
   }
 
   /// Get the value of a constant as a double.
@@ -97,7 +97,7 @@ namespace sprite { namespace llvm
   typename std::enable_if<
       std::is_same<Target, double>::value, double
     >::type
-  value(ConstantWrapper<T, Factory> const & c)
+  value(constantobj<T, Factory> const & c)
   {
     llvm_::APFloat const & val = value<llvm_::APFloat>(c);
     llvm_::fltSemantics const & sem = val.getSemantics();
@@ -105,6 +105,6 @@ namespace sprite { namespace llvm
       return val.convertToFloat();
     else if(&sem == &llvm_::APFloat::IEEEdouble)
       return val.convertToDouble();
-    throw ValueError("Unsupported float semantics");
+    throw value_error("Unsupported float semantics");
   }
 }}

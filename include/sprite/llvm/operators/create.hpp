@@ -76,8 +76,8 @@ namespace sprite { namespace llvm
    *
    * @snippet constants.cpp Instantiating a NULL integer
    */
-  SPRITE_BINOP_PREAMBLE(ConstantInt, T, IntegerType, U, Null)
-  operator%(TypeWrapper<T> const & tp, U const &)
+  SPRITE_BINOP_PREAMBLE(ConstantInt, T, IntegerType, U, null_arg)
+  operator%(typeobj<T> const & tp, U const &)
     { return tp % 0; }
 
   /**
@@ -91,7 +91,7 @@ namespace sprite { namespace llvm
    * @snippet constants.cpp Instantiating simple types
    */
   SPRITE_BINOP_PREAMBLE(ConstantInt, T, IntegerType, U, uint64_t)
-  operator%(TypeWrapper<T> const & tp, U const & value)
+  operator%(typeobj<T> const & tp, U const & value)
   {
     // Handle Booleans.
     if(tp->isIntegerTy(1))
@@ -117,7 +117,7 @@ namespace sprite { namespace llvm
    * @snippet constants.cpp Instantiating integer types from strings
    */
   SPRITE_BINOP_PREAMBLE(ConstantInt, T, IntegerType, U, StringRef)
-  operator%(TypeWrapper<T> const & tp, U const & value_)
+  operator%(typeobj<T> const & tp, U const & value_)
   {
     StringRef value(value_);
     int radix = 10;
@@ -153,7 +153,7 @@ namespace sprite { namespace llvm
    * @snippet constants.cpp Instantiating simple types
    */
   SPRITE_BINOP_PREAMBLE(ConstantInt, T, IntegerType, U, llvm_::APInt)
-  operator%(TypeWrapper<T> const & tp, U const & value)
+  operator%(typeobj<T> const & tp, U const & value)
   {
     return wrap(
         tp.factory()
@@ -167,8 +167,8 @@ namespace sprite { namespace llvm
   // ====== Instantiation functions for FPType ======
 
   /// Instantiates a floating-point type with a null value.
-  SPRITE_BINOP_PREAMBLE(ConstantFP, T, FPType, U, Null)
-  operator%(TypeWrapper<T> const & tp, U const &)
+  SPRITE_BINOP_PREAMBLE(ConstantFP, T, FPType, U, null_arg)
+  operator%(typeobj<T> const & tp, U const &)
     { return tp % 0.0; }
 
   /**
@@ -177,7 +177,7 @@ namespace sprite { namespace llvm
    * @snippet constants.cpp Instantiating simple types
    */
   SPRITE_BINOP_PREAMBLE(ConstantFP, T, FPType, U, double)
-  operator%(TypeWrapper<T> const & tp, U const & value)
+  operator%(typeobj<T> const & tp, U const & value)
   {
     return wrap<ConstantFP>(
         tp.factory(), ConstantFP::get(tp.ptr(), static_cast<double>(value))
@@ -190,7 +190,7 @@ namespace sprite { namespace llvm
    * @snippet constants.cpp Instantiating simple types
    */
   SPRITE_BINOP_PREAMBLE(ConstantFP, T, FPType, U, StringRef)
-  operator%(TypeWrapper<T> const & tp, U const & value)
+  operator%(typeobj<T> const & tp, U const & value)
   {
     return wrap<ConstantFP>(
         tp.factory()
@@ -204,7 +204,7 @@ namespace sprite { namespace llvm
    * @snippet constants.cpp Instantiating simple types
    */
   SPRITE_BINOP_PREAMBLE(ConstantFP, T, FPType, U, llvm_::APFloat)
-  operator%(TypeWrapper<T> const & tp, U const & value)
+  operator%(typeobj<T> const & tp, U const & value)
   {
     return wrap(
         tp.factory()
@@ -219,23 +219,23 @@ namespace sprite { namespace llvm
    *
    * @snippet constants.cpp Instantiating non-finite floating-point types
    */
-  SPRITE_BINOP_PREAMBLE(ConstantFP, T, FPType, U, NonFiniteValue)
-  operator%(TypeWrapper<T> const & tp, U const & nfv_)
+  SPRITE_BINOP_PREAMBLE(ConstantFP, T, FPType, U, non_finite_value)
+  operator%(typeobj<T> const & tp, U const & nfv_)
   {
-    NonFiniteValue const nfv = nfv_;
+    non_finite_value const nfv = nfv_;
     auto const & sem = tp->getFltSemantics();
     switch(nfv.kind())
     {
-      case NonFiniteValue::Inf:
+      case non_finite_value::Inf:
         return tp % llvm_::APFloat::getInf(sem, nfv.negative());
-      case NonFiniteValue::Nan:
+      case non_finite_value::Nan:
         return tp % llvm_::APFloat::getNaN(sem, nfv.negative());
-      case NonFiniteValue::Qnan:
+      case non_finite_value::Qnan:
         return tp % llvm_::APFloat::getQNaN(sem, nfv.negative());
-      case NonFiniteValue::Snan:
+      case non_finite_value::Snan:
         return tp % llvm_::APFloat::getSNaN(sem, nfv.negative());
     }
-    throw RuntimeError("Bad non-finite value specifier");
+    throw runtime_error("Bad non-finite value specifier");
   }
 
   // ====== Instantiation functions for StructType ======
@@ -247,8 +247,8 @@ namespace sprite { namespace llvm
    *
    * @snippet constants.cpp Instantiating a NULL struct
    */
-  SPRITE_BINOP_PREAMBLE(ConstantAggregateZero, T, StructType, U, Null)
-  operator%(TypeWrapper<T> const & tp, U const &)
+  SPRITE_BINOP_PREAMBLE(ConstantAggregateZero, T, StructType, U, null_arg)
+  operator%(typeobj<T> const & tp, U const &)
     { return wrap(tp.factory(), ConstantAggregateZero::get(tp.ptr())); }
 
   /**
@@ -256,10 +256,10 @@ namespace sprite { namespace llvm
    *
    * @snippet constants.cpp Instantiating types
    */
-  SPRITE_BINOP_PREAMBLE(Constant, T, StructType, U, AnyArrayRef)
-  operator%(TypeWrapper<T> const & tp, U const & values_)
+  SPRITE_BINOP_PREAMBLE(Constant, T, StructType, U, any_array_ref)
+  operator%(typeobj<T> const & tp, U const & values_)
   {
-    AnyArrayRef values(values_);
+    any_array_ref values(values_);
     return values._accept_modulo(tp);
   }
 
@@ -268,10 +268,10 @@ namespace sprite { namespace llvm
    *
    * @snippet constants.cpp Instantiating types
    */
-  SPRITE_BINOP_PREAMBLE(Constant, T, StructType, U, AnyTupleRef)
-  operator%(TypeWrapper<T> const & tp, U const & values_)
+  SPRITE_BINOP_PREAMBLE(Constant, T, StructType, U, any_tuple_ref)
+  operator%(typeobj<T> const & tp, U const & values_)
   {
-    AnyTupleRef values(values_);
+    any_tuple_ref values(values_);
     return values._accept_modulo(tp);
   }
 
@@ -279,8 +279,8 @@ namespace sprite { namespace llvm
    * @brief Implements operator @p % between a struct type and a sequence of
    * instantiated values.
    */
-  ConstantWrapper<Constant>
-  _modulo(TypeWrapper<StructType> const & tp, ArrayRef<Constant*> const & values)
+  constantobj<Constant>
+  _modulo(struct_type const & tp, ArrayRef<Constant*> const & values)
   {
     auto const p = ConstantStruct::get(
         tp.ptr(), static_cast<ArrayRef<Constant*> const &>(values)
@@ -289,11 +289,11 @@ namespace sprite { namespace llvm
   }
 
   template<typename T>
-  ConstantWrapper<Constant>
-  _modulo(TypeWrapper<StructType> const & tp, ArrayRef<T> const & values)
+  constantobj<Constant>
+  _modulo(struct_type const & tp, ArrayRef<T> const & values)
   {
     if(values.size() > 0 && tp->indexValid(values.size() - 1))
-      throw TypeError("Too many values to extract in struct instantiation");
+      throw type_error("Too many values to extract in struct instantiation");
     std::vector<Constant*> args;
     size_t i=0;
     for(auto arg: values)
@@ -305,12 +305,12 @@ namespace sprite { namespace llvm
   }
 
   template<typename...T>
-  ConstantWrapper<Constant>
-  _modulo(TypeWrapper<StructType> const & tp, std::tuple<T...> const & value)
+  constantobj<Constant>
+  _modulo(struct_type const & tp, std::tuple<T...> const & value)
   {
     std::vector<Constant*> args;
     if(!aux::build_nonuniform_constants(args, tp, value))
-      throw TypeError("Too many values to extract in struct instantiation");
+      throw type_error("Too many values to extract in struct instantiation");
     return _modulo(tp, args);
   }
 
@@ -323,8 +323,8 @@ namespace sprite { namespace llvm
    *
    * @snippet constants.cpp Instantiating a NULL array
    */
-  SPRITE_BINOP_PREAMBLE(ConstantAggregateZero, T, ArrayType, U, Null)
-  operator%(TypeWrapper<T> const & tp, U const &)
+  SPRITE_BINOP_PREAMBLE(ConstantAggregateZero, T, ArrayType, U, null_arg)
+  operator%(typeobj<T> const & tp, U const &)
     { return wrap(tp.factory(), ConstantAggregateZero::get(tp.ptr())); }
 
   /**
@@ -338,10 +338,10 @@ namespace sprite { namespace llvm
    * @snippet constants.cpp Instantiating arrays as aggregates
    * @snippet constants.cpp Instantiating an array from a sequence
    */
-  SPRITE_BINOP_PREAMBLE(Constant, T, ArrayType, U, AnyArrayRef)
-  operator%(TypeWrapper<T> const & tp, U const & values)
+  SPRITE_BINOP_PREAMBLE(Constant, T, ArrayType, U, any_array_ref)
+  operator%(typeobj<T> const & tp, U const & values)
   {
-    AnyArrayRef values_(values);
+    any_array_ref values_(values);
     return values_._accept_modulo(tp);
   }
 
@@ -350,10 +350,10 @@ namespace sprite { namespace llvm
    *
    * @snippet constants.cpp Instantiating arrays from tuples
    */
-  SPRITE_BINOP_PREAMBLE(Constant, T, ArrayType, U, AnyTupleRef)
-  operator%(TypeWrapper<T> const & tp, U const & values_)
+  SPRITE_BINOP_PREAMBLE(Constant, T, ArrayType, U, any_tuple_ref)
+  operator%(typeobj<T> const & tp, U const & values_)
   {
-    AnyTupleRef values(values_);
+    any_tuple_ref values(values_);
     return values._accept_modulo(tp);
   }
 
@@ -361,8 +361,8 @@ namespace sprite { namespace llvm
    * @brief Implements operator @p % between an array type and a sequence of
    * instantiated values.
    */
-  ConstantWrapper<Constant>
-  _modulo(TypeWrapper<ArrayType> const & tp, ArrayRef<Constant*> const & values)
+  constantobj<Constant>
+  _modulo(array_type const & tp, ArrayRef<Constant*> const & values)
   {
     auto const p = ConstantArray::get(
         tp.ptr(), static_cast<ArrayRef<Constant*> const &>(values)
@@ -375,8 +375,8 @@ namespace sprite { namespace llvm
    * initializer values.
    */
   template<typename T>
-  ConstantWrapper<Constant>
-  _modulo(TypeWrapper<ArrayType> const & tp, ArrayRef<T> const & values)
+  constantobj<Constant>
+  _modulo(array_type const & tp, ArrayRef<T> const & values)
   {
     auto const elem_ty = wrap(tp.factory(), tp->getElementType());
     std::vector<Constant*> args;
@@ -385,8 +385,8 @@ namespace sprite { namespace llvm
   }
 
   template<typename...T>
-  ConstantWrapper<Constant>
-  _modulo(TypeWrapper<ArrayType> const & tp, std::tuple<T...> const & value)
+  constantobj<Constant>
+  _modulo(array_type const & tp, std::tuple<T...> const & value)
   {
     auto const elem_ty = wrap(tp.factory(), tp->getElementType());
     std::vector<Constant*> args;
@@ -402,16 +402,16 @@ namespace sprite { namespace llvm
    *
    * @snippet constants.cpp Instantiating a NULL pointer
    */
-  SPRITE_BINOP_PREAMBLE(ConstantPointerNull, T, PointerType, U, Null)
-  operator%(TypeWrapper<T> const & tp, U const &)
+  SPRITE_BINOP_PREAMBLE(ConstantPointerNull, T, PointerType, U, null_arg)
+  operator%(typeobj<T> const & tp, U const &)
     { return wrap(tp.factory(), ConstantPointerNull::get(tp.ptr())); }
 
   namespace aux
   {
     template<typename T, typename U>
-    ConstantWrapper<Constant>
+    constantobj<Constant>
     create_global_pointer_from_constants(
-        TypeWrapper<T> const & tp, U const & values
+        typeobj<T> const & tp, U const & values
       )
     {
       auto const elem_ty = wrap(tp.factory(), tp->getElementType());
@@ -420,7 +420,7 @@ namespace sprite { namespace llvm
           /* Module      */ *tp.factory().module()
         , /* Type        */ array_ty.ptr()
         , /* isConstant  */ true
-        , /* Linkage     */ llvm_::GlobalValue::PrivateLinkage
+        , /* Linkage     */ GlobalValue::PrivateLinkage
         , /* Initializer */ (array_ty % values).ptr()
         , /* Name        */ ".str"
         );
@@ -449,7 +449,7 @@ namespace sprite { namespace llvm
    * @snippet constants.cpp Instantiating char pointers
    */
   SPRITE_BINOP_PREAMBLE(Constant, T, PointerType, U, StringRef)
-  operator%(TypeWrapper<T> const & tp, U const & value)
+  operator%(typeobj<T> const & tp, U const & value)
   {
     StringRef const str(value);
     ArrayRef<char> const values(str.data(), str.size() + 1);
@@ -466,10 +466,10 @@ namespace sprite { namespace llvm
    *
    * @snippet constants.cpp Instantiating pointers as global arrays
    */
-  SPRITE_BINOP_PREAMBLE3(Constant, T, PointerType, U, AnyArrayRef, StringRef)
-  operator%(TypeWrapper<T> const & tp, U const & values_)
+  SPRITE_BINOP_PREAMBLE3(Constant, T, PointerType, U, any_array_ref, StringRef)
+  operator%(typeobj<T> const & tp, U const & values_)
   {
-    AnyArrayRef const values(values_);
+    any_array_ref const values(values_);
     return aux::create_global_pointer_from_constants(tp, values);
   }
 
@@ -481,15 +481,15 @@ namespace sprite { namespace llvm
    *
    * @snippet constants.cpp Instantiating pointers as global arrays
    */
-  SPRITE_BINOP_PREAMBLE(Constant, T, PointerType, U, AnyTupleRef)
-  operator%(TypeWrapper<T> const & tp, U const & values_)
+  SPRITE_BINOP_PREAMBLE(Constant, T, PointerType, U, any_tuple_ref)
+  operator%(typeobj<T> const & tp, U const & values_)
   {
-    AnyTupleRef const values(values_);
+    any_tuple_ref const values(values_);
     return aux::create_global_pointer_from_constants(tp, values);
   }
 
   /**
-   * @brief Generic version of operator% for @p TypeWrapper.
+   * @brief Generic version of operator% for @p typeobj.
    *
    * Instantiates a pointer, array, struct, integer, or floating-point type
    * with any allowed value.
@@ -499,21 +499,21 @@ namespace sprite { namespace llvm
    * failure.
    */
   template<typename T>
-  inline ConstantWrapper<Constant>
-  operator%(TypeWrapper<Type> const & tp, T const & arg)
+  inline constantobj<Constant>
+  operator%(type const & tp, T const & arg)
   {
     using namespace generics;
-    GenericHandler<
-        /* Return type */     ConstantWrapper<Constant>
-      , /* Action on match */ Modulo
+    generic_handler<
+        /* Return type */     constantobj<Constant>
+      , /* Action on match */ modulo
 
         /*    LHS Match     Allowed RHSs */
         /*    ------------  ------------ */
-      , Case< IntegerType,  Null, uint64_t, StringRef, llvm_::APInt>
-      , Case< FPType,       Null, double, StringRef, llvm_::APFloat, NonFiniteValue>
-      , Case< StructType,   Null, AnyArrayRef, AnyTupleRef>
-      , Case< ArrayType,    Null, AnyArrayRef, AnyTupleRef>
-      , Case< PointerType,  Null, StringRef>
+      , case_< IntegerType,  null_arg, uint64_t, StringRef, llvm_::APInt>
+      , case_< FPType,       null_arg, double, StringRef, llvm_::APFloat, non_finite_value>
+      , case_< StructType,   null_arg, any_array_ref, any_tuple_ref>
+      , case_< ArrayType,    null_arg, any_array_ref, any_tuple_ref>
+      , case_< PointerType,  null_arg, StringRef>
 
       > const handler;
 
@@ -523,7 +523,7 @@ namespace sprite { namespace llvm
   /**
    * @brief Instantiates a constant data array.
    *
-   * This method takes a @p TypeFactory, not a @p TypeWrapper, as the left-hand
+   * This method takes a @p type_factory, not a @p typeobj, as the left-hand
    * side.  An array of the appropriate element type and length is deduced.
    *
    * The right-hand side type is constrained by @p ConstantDataArray, meaning
@@ -541,9 +541,9 @@ namespace sprite { namespace llvm
         || std::is_convertible<T, ArrayRef<float>>::value
         || std::is_convertible<T, ArrayRef<double>>::value
         || !std::is_convertible<T, StringRef>::value
-    , ConstantWrapper<Constant>
+    , constantobj<Constant>
     >::type
-  operator%(TypeFactory const & tf, T const & value)
+  operator%(type_factory const & tf, T const & value)
     { return wrap(tf, llvm_::ConstantDataArray::get(tf.context(), value)); }
 
   /**
@@ -554,8 +554,8 @@ namespace sprite { namespace llvm
    *
    * @snippet constants.cpp Instantiating constant data arrays
    */
-  inline ConstantWrapper<Constant>
-  operator%(TypeFactory const & tf, StringRef const & value)
+  inline constantobj<Constant>
+  operator%(type_factory const & tf, StringRef const & value)
     { return wrap(tf, llvm_::ConstantDataArray::getString(tf.context(), value)); }
 }}
 

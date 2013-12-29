@@ -16,9 +16,9 @@ int main()
 
   {
     /// [Creating basic types]
-    // Create a new module and TypeFactory.
+    // Create a new module and type_factory.
     llvm::Module * mod = new llvm::Module("mymodule", llvm::getGlobalContext());
-    TypeFactory const types(mod);
+    type_factory const types(mod);
 
     // Get a few basic types.
     auto const char_ = types.int_(8); // get the char type
@@ -36,7 +36,7 @@ int main()
 
   {
     /// [Creating array types]
-    TypeFactory const types;
+    type_factory const types;
     auto const i32 = types.int_(32);
     auto const i32_x2 = i32[2]; // get the i32[2] type
     /// [Creating array types]
@@ -45,7 +45,7 @@ int main()
 
   {
     /// [Creating pointer types]
-    TypeFactory const types;
+    type_factory const types;
     auto const i32 = types.int_(32);
     auto const i32_p = *i32; // get the i32 * type
     /// [Creating pointer types]
@@ -54,7 +54,7 @@ int main()
 
   {
     /// [Creating function types]
-    TypeFactory const types;
+    type_factory const types;
     auto const char_ = types.int_(8);
     auto const float_ = types.float_();
     auto const i32 = types.int_(32);
@@ -73,7 +73,7 @@ int main()
   {
     /// [Creating an anonymous struct]
     // A struct consisting of two 32-bit integers.
-    TypeFactory const types;
+    type_factory const types;
     auto const i32 = types.int_(32);
     auto const anon = types.struct_({i32, i32});
     /// [Creating an anonymous struct]
@@ -83,7 +83,7 @@ int main()
   {
     /// [Creating opaque structs]
     // Creates an opaque struct.
-    TypeFactory const types;
+    type_factory const types;
     auto const opaque = types.struct_("OpaqueStruct");
     /// [Creating opaque structs]
     (void) opaque;
@@ -91,7 +91,7 @@ int main()
 
   {
     /// [Creating structs]
-    TypeFactory const types;
+    type_factory const types;
 
     // Creates an empty (not opaque) struct.
     auto const empty = types.struct_("empty", {});

@@ -24,16 +24,16 @@ namespace sprite { namespace llvm
    *
    * It is assumed LLVM will manage the lifetime of the raw pointer.  An
    * instance of this type can be created directly, though normally it's easier
-   * to use one of the TypeFactory::wrap methods.
+   * to use one of the type_factory::wrap methods.
    */
-  template<typename T, typename Factory> class Wrapper
+  template<typename T, typename Factory> class object
   {
   protected:
 
     /// The wrapped pointer to an LLVM object.
     T * px;
 
-    /// The @p TypeFactory associated with this object.
+    /// The @p type_factory associated with this object.
     Factory fx;
 
   public:
@@ -49,23 +49,23 @@ namespace sprite { namespace llvm
         typename U
       , typename = typename std::enable_if<std::is_base_of<T,U>::value>::type
       >
-    Wrapper(U * p, Factory const & factory) : px(p), fx(factory) {}
+    object(U * p, Factory const & factory) : px(p), fx(factory) {}
 
     /// Implicitly-converting constructor.
     template<
         typename U
       , typename = typename std::enable_if<std::is_base_of<T,U>::value>::type
       >
-    Wrapper(Wrapper<U, Factory> const & arg)
+    object(object<U, Factory> const & arg)
       : px(arg.ptr()), fx(arg.factory())
     {}
 
     // Default copy and assignment are OK.
 
-    friend bool operator==(Wrapper const & lhs, Wrapper const & rhs)
+    friend bool operator==(object const & lhs, object const & rhs)
       { return lhs.px == rhs.px && lhs.fx == rhs.fx; }
 
-    friend bool operator!=(Wrapper const & lhs, Wrapper const & rhs)
+    friend bool operator!=(object const & lhs, object const & rhs)
       { return !(lhs == rhs); }
 
     /// Explicit conversion to @p bool.  True if the wrapped pointer is valid.
@@ -88,12 +88,12 @@ namespace sprite { namespace llvm
    * @brief Represents a basic block in the target program.
    *
    * This class is the destination for instructions added to the target program.
-   * A @p Context may be used to set the destination for several instructions.
+   * A @p context may be used to set the destination for several instructions.
    */
   template<typename Factory>
-  struct BasicBlockWrapper : Wrapper<llvm_::BasicBlock, Factory>
+  struct basic_block : object<llvm_::BasicBlock, Factory>
   {
-    typedef Wrapper<llvm_::BasicBlock, Factory> base_type;
+    typedef object<llvm_::BasicBlock, Factory> base_type;
     using base_type::base_type;
   };
 
@@ -106,11 +106,11 @@ namespace sprite { namespace llvm
      * right-hand side initializer expression, or as function call argument.
      */
     template<typename Factory>
-    struct RvalueSequence : std::vector<llvm_::Constant *>
+    struct rvalue_sequence : std::vector<llvm_::Constant *>
     {
       /// Adds a constant value to this sequence.
       template<typename T>
-      RvalueSequence & operator,(ConstantWrapper<T, Factory> const & rhs)
+      rvalue_sequence & operator,(constantobj<T, Factory> const & rhs)
       {
         this->push_back(rhs.ptr());
         return *this;
@@ -119,9 +119,9 @@ namespace sprite { namespace llvm
   }
 
   /**
-   * @brief Wrapper for @p llvm::Constant objects.
+   * @brief object for @p llvm::Constant objects.
    *
-   * Instances are returned when the @p % operator of @p TypeWrapper is
+   * Instances are returned when the @p % operator of @p typeobj is
    * used to create a constant value.
    *
    * Multiple constants can be joined with the @p , (comma) operator to form a
@@ -134,22 +134,22 @@ namespace sprite { namespace llvm
    * Implicitly converts to @p llvm::Constant *, so it can be used anywhere an
    * LLVM constant is expected.
    */
-  template<typename T, typename Factory> struct ConstantWrapper
-    : Wrapper<T, Factory>
+  template<typename T, typename Factory> struct constantobj
+    : object<T, Factory>
   {
-    using Wrapper<T, Factory>::Wrapper;
+    using object<T, Factory>::object;
 
     /// Creates a sequence of Constant objects, useful for aggregate initialization.
     template<typename U>
-    aux::RvalueSequence<Factory>
-    operator,(ConstantWrapper<U, Factory> const & rhs) const
+    aux::rvalue_sequence<Factory>
+    operator,(constantobj<U, Factory> const & rhs) const
     {
-      aux::RvalueSequence<Factory> seq;
+      aux::rvalue_sequence<Factory> seq;
       return (seq, *this, rhs);
     }
 
     /// Get the type of this constant.
-    TypeWrapper<Type, Factory> type() const
+    llvm::typeobj<Type, Factory> type() const
       { return wrap(this->factory(), (*this)->getType()); }
 
     /// Get the value of this constant as the specified type.
@@ -166,14 +166,14 @@ namespace sprite { namespace llvm
   /**
    * @brief Wraps an LLVM Instruction object.
    */
-  template<typename T, typename Factory> struct InstructionWrapper
-    : Wrapper<T, Factory>
+  template<typename T, typename Factory> struct instruction
+    : object<T, Factory>
   {
-    using Wrapper<T, Factory>::Wrapper;
+    using object<T, Factory>::object;
 
     template<typename U>
-    InstructionWrapper(U * u)
-      : Wrapper<T, Factory>(u, Factory()) {}
+    instruction(U * u)
+      : object<T, Factory>(u, Factory()) {}
 
   private:
 
@@ -190,17 +190,17 @@ namespace sprite { namespace llvm
    * be further indexed with @p operator[] or its address taken with the unary
    * @p operator&, or with the function @p address_inbounds.
    */
-  template<typename T, typename Factory> struct GlobalValueProxy
+  template<typename T, typename Factory> struct global_value_proxy
   {
-    GlobalValueProxy operator[](int64_t i) const;
+    global_value_proxy operator[](int64_t i) const;
 
     template<typename Index>
-    typename std::enable_if<aux::is_constarg<Index>(), GlobalValueProxy>::type
+    typename std::enable_if<aux::is_constarg<Index>(), global_value_proxy>::type
     operator[](Index const & i) const;
 
-    ConstantWrapper<Constant, Factory> operator&() const;
+    constantobj<Constant, Factory> operator&() const;
 
-    GlobalValueWrapper<T, Factory> const & get_base() const
+    globalobj<T, Factory> const & get_base() const
       { return base; }
 
     llvm_::SmallVector<Constant *, 4> const & get_indices() const
@@ -208,18 +208,18 @@ namespace sprite { namespace llvm
 
   private:
 
-    template<typename T_, typename Factory_> friend struct GlobalValueWrapper;
+    template<typename T_, typename Factory_> friend struct globalobj;
 
-    GlobalValueProxy(GlobalValueWrapper<T, Factory> const & base_)
+    global_value_proxy(globalobj<T, Factory> const & base_)
       : base(base_), indices()
     {}
 
-    GlobalValueWrapper<T, Factory> base;
+    globalobj<T, Factory> base;
     llvm_::SmallVector<Constant *, 4> indices;
   };
 
   /**
-   * @brief Wrapper for @p llvm::GlobalValue objects.
+   * @brief object for @p llvm::GlobalValue objects.
    *
    * Instances are returned by @ref def and the related functions @ref extern_,
    * @ref static_, and @ref inline_.  Note that a global value is characterized
@@ -232,10 +232,10 @@ namespace sprite { namespace llvm
    * Implicitly converts to @p llvm::GlobalValue *, so it can be used anywhere
    * an LLVM global value is expected.
    */
-  template<typename T, typename Factory> struct GlobalValueWrapper
-    : ConstantWrapper<T, Factory>
+  template<typename T, typename Factory> struct globalobj
+    : constantobj<T, Factory>
   {
-    using ConstantWrapper<T, Factory>::ConstantWrapper;
+    using constantobj<T, Factory>::constantobj;
 
     /**
      * @brief Sets the initializer for a global variable from a single value.
@@ -244,12 +244,12 @@ namespace sprite { namespace llvm
      * (i.e., anything LLVM will accept as an initializer for the given type).
      * For initializing aggregates, the "single value" could be a sequence of
      * constants created using the @p , (comma) operator of @ref
-     * ConstantWrapper.
+     * constantobj.
      *
      * @snippet defs.cpp Initializing a global from a value
      */
     template<typename U>
-    GlobalValueWrapper & operator=(U const & value)
+    globalobj & operator=(U const & value)
       { return this->set_initializer(value); }
 
     /**
@@ -262,7 +262,7 @@ namespace sprite { namespace llvm
      * @snippet defs.cpp Initializing a global from an aggregate
      */
     template<typename U>
-    GlobalValueWrapper & operator=(std::initializer_list<U> values)
+    globalobj & operator=(std::initializer_list<U> values)
       { return this->set_initializer(values); }
 
     /**
@@ -276,7 +276,7 @@ namespace sprite { namespace llvm
      * @snippet defs.cpp Initializing a global from heterogeneous data
      */
     template<typename...U>
-    GlobalValueWrapper & operator=(std::tuple<U...> const & values)
+    globalobj & operator=(std::tuple<U...> const & values)
       { return this->set_initializer(values); }
 
     /**
@@ -285,7 +285,7 @@ namespace sprite { namespace llvm
      * Synonymous with @p operator=.
      */
     template<typename U>
-    GlobalValueWrapper & set_initializer(U const & value);
+    globalobj & set_initializer(U const & value);
 
     /**
      * @brief Sets the initializer for a global variable using an aggregate.
@@ -293,7 +293,7 @@ namespace sprite { namespace llvm
      * Synonymous with @p operator=.
      */
     template<typename U>
-    GlobalValueWrapper &
+    globalobj &
     set_initializer(std::initializer_list<U> const & values);
 
     /**
@@ -302,16 +302,16 @@ namespace sprite { namespace llvm
      * Synonymous with @p operator=.
      */
     template<typename...U>
-    GlobalValueWrapper &
+    globalobj &
     set_initializer(std::tuple<U...> const &);
 
     /// Begins indexing into a global value.
-    GlobalValueProxy<T, Factory> operator[](int64_t i) const;
+    global_value_proxy<T, Factory> operator[](int64_t i) const;
 
     /// Begins indexing into a global value.
     template<typename Index>
     typename std::enable_if<
-        aux::is_constarg<Index>(), GlobalValueProxy<T, Factory>
+        aux::is_constarg<Index>(), global_value_proxy<T, Factory>
       >::type
     operator[](Index const & i) const;
 
@@ -320,28 +320,28 @@ namespace sprite { namespace llvm
      *
      * @snippet constexprs.cpp Computing addresses
      */
-    ConstantWrapper<Constant, Factory> operator&() const;
+    constantobj<Constant, Factory> operator&() const;
 
   private:
 
     static_assert(
-        std::is_base_of<llvm_::GlobalValue, T>::value
+        std::is_base_of<GlobalValue, T>::value
       , "Expected an LLVM GlobalValue object"
       );
   };
 
   /**
-   * @brief Specializes @p GlobalValueWrapper for functions.
+   * @brief Specializes @p globalobj for functions.
    */
   template<typename Factory>
-  struct GlobalValueWrapper<llvm_::Function, Factory>
-    : ConstantWrapper<llvm_::Function, Factory>
+  struct globalobj<Function, Factory>
+    : constantobj<Function, Factory>
   {
-    typedef ConstantWrapper<llvm_::Function, Factory> base_type;
+    typedef constantobj<Function, Factory> base_type;
     using base_type::base_type;
 
     /// Returns the function entry point.
-    BasicBlockWrapper<Factory> entry() const
+    basic_block<Factory> entry() const
     {
       assert(this->px);
       if(this->px->empty())
@@ -356,14 +356,14 @@ namespace sprite { namespace llvm
 
     // Inserts a call instruction in the current context.
     template<typename... Args>
-    InstructionWrapper<llvm_::CallInst, Factory>
+    instruction<llvm_::CallInst, Factory>
       operator()(Args &&... args) const;
   };
 
   /**
-   * @brief Wrapper for @p llvm::Type objects.
+   * @brief object for @p llvm::Type objects.
    *
-   * Instances are returned when @p TypeFactory produces a new type.
+   * Instances are returned when @p type_factory produces a new type.
    *
    * Elaborated types can be created by using the @p * operator (to create
    * pointers), the @p [] operator (to create arrays), or the @p () operator
@@ -376,24 +376,24 @@ namespace sprite { namespace llvm
    * Implicitly converts to llvm::Type *, so it can be used anywhere an LLVM
    * type is expected.
    */
-  template<typename T, typename Factory> struct TypeWrapper
-    : Wrapper<T, Factory>
+  template<typename T, typename Factory> struct typeobj
+    : object<T, Factory>
   {
-    using Wrapper<T, Factory>::Wrapper;
+    using object<T, Factory>::object;
 
     /**
      * @brief Creates a pointer type.
      *
      * @snippet types.cpp Creating pointer types
      */
-    TypeWrapper<PointerType, Factory> operator*() const;
+    typeobj<PointerType, Factory> operator*() const;
 
     /**
      * @brief Creates an array type.
      *
      * @snippet types.cpp Creating array types
      */
-    TypeWrapper<ArrayType, Factory> operator[](uint64_t size) const;
+    typeobj<ArrayType, Factory> operator[](uint64_t size) const;
 
     /**
      * @brief Creates a function type.
@@ -407,7 +407,7 @@ namespace sprite { namespace llvm
      * @snippet types.cpp Creating function types
      */
     template<typename... Args>
-    TypeWrapper<llvm_::FunctionType, Factory> operator()(Args &&... argtypes) const;
+    typeobj<FunctionType, Factory> operator()(Args &&... argtypes) const;
 
   private:
 

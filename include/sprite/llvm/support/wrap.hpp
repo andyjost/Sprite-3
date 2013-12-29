@@ -8,41 +8,41 @@ namespace sprite { namespace llvm
 
   /// Wraps an llvm_::Type object using the specified factory as context.
   template<typename T, typename Factory>
-  TypeWrapper<T,Factory> wrap(
-      Factory const & f, T * arg, typename aux::EnableIfLlvmType<T>::type=0
+  typeobj<T,Factory> wrap(
+      Factory const & f, T * arg, typename aux::enable_if_type<T>::type=0
     )
-  { return TypeWrapper<T, Factory>(arg, f); }
+  { return typeobj<T, Factory>(arg, f); }
 
   /// Wraps an llvm_::Constant object using the specified factory as context.
   template<typename T, typename Factory>
-  ConstantWrapper<T, Factory> wrap(
+  constantobj<T, Factory> wrap(
       Factory const & f, T * arg
-    , typename aux::EnableIfLlvmConstantNotGlobal<T>::type=0
+    , typename aux::enable_if_constant_not_global<T>::type=0
     )
-  { return ConstantWrapper<T, Factory>(arg, f); }
+  { return constantobj<T, Factory>(arg, f); }
 
-  /// Wraps an llvm_::GlobalValue object using the specified factory as context.
+  /// Wraps an GlobalValue object using the specified factory as context.
   template<typename T, typename Factory>
-  GlobalValueWrapper<T, Factory> wrap(
+  globalobj<T, Factory> wrap(
       Factory const & f, T * arg
-    , typename aux::EnableIfLlvmGlobalValue<T>::type=0
+    , typename aux::enable_if_global_value<T>::type=0
     )
-  { return GlobalValueWrapper<T, Factory>(arg, f); }
+  { return globalobj<T, Factory>(arg, f); }
 
   /// Wraps an llvm_::BasicBlock object.
   template<typename Factory>
-  BasicBlockWrapper<Factory> wrap(
+  basic_block<Factory> wrap(
       Factory const & f, llvm_::BasicBlock * arg
     )
-  { return BasicBlockWrapper<Factory>(arg, f); }
+  { return basic_block<Factory>(arg, f); }
 
   /// Wraps an llvm_::Instruction object.
   template<typename T, typename Factory>
-  InstructionWrapper<T> wrap(
+  instruction<T> wrap(
       Factory const & f, T * arg
-    , typename aux::EnableIfLlvmInstruction<T>::type=0
+    , typename aux::enable_if_instruction<T>::type=0
     )
-  { return InstructionWrapper<T, Factory>(arg, f); }
+  { return instruction<T, Factory>(arg, f); }
 
   /**
    * @brief Combines a @p wrap operation with @p cast.

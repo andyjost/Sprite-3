@@ -20,11 +20,11 @@ namespace llvm
   struct simplify_type<Wrapper_<T,Factory>>
     : std::enable_if<
           std::is_base_of<
-              sprite::llvm::Wrapper<T, Factory>, Wrapper_<T, Factory>
+              sprite::llvm::object<T, Factory>, Wrapper_<T, Factory>
             >::value
-        , sprite::llvm::Null
+        , sprite::llvm::null_arg
         >::type
-  { typedef sprite::llvm::Null SimpleType; };
+  { typedef sprite::llvm::null_arg SimpleType; };
 
   /// Disables llvm::cast_retty for wrappers.
   template<
@@ -37,9 +37,9 @@ namespace llvm
     >
     : std::enable_if<
           std::is_base_of<
-              sprite::llvm::Wrapper<From, Factory>, Wrapper_<From, Factory>
+              sprite::llvm::object<From, Factory>, Wrapper_<From, Factory>
             >::value
-        , sprite::llvm::Null
+        , sprite::llvm::null_arg
         >::type
   {};
 }
@@ -54,7 +54,7 @@ namespace sprite { namespace llvm
   #define SPRITE_CAST_RETURN                                              \
       typename std::enable_if<                                            \
           std::is_base_of<                                                \
-              sprite::llvm::Wrapper<Src, Factory>, Wrapper_<Src, Factory> \
+              sprite::llvm::object<Src, Factory>, Wrapper_<Src, Factory> \
             >::value                                                      \
         , Wrapper_<Tgt, Factory>                                          \
         >::type                                                           \

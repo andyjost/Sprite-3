@@ -13,11 +13,11 @@
 namespace sprite { namespace llvm { namespace aux
 {
   /**
-   * @brief Loads function arguments into an array; handles an @p Ellipsis as the final
+   * @brief Loads function arguments into an array; handles an @p ellipsis as the final
    * argument.
    */
   template<typename TargetType>
-  struct FunctionArgLoader
+  struct function_arg_loader
   {
     /// Processes a non-terminal argument.
     template<typename First, typename... Remaining>
@@ -34,18 +34,18 @@ namespace sprite { namespace llvm { namespace aux
       { return p; }
 
     /// Terminates with varargs.
-    TargetType ** operator()(TargetType** p, Ellipsis const &) const
+    TargetType ** operator()(TargetType** p, ellipsis const &) const
       { return p; }
   };
 }}}
 
 namespace sprite { namespace llvm
 {
-  // ====== Implementation details for TypeWrapper.
+  // ====== Implementation details for typeobj.
 
   template<typename T, typename Factory>
-  TypeWrapper<PointerType, Factory>
-  TypeWrapper<T, Factory>::operator*() const
+  typeobj<PointerType, Factory>
+  typeobj<T, Factory>::operator*() const
   {
     return wrap(
         this->factory(), (*this)->getPointerTo(this->factory().addrSpace())
@@ -53,17 +53,17 @@ namespace sprite { namespace llvm
   }
     
   template<typename T, typename Factory>
-  TypeWrapper<ArrayType, Factory>
-  TypeWrapper<T, Factory>::operator[](uint64_t size) const
+  typeobj<ArrayType, Factory>
+  typeobj<T, Factory>::operator[](uint64_t size) const
     { return wrap(this->factory(), ArrayType::get(this->ptr(), size)); }
 
   template<typename T, typename Factory>
   template<typename... Args>
-  TypeWrapper<llvm_::FunctionType, Factory>
-  TypeWrapper<T, Factory>::operator()(Args &&... argtypes) const
+  typeobj<FunctionType, Factory>
+  typeobj<T, Factory>::operator()(Args &&... argtypes) const
   {
     Type * tmp[sizeof...(argtypes)];
-    Type ** end = aux::FunctionArgLoader<Type>()(&tmp[0], argtypes...);
+    Type ** end = aux::function_arg_loader<Type>()(&tmp[0], argtypes...);
     ArrayRef<Type*> args(&tmp[0], end);
     bool const varargs = (args.size() == sizeof...(argtypes) - 1);
     assert(varargs || args.size() == sizeof...(argtypes));
@@ -72,19 +72,19 @@ namespace sprite { namespace llvm
 
   template<typename Factory>
   template<typename... Args>
-  InstructionWrapper<llvm_::CallInst, Factory>
-  GlobalValueWrapper<llvm_::Function, Factory>::operator()(Args &&... args) const
+  instruction<llvm_::CallInst, Factory>
+  globalobj<Function, Factory>::operator()(Args &&... args) const
   {
     Value * tmp[sizeof...(args)];
-    Value ** end = aux::FunctionArgLoader<Value>()(&tmp[0], args...);
+    Value ** end = aux::function_arg_loader<Value>()(&tmp[0], args...);
     ArrayRef<Value*> args_(&tmp[0], end);
     if(args_.size() != sizeof...(args))
     {
-      throw ParameterError(
+      throw parameter_error(
           "An ellipsis cannot be supplied to a function call."
         );
     }
-    ContextFrame<Factory> const & cxt = activeContext();
+    context_frame<Factory> const & cxt = active_context();
     return wrap(cxt.factory(), cxt.builder().CreateCall(this->px, args_));
   }
 }}

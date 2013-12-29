@@ -12,7 +12,7 @@
 namespace sprite { namespace llvm { namespace aux
 {
   /// Enables a template only when T can be converted to llvm::Type.
-  template<typename T> using EnableIfLlvmType = 
+  template<typename T> using enable_if_type = 
       std::enable_if<std::is_convertible<T*, llvm_::Type*>::value, void *>
     ;
 
@@ -23,10 +23,10 @@ namespace sprite { namespace llvm { namespace aux
    * Does not permit llvm::GlobalValue, which is a Constant, but has a more
    * specific test.
    */
-  template<typename T> using EnableIfLlvmConstantNotGlobal =
+  template<typename T> using enable_if_constant_not_global =
       std::enable_if<
           std::is_convertible<T*, llvm_::Constant*>::value
-              && !std::is_convertible<T*, llvm_::GlobalValue*>::value
+              && !std::is_convertible<T*, GlobalValue*>::value
         , void *
         >
     ;
@@ -35,19 +35,19 @@ namespace sprite { namespace llvm { namespace aux
    * @brief Enables a template only when T can be converted to
    * llvm::Instruction.
    */
-  template<typename T> using EnableIfLlvmInstruction =
+  template<typename T> using enable_if_instruction =
       std::enable_if<
           std::is_convertible<T*, llvm_::Instruction*>::value
         , void *
         >
     ;
   /// Enables a template only when T can be converted to llvm::GlobalValue.
-  template<typename T> using EnableIfLlvmGlobalValue = 
-      std::enable_if<std::is_convertible<T*, llvm_::GlobalValue*>::value, void *>
+  template<typename T> using enable_if_global_value = 
+      std::enable_if<std::is_convertible<T*, GlobalValue*>::value, void *>
     ;
 
   /// Enables a template only when T can be converted to llvm::StringRef.
-  template<typename T> using EnableIfConvertibleToString =
+  template<typename T> using enable_if_convertible_to_string =
       std::enable_if<
           std::is_convertible<T, llvm_::StringRef>::value
         , void *
@@ -63,17 +63,17 @@ namespace sprite { namespace llvm { namespace aux
     ;
 
   /// Enables a template only when T can be converted to uint64_t;
-  template<typename T> using EnableIfConvertibleToInt64 =
+  template<typename T> using enable_if_convertible_to_int64 =
       std::enable_if<std::is_convertible<T, uint64_t>::value, void *>
     ;
 
   /// Disables a template only when T can be converted to uint64_t;
-  template<typename T> using DisableIfConvertibleToInt64 =
+  template<typename T> using disable_if_convertible_to_int64 =
       std::enable_if<!std::is_convertible<T, uint64_t>::value, void *>
     ;
 
   /// Enables a template only when T can be converted to an array of Constant *.
-  template<typename T> using EnableIfConvertibleToConstantArray =
+  template<typename T> using enable_if_convertible_to_constant_array =
       std::enable_if<
           std::is_convertible<T, llvm_::ArrayRef<llvm_::Constant*>>::value
         , void *
@@ -81,17 +81,17 @@ namespace sprite { namespace llvm { namespace aux
     ;
 
   /// Enables a template only when T can be converted to an array of Value *.
-  template<typename T> using EnableIfConvertibleToValueArray =
+  template<typename T> using enable_if_convertible_to_value_array =
       std::enable_if<
-          std::is_convertible<T, llvm_::ArrayRef<llvm_::Value*>>::value
+          std::is_convertible<T, llvm_::ArrayRef<Function*>>::value
         , void *
         >
     ;
 
   // Extract an LLVM api pointer from any suitable object.
-  template<typename T> T * ptr(Wrapper<T> const & tp) { return tp.ptr(); }
+  template<typename T> T * ptr(object<T> const & tp) { return tp.ptr(); }
   template<typename T>
-    auto ptr(aux::ArgWithFlags<T> const & x) -> decltype(ptr(x.arg()))
+    auto ptr(aux::arg_with_flags<T> const & x) -> decltype(ptr(x.arg()))
     { return ptr(x.arg()); }
   template<typename T> T * ptr(T * t) { return t; }
   // This version allows is_constarg to work for arguments it will reject.  It

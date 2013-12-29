@@ -11,16 +11,16 @@
 #define SPRITE_INSTRUCTION_PREAMBLE_WRAPPED(RetTy, ArgTy)       \
     template<typename Arg>                                      \
     inline typename std::enable_if<                             \
-        std::is_convertible<Arg, ConstantWrapper<ArgTy>>::value \
-      , InstructionWrapper<RetTy>                               \
+        std::is_convertible<Arg, constantobj<ArgTy>>::value \
+      , instruction<RetTy>                               \
       >::type                                                   \
   /**/
 
 #define SPRITE_INSTRUCTION_PREAMBLE_UNWRAPPED(RetTy, ArgTy)      \
     template<typename Arg>                                       \
     inline typename std::enable_if<                              \
-        !std::is_convertible<Arg, ConstantWrapper<ArgTy>>::value \
-      , InstructionWrapper<RetTy>                                \
+        !std::is_convertible<Arg, constantobj<ArgTy>>::value \
+      , instruction<RetTy>                                \
       >::type                                                    \
   /**/
 
@@ -29,16 +29,16 @@ namespace sprite { namespace llvm
   /**
    * @brief Inserts a return instruction into the active context.
    */
-  InstructionWrapper<llvm_::ReturnInst> return_(Value * value)
+  instruction<llvm_::ReturnInst> return_(Value * value)
   {
-    auto const & cxt = activeContext();
+    auto const & cxt = active_context();
     return wrap(cxt.factory(), cxt.builder().CreateRet(value));
   }
 
   /**
    * @brief Inserts a return instruction into the active context.
    *
-   * The argument is a @p ConstantWrapper.
+   * The argument is a @p constantobj.
    */
   SPRITE_INSTRUCTION_PREAMBLE_WRAPPED(llvm_::ReturnInst, Constant)
   return_(Arg const & arg)
@@ -47,14 +47,14 @@ namespace sprite { namespace llvm
   /**
    * @brief Inserts a return instruction into the active context.
    *
-   * The argument is not a @p ConstantWrapper.  It is converted to a @p Value
+   * The argument is not a @p constantobj.  It is converted to a @p Value
    * @p * by constructing the active function's return type using the supplied
    * value.
    */
   SPRITE_INSTRUCTION_PREAMBLE_UNWRAPPED(llvm_::ReturnInst, Constant)
   return_(Arg const & arg)
   {
-    auto const & cxt = activeContext();
+    auto const & cxt = active_context();
     auto const retty = wrap(
         cxt.factory()
       , cxt.builder().GetInsertBlock()->getParent()->getReturnType()

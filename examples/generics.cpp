@@ -13,12 +13,12 @@ int main()
 
   // Note that the generic type Type in each wrapper makes operator% go through
   // the generic dispatch.
-  TypeFactory const types;
-  TypeWrapper<Type> bool_ = types.int_(1);
-  TypeWrapper<Type> char_ = types.int_(8);
-  TypeWrapper<Type> i32 = types.int_(32);
-  TypeWrapper<Type> float_ = types.float_();
-  TypeWrapper<Type> double_ = types.double_();
+  type_factory const types;
+  type bool_ = types.int_(1);
+  type char_ = types.int_(8);
+  type i32 = types.int_(32);
+  type float_ = types.float_();
+  type double_ = types.double_();
 
   #define MYCHECK(expr, expected)                            \
       {                                                      \

@@ -14,6 +14,7 @@
 namespace llvm
 {
   // Derived types.
+  class Type;
   class ArrayType;
   class FunctionType;
   class IntegerType;
@@ -28,6 +29,12 @@ namespace llvm
   class ConstantInt;
   class ConstantPointerNull;
   class ConstantStruct;
+
+  // Values.
+  class Value;
+  class Function;
+  class GlobalValue;
+  class Instruction;
 }
 
 namespace sprite { namespace llvm
@@ -36,19 +43,24 @@ namespace sprite { namespace llvm
   namespace llvm_ = ::llvm;
 
   // Types.
+  using llvm_::Type;
   using llvm_::ArrayType;
   using llvm_::FunctionType;
   using llvm_::IntegerType;
   using llvm_::PointerType;
   using llvm_::StructType;
-  using llvm_::Type;
-  using llvm_::Value;
 
   SPRITE_DECLARE_TYPENAME(ArrayType)
   SPRITE_DECLARE_TYPENAME(FunctionType)
   SPRITE_DECLARE_TYPENAME(IntegerType)
   SPRITE_DECLARE_TYPENAME(PointerType)
   SPRITE_DECLARE_TYPENAME(StructType)
+
+  // Values.
+  using llvm_::Value;
+  using llvm_::Function;
+  using llvm_::GlobalValue;
+  using llvm_::Instruction;
 
   /// Returns a human-readable version of an LLVM type name.
   inline std::string typename_(Type & tp)
@@ -69,7 +81,7 @@ namespace sprite { namespace llvm
    * LLVM does not define a type class for floating-point types as it does for
    * other types such as @p IntegerType.  Instead, floating-point types are
    * handled using the generic class @p Type.  That poses a real problem for @p
-   * TypeWrapper, which uses the type of the wrapped object to activate the
+   * typeobj, which uses the type of the wrapped object to activate the
    * relevant operators.
    *
    * To work around that problem, this type is invented.  When a floating-point
@@ -129,7 +141,5 @@ namespace sprite { namespace llvm
     ArrayRef(std::initializer_list<T> && args)
       : llvm_::ArrayRef<T>(args.begin(), args.size())
     {}
-
-
   };
 }}

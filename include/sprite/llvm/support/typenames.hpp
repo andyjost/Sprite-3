@@ -32,12 +32,12 @@ namespace sprite { namespace llvm
     { return aux::demangle(typeid(arg).name()); }
 
   /// Returns a human-readable name for certain types.
-  template<typename T> struct Typename
+  template<typename T> struct typename_impl
     { static std::string name() { return aux::demangle(typeid(T).name()); } };
 
-  /// Declares a specialization of @p Typename.
+  /// Declares a specialization of @p typename_impl.
   #define SPRITE_DECLARE_TYPENAME(name_)                  \
-      template<> struct Typename<name_>                   \
+      template<> struct typename_impl<name_>                   \
         { static std::string name() { return #name_; } }; \
     /**/
 

@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Defines class Context.
+ * @brief Defines class context.
  */
 
 #pragma once
@@ -10,10 +10,10 @@
 
 namespace sprite { namespace llvm
 {
-  template<typename Factory=TypeFactory>
-  struct ContextFrame
+  template<typename Factory=type_factory>
+  struct context_frame
   {
-    ContextFrame(llvm_::IRBuilder<> const & b, Factory const & f)
+    context_frame(llvm_::IRBuilder<> const & b, Factory const & f)
       : m_builder(b), m_factory(f)
     {}
 
@@ -38,26 +38,26 @@ namespace sprite { namespace llvm
    * instance of Scope inside it, and, finally, specifying the commands as a
    * series of simple statements.
    *
-   * @snippet hello_world.cpp Using Context
+   * @snippet hello_world.cpp Using context
    */
-  class Context
+  class context
   {
   public:
-    Context(BasicBlockWrapper<TypeFactory> const &);
-    Context(Context &&);
-    ~Context();
-    Context(Context const &) = delete;
-    Context & operator=(Context const &) = delete;
+    context(basic_block<type_factory> const &);
+    context(context &&);
+    ~context();
+    context(context const &) = delete;
+    context & operator=(context const &) = delete;
 
   private:
     // Points to the frame in the context list associated with this context.
-    std::list<ContextFrame<>>::iterator frame;
+    std::list<context_frame<>>::iterator frame;
   };
 
   /**
    * @brief Returns the active context (where instructions will be added).
    *
-   * Throws @p RuntimeError if there is no active context.
+   * Throws @p runtime_error if there is no active context.
    */
-  ContextFrame<> const & activeContext();
+  context_frame<> const & active_context();
 }}
