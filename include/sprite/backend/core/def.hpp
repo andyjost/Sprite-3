@@ -14,7 +14,7 @@ namespace sprite { namespace backend
   /**
    * @brief Declares a function with user-specified linkage.
    */
-  inline globalobj<Function> def(
+  inline function def(
       GlobalValue::LinkageTypes linkage
     , function_type const & type
     , twine const & name = ""
@@ -80,21 +80,16 @@ namespace sprite { namespace backend
    *
    * @snippet defs.cpp Using extern_
    */
-  inline global extern_(
-      type const & type
-    , twine const & name = ""
-    )
+  inline global extern_(type const & type, twine const & name = "")
   { return def(GlobalValue::ExternalLinkage, type, name); }
 
   /**
    * @brief Version of extern_ that takes a return type specifier.
    */
-  template<typename ReturnType>
-  inline globalobj<ReturnType> extern_(
-      type const & type
-    , twine const & name = ""
-    )
-  { return dyn_cast<ReturnType>(extern_(type, name)); }
+  template<typename SymbolType>
+  inline globalobj<SymbolType>
+  extern_(type const & type, twine const & name = "")
+    { return dyn_cast<SymbolType>(extern_(type, name)); }
 
   /**
    * @brief Declares a global variable or function with internal linkage.

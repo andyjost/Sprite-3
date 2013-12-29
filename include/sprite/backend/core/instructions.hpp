@@ -8,20 +8,20 @@
 #include "sprite/backend/core/wrappers.hpp"
 #include "sprite/backend/operators/create.hpp"
 
-#define SPRITE_INSTRUCTION_PREAMBLE_WRAPPED(RetTy, ArgTy)       \
-    template<typename Arg>                                      \
-    inline typename std::enable_if<                             \
+#define SPRITE_INSTRUCTION_PREAMBLE_WRAPPED(RetTy, ArgTy)   \
+    template<typename Arg>                                  \
+    inline typename std::enable_if<                         \
         std::is_convertible<Arg, constantobj<ArgTy>>::value \
-      , instruction<RetTy>                               \
-      >::type                                                   \
+      , instruction<RetTy>                                  \
+      >::type                                               \
   /**/
 
-#define SPRITE_INSTRUCTION_PREAMBLE_UNWRAPPED(RetTy, ArgTy)      \
-    template<typename Arg>                                       \
-    inline typename std::enable_if<                              \
+#define SPRITE_INSTRUCTION_PREAMBLE_UNWRAPPED(RetTy, ArgTy)  \
+    template<typename Arg>                                   \
+    inline typename std::enable_if<                          \
         !std::is_convertible<Arg, constantobj<ArgTy>>::value \
-      , instruction<RetTy>                                \
-      >::type                                                    \
+      , instruction<RetTy>                                   \
+      >::type                                                \
   /**/
 
 namespace sprite { namespace backend

@@ -126,8 +126,7 @@ namespace sprite { namespace backend
    *
    * @snippet constexprs.cpp alignof_
    */
-  inline constantobj<Constant>
-  alignof_(type const & tp)
+  inline constant alignof_(type const & tp)
     { return wrap(tp.factory(), ConstantExpr::getAlignOf(tp.ptr())); }
 
   // No wrapper for constant expression getSizeOf.  Use i64 % sizeof_(ty)
@@ -138,8 +137,7 @@ namespace sprite { namespace backend
    *
    * @snippet constexprs.cpp offsetof_
    */
-  inline constantobj<Constant>
-  offsetof_(type const & tp, unsigned FieldNo)
+  inline constant offsetof_(type const & tp, unsigned FieldNo)
   {
     auto const p = dyn_cast<StructType>(tp);
     return wrap(tp.factory(), ConstantExpr::getOffsetOf(p.ptr(), FieldNo));
@@ -150,11 +148,8 @@ namespace sprite { namespace backend
    *
    * @snippet constexprs.cpp offsetof_
    */
-  inline constantobj<Constant>
-  offsetof_(type const & tp, Constant * FieldNo)
-  {
-    return wrap(tp.factory(), ConstantExpr::getOffsetOf(tp.ptr(), FieldNo));
-  }
+  inline constant offsetof_(type const & tp, Constant * FieldNo)
+   { return wrap(tp.factory(), ConstantExpr::getOffsetOf(tp.ptr(), FieldNo)); }
 
   /**
    * @brief Integer or floating-point negation.
@@ -162,7 +157,7 @@ namespace sprite { namespace backend
    * @snippet constexprs.cpp neg
    */
   template<typename Arg>
-  inline constantobj<Constant> operator-(aux::arg_with_flags<Arg> const & c)
+  inline constant operator-(aux::arg_with_flags<Arg> const & c)
   {
     if(aux::has_arg_types<ConstantInt>(c))
     {
@@ -189,7 +184,7 @@ namespace sprite { namespace backend
    *
    * @snippet constexprs.cpp neg
    */
-  inline constantobj<Constant> operator-(constantobj<Constant> const & c)
+  inline constant operator-(constant const & c)
     { return -aux::operator_flags()(c); }
 
   /**
@@ -197,7 +192,7 @@ namespace sprite { namespace backend
    *
    * @snippet constexprs.cpp inv
    */
-  inline constantobj<Constant> operator~(constantobj<Constant> const & c)
+  inline constant operator~(constant const & c)
   {
     if(aux::has_arg_types<ConstantInt>(c))
       return wrap(c.factory(), ConstantExpr::getNot(ptr(c)));
@@ -209,45 +204,39 @@ namespace sprite { namespace backend
    *
    * @snippet constexprs.cpp pos
    */
-  inline constantobj<Constant> operator+(constantobj<Constant> const & c)
+  inline constant operator+(constant const & c)
     { return c; }
 
   namespace aux
   {
     // These functions help binary operators accept any combination of Constant
     // * and constantobj, so long as at least one argument is a wrapper.
-    inline constantobj<Constant>
-    getlhs(constantobj<Constant> const & lhs, void *)
+    inline constant getlhs(constant const & lhs, void *)
       { return lhs; }
 
     template<typename T>
-    inline constantobj<Constant>
-    getlhs(constantobj<Constant> const & lhs, object<T> const &)
+    inline constant getlhs(constant const & lhs, object<T> const &)
       { return lhs; }
 
     template<typename T>
-    inline constantobj<Constant>
-    getlhs(Constant * lhs, object<T> const & rhs)
+    inline constant getlhs(Constant * lhs, object<T> const & rhs)
       { return wrap(rhs.factory(), lhs); }
 
-    inline constantobj<Constant>
-    getrhs(constantobj<Constant> const & lhs, Constant * rhs)
+    inline constant getrhs(constant const & lhs, Constant * rhs)
       { return wrap(lhs.factory(), rhs); }
 
     inline type
-    getrhs(constantobj<Constant> const & lhs, Type * rhs)
+    getrhs(constant const & lhs, Type * rhs)
       { return wrap(lhs.factory(), rhs); }
 
-    inline constantobj<Constant>
-    getrhs(constantobj<Constant> const &, constantobj<Constant> const & rhs)
+    inline constant getrhs(constant const &, constant const & rhs)
       { return rhs; }
 
     inline type
-    getrhs(constantobj<Constant> const &, type const & rhs)
+    getrhs(constant const &, type const & rhs)
       { return rhs; }
 
-    inline constantobj<Constant>
-    getrhs(Constant *, constantobj<Constant> const & rhs)
+    inline constant getrhs(Constant *, constant const & rhs)
       { return rhs; }
 
     inline type
@@ -262,7 +251,7 @@ namespace sprite { namespace backend
    */
   template<typename Lhs, typename Arg>
   inline typename std::enable_if<
-      aux::is_constarg<Lhs>(), constantobj<Constant>
+      aux::is_constarg<Lhs>(), constant
     >::type
   operator+(Lhs const & lhs, aux::arg_with_flags<Arg> const & rhs)
   {
@@ -294,12 +283,12 @@ namespace sprite { namespace backend
    */
   template<typename Lhs, typename Rhs>
   inline typename std::enable_if<
-      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), constantobj<Constant>
+      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), constant
     >::type
   operator+(Lhs const & lhs, Rhs const & rhs)
   {
-    constantobj<Constant> lhs_ = aux::getlhs(lhs, rhs);
-    constantobj<Constant> rhs_ = aux::getrhs(lhs, rhs);
+    constant lhs_ = aux::getlhs(lhs, rhs);
+    constant rhs_ = aux::getrhs(lhs, rhs);
     return lhs_ +aux::operator_flags() (rhs_);
   }
 
@@ -309,9 +298,7 @@ namespace sprite { namespace backend
    * @snippet constexprs.cpp sub
    */
   template<typename Lhs, typename Arg>
-  inline typename std::enable_if<
-      aux::is_constarg<Lhs>(), constantobj<Constant>
-    >::type
+  inline typename std::enable_if<aux::is_constarg<Lhs>(), constant>::type
   operator-(Lhs const & lhs, aux::arg_with_flags<Arg> const & rhs)
   {
     if(aux::has_arg_types<ConstantInt>(lhs, rhs))
@@ -342,12 +329,12 @@ namespace sprite { namespace backend
    */
   template<typename Lhs, typename Rhs>
   inline typename std::enable_if<
-      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), constantobj<Constant>
+      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), constant
     >::type
   operator-(Lhs const & lhs, Rhs const & rhs)
   {
-    constantobj<Constant> lhs_ = aux::getlhs(lhs, rhs);
-    constantobj<Constant> rhs_ = aux::getrhs(lhs, rhs);
+    constant lhs_ = aux::getlhs(lhs, rhs);
+    constant rhs_ = aux::getrhs(lhs, rhs);
     return lhs_ -aux::operator_flags() (rhs_);
   }
 
@@ -357,9 +344,7 @@ namespace sprite { namespace backend
    * @snippet constexprs.cpp mul
    */
   template<typename Lhs, typename Arg>
-  inline typename std::enable_if<
-      aux::is_constarg<Lhs>(), constantobj<Constant>
-    >::type
+  inline typename std::enable_if<aux::is_constarg<Lhs>(), constant>::type
   operator*(Lhs const & lhs, aux::arg_with_flags<Arg> const & rhs)
   {
     if(aux::has_arg_types<ConstantInt>(lhs, rhs))
@@ -390,12 +375,12 @@ namespace sprite { namespace backend
    */
   template<typename Lhs, typename Rhs>
   inline typename std::enable_if<
-      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), constantobj<Constant>
+      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), constant
     >::type
   operator*(Lhs const & lhs, Rhs const & rhs)
   {
-    constantobj<Constant> lhs_ = aux::getlhs(lhs, rhs);
-    constantobj<Constant> rhs_ = aux::getrhs(lhs, rhs);
+    constant lhs_ = aux::getlhs(lhs, rhs);
+    constant rhs_ = aux::getrhs(lhs, rhs);
     return lhs_ *aux::operator_flags() (rhs_);
   }
 
@@ -405,9 +390,7 @@ namespace sprite { namespace backend
    * @snippet constexprs.cpp div
    */
   template<typename Lhs, typename Arg>
-  typename std::enable_if<
-      aux::is_constarg<Lhs>(), constantobj<Constant>
-    >::type
+  typename std::enable_if<aux::is_constarg<Lhs>(), constant>::type
   operator/(Lhs const & lhs, aux::arg_with_flags<Arg> const & rhs)
   {
     if(aux::has_arg_types<ConstantInt>(lhs, rhs))
@@ -454,12 +437,12 @@ namespace sprite { namespace backend
    */
   template<typename Lhs, typename Rhs>
   inline typename std::enable_if<
-      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), constantobj<Constant>
+      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), constant
     >::type
   operator/(Lhs const & lhs, Rhs const & rhs)
   {
-    constantobj<Constant> lhs_ = aux::getlhs(lhs, rhs);
-    constantobj<Constant> rhs_ = aux::getrhs(lhs, rhs);
+    constant lhs_ = aux::getlhs(lhs, rhs);
+    constant rhs_ = aux::getrhs(lhs, rhs);
     return lhs_ /aux::operator_flags() (rhs_);
   }
 
@@ -469,9 +452,7 @@ namespace sprite { namespace backend
    * @snippet constexprs.cpp rem
    */
   template<typename Lhs, typename Arg>
-  typename std::enable_if<
-      aux::is_constarg<Lhs>(), constantobj<Constant>
-    >::type
+  typename std::enable_if<aux::is_constarg<Lhs>(), constant>::type
   operator%(Lhs const & lhs, aux::arg_with_flags<Arg> const & rhs)
   {
     if(aux::has_arg_types<ConstantInt>(lhs, rhs))
@@ -514,12 +495,12 @@ namespace sprite { namespace backend
    */
   template<typename Lhs, typename Rhs>
   inline typename std::enable_if<
-      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), constantobj<Constant>
+      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), constant
     >::type
   operator%(Lhs const & lhs, Rhs const & rhs)
   {
-    constantobj<Constant> lhs_ = aux::getlhs(lhs, rhs);
-    constantobj<Constant> rhs_ = aux::getrhs(lhs, rhs);
+    constant lhs_ = aux::getlhs(lhs, rhs);
+    constant rhs_ = aux::getrhs(lhs, rhs);
     return lhs_ %aux::operator_flags() (rhs_);
   }
 
@@ -530,12 +511,12 @@ namespace sprite { namespace backend
    */
   template<typename Lhs, typename Rhs>
   inline typename std::enable_if<
-      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), constantobj<Constant>
+      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), constant
     >::type
   operator&(Lhs const & lhs, Rhs const & rhs)
   {
-    constantobj<Constant> lhs_ = aux::getlhs(lhs, rhs);
-    constantobj<Constant> rhs_ = aux::getrhs(lhs, rhs);
+    constant lhs_ = aux::getlhs(lhs, rhs);
+    constant rhs_ = aux::getrhs(lhs, rhs);
 
     if(aux::has_arg_types<ConstantInt>(lhs_, rhs_))
     {
@@ -554,12 +535,12 @@ namespace sprite { namespace backend
    */
   template<typename Lhs, typename Rhs>
   inline typename std::enable_if<
-      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), constantobj<Constant>
+      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), constant
     >::type
   operator|(Lhs const & lhs, Rhs const & rhs)
   {
-    constantobj<Constant> lhs_ = aux::getlhs(lhs, rhs);
-    constantobj<Constant> rhs_ = aux::getrhs(lhs, rhs);
+    constant lhs_ = aux::getlhs(lhs, rhs);
+    constant rhs_ = aux::getrhs(lhs, rhs);
 
     if(aux::has_arg_types<ConstantInt>(lhs_, rhs_))
     {
@@ -578,12 +559,12 @@ namespace sprite { namespace backend
    */
   template<typename Lhs, typename Rhs>
   inline typename std::enable_if<
-      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), constantobj<Constant>
+      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), constant
     >::type
   operator^(Lhs const & lhs, Rhs const & rhs)
   {
-    constantobj<Constant> lhs_ = aux::getlhs(lhs, rhs);
-    constantobj<Constant> rhs_ = aux::getrhs(lhs, rhs);
+    constant lhs_ = aux::getlhs(lhs, rhs);
+    constant rhs_ = aux::getrhs(lhs, rhs);
 
     if(aux::has_arg_types<ConstantInt>(lhs_, rhs_))
     {
@@ -601,9 +582,7 @@ namespace sprite { namespace backend
    * @snippet constexprs.cpp shl
    */
   template<typename Lhs, typename Arg>
-  inline typename std::enable_if<
-      aux::is_constarg<Lhs>(), constantobj<Constant>
-    >::type
+  inline typename std::enable_if<aux::is_constarg<Lhs>(), constant>::type
   operator<<(Lhs const & lhs, aux::arg_with_flags<Arg> const & rhs)
   {
     if(aux::has_arg_types<ConstantInt>(lhs, rhs))
@@ -626,12 +605,12 @@ namespace sprite { namespace backend
    */
   template<typename Lhs, typename Rhs>
   inline typename std::enable_if<
-      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), constantobj<Constant>
+      aux::is_constarg<Lhs>() && aux::is_constarg<Rhs>(), constant
     >::type
   operator<<(Lhs const & lhs, Rhs const & rhs)
   {
-    constantobj<Constant> lhs_ = aux::getlhs(lhs, rhs);
-    constantobj<Constant> rhs_ = aux::getrhs(lhs, rhs);
+    constant lhs_ = aux::getlhs(lhs, rhs);
+    constant rhs_ = aux::getrhs(lhs, rhs);
     return lhs_ <<aux::operator_flags() (rhs_);
   }
 
@@ -641,9 +620,7 @@ namespace sprite { namespace backend
    * @snippet constexprs.cpp shr
    */
   template<typename Lhs, typename Arg>
-  inline typename std::enable_if<
-      aux::is_constarg<Lhs>(), constantobj<Constant>
-    >::type
+  inline typename std::enable_if<aux::is_constarg<Lhs>(), constant>::type
   operator>>(Lhs const & lhs, aux::arg_with_flags<Arg> const & rhs)
   {
     if(aux::has_arg_types<ConstantInt>(lhs, rhs))
@@ -684,7 +661,7 @@ namespace sprite { namespace backend
    * @snippet constexprs.cpp typecast
    */
   template<typename Arg, typename Rhs>
-  typename std::enable_if<aux::is_typearg<Rhs>(), constantobj<Constant>>::type
+  typename std::enable_if<aux::is_typearg<Rhs>(), constant>::type
   typecast(aux::arg_with_flags<Arg> const & lhs, Rhs const & rhs)
   {
     Type * const type = ptr(rhs);
@@ -850,11 +827,11 @@ namespace sprite { namespace backend
    */
   template<typename Lhs, typename Rhs>
   inline typename std::enable_if<
-      aux::is_constarg<Lhs>() && aux::is_typearg<Rhs>(), constantobj<Constant>
+      aux::is_constarg<Lhs>() && aux::is_typearg<Rhs>(), constant
     >::type
   typecast(Lhs const & lhs, Rhs const & rhs)
   {
-    constantobj<Constant> lhs_ = aux::getlhs(lhs, rhs);
+    constant lhs_ = aux::getlhs(lhs, rhs);
     type rhs_ = aux::getrhs(lhs, rhs);
     return typecast(aux::operator_flags()(lhs_), rhs_);
   }
@@ -866,11 +843,11 @@ namespace sprite { namespace backend
    */
   template<typename Lhs, typename Rhs>
   inline typename std::enable_if<
-      aux::is_constarg<Lhs>() && aux::is_typearg<Rhs>(), constantobj<Constant>
+      aux::is_constarg<Lhs>() && aux::is_typearg<Rhs>(), constant
     >::type
   bitcast(Lhs const & lhs, Rhs const & rhs)
   {
-    constantobj<Constant> lhs_ = aux::getlhs(lhs, rhs);
+    constant lhs_ = aux::getlhs(lhs, rhs);
     return wrap(
         lhs_.factory()
       , ConstantExpr::getBitCast(ptr(lhs_), ptr(rhs))
@@ -886,11 +863,11 @@ namespace sprite { namespace backend
   inline typename std::enable_if<
       aux::is_constarg<If>() && aux::is_constarg<Then>()
         && aux::is_constarg<Else>()
-    , constantobj<Constant>
+    , constant
     >::type
   select(If const & if_, Then const & then, Else const & else_)
   {
-    constantobj<Constant> if__ = aux::getlhs(aux::getlhs(if_, then), else_);
+    constant if__ = aux::getlhs(aux::getlhs(if_, then), else_);
     return wrap(
         if__.factory()
       , ConstantExpr::getSelect(ptr(if_), ptr(then), ptr(else_))

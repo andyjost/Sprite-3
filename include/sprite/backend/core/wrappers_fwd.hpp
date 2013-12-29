@@ -13,9 +13,7 @@ namespace sprite { namespace backend
   // Always wraps an llvm::BasicBlock.
   template<typename Factory=type_factory> class basic_block;
 
-  template<typename Factory=type_factory>
-    using function = globalobj<Function, Factory>;
-
+  // Types.
   using type = typeobj<>;
   using array_type = typeobj<ArrayType>;
   using integer_type = typeobj<IntegerType>;
@@ -24,7 +22,19 @@ namespace sprite { namespace backend
   using pointer_type = typeobj<PointerType>;
   using struct_type = typeobj<StructType>;
 
+  // Constants.
+  using constant = constantobj<>;
+  using const_array = constantobj<ConstantArray>;
+  using constexpr_ = constantobj<ConstantExpr>;
+  using const_fp = constantobj<ConstantFP>;
+  using const_int = constantobj<ConstantInt>;
+  using const_nullptr = constantobj<ConstantPointerNull>;
+  using const_struct = constantobj<ConstantStruct>;
+
+  // Globals (anything the linker sees, even symbols marked private).
   using global = globalobj<>;
+  using function = globalobj<Function>;
+  using globalvar = globalobj<GlobalVariable>;
 
   namespace aux
   {

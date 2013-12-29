@@ -279,8 +279,7 @@ namespace sprite { namespace backend
    * @brief Implements operator @p % between a struct type and a sequence of
    * instantiated values.
    */
-  constantobj<Constant>
-  _modulo(struct_type const & tp, array_ref<Constant*> const & values)
+  constant _modulo(struct_type const & tp, array_ref<Constant*> const & values)
   {
     auto const p = ConstantStruct::get(
         tp.ptr(), static_cast<array_ref<Constant*> const &>(values)
@@ -289,8 +288,7 @@ namespace sprite { namespace backend
   }
 
   template<typename T>
-  constantobj<Constant>
-  _modulo(struct_type const & tp, array_ref<T> const & values)
+  constant _modulo(struct_type const & tp, array_ref<T> const & values)
   {
     if(values.size() > 0 && tp->indexValid(values.size() - 1))
       throw type_error("Too many values to extract in struct instantiation");
@@ -305,8 +303,7 @@ namespace sprite { namespace backend
   }
 
   template<typename...T>
-  constantobj<Constant>
-  _modulo(struct_type const & tp, std::tuple<T...> const & value)
+  constant _modulo(struct_type const & tp, std::tuple<T...> const & value)
   {
     std::vector<Constant*> args;
     if(!aux::build_nonuniform_constants(args, tp, value))
@@ -361,8 +358,7 @@ namespace sprite { namespace backend
    * @brief Implements operator @p % between an array type and a sequence of
    * instantiated values.
    */
-  constantobj<Constant>
-  _modulo(array_type const & tp, array_ref<Constant*> const & values)
+  constant _modulo(array_type const & tp, array_ref<Constant*> const & values)
   {
     auto const p = ConstantArray::get(
         tp.ptr(), static_cast<array_ref<Constant*> const &>(values)
@@ -375,8 +371,7 @@ namespace sprite { namespace backend
    * initializer values.
    */
   template<typename T>
-  constantobj<Constant>
-  _modulo(array_type const & tp, array_ref<T> const & values)
+  constant _modulo(array_type const & tp, array_ref<T> const & values)
   {
     auto const elem_ty = wrap(tp.factory(), tp->getElementType());
     std::vector<Constant*> args;
@@ -385,8 +380,7 @@ namespace sprite { namespace backend
   }
 
   template<typename...T>
-  constantobj<Constant>
-  _modulo(array_type const & tp, std::tuple<T...> const & value)
+  constant _modulo(array_type const & tp, std::tuple<T...> const & value)
   {
     auto const elem_ty = wrap(tp.factory(), tp->getElementType());
     std::vector<Constant*> args;
@@ -409,8 +403,7 @@ namespace sprite { namespace backend
   namespace aux
   {
     template<typename T, typename U>
-    constantobj<Constant>
-    create_global_pointer_from_constants(
+    constant create_global_pointer_from_constants(
         typeobj<T> const & tp, U const & values
       )
     {
@@ -501,12 +494,11 @@ namespace sprite { namespace backend
    * failure.
    */
   template<typename T>
-  inline constantobj<Constant>
-  operator%(type const & tp, T const & arg)
+  inline constant operator%(type const & tp, T const & arg)
   {
     using namespace generics;
     generic_handler<
-        /* Return type */     constantobj<Constant>
+        /* Return type */     constant
       , /* Action on match */ modulo
 
         /*    LHS Match     Allowed RHSs */
@@ -535,27 +527,27 @@ namespace sprite { namespace backend
    * @snippet constants.cpp Instantiating constant data arrays
    */
 
-  inline constantobj<Constant>
+  inline constant
   operator%(type_factory const & tf, array_ref<uint8_t> const & value)
     { return wrap(tf, llvm::ConstantDataArray::get(tf.context(), value)); }
 
-  inline constantobj<Constant>
+  inline constant
   operator%(type_factory const & tf, array_ref<uint16_t> const & value)
     { return wrap(tf, llvm::ConstantDataArray::get(tf.context(), value)); }
 
-  inline constantobj<Constant>
+  inline constant
   operator%(type_factory const & tf, array_ref<uint32_t> const & value)
     { return wrap(tf, llvm::ConstantDataArray::get(tf.context(), value)); }
 
-  inline constantobj<Constant>
+  inline constant
   operator%(type_factory const & tf, array_ref<uint64_t> const & value)
     { return wrap(tf, llvm::ConstantDataArray::get(tf.context(), value)); }
 
-  inline constantobj<Constant>
+  inline constant
   operator%(type_factory const & tf, array_ref<float> const & value)
     { return wrap(tf, llvm::ConstantDataArray::get(tf.context(), value)); }
 
-  inline constantobj<Constant>
+  inline constant
   operator%(type_factory const & tf, array_ref<double> const & value)
     { return wrap(tf, llvm::ConstantDataArray::get(tf.context(), value)); }
   //@}
@@ -568,8 +560,9 @@ namespace sprite { namespace backend
    *
    * @snippet constants.cpp Instantiating constant data arrays
    */
-  inline constantobj<Constant>
-  operator%(type_factory const & tf, string_ref const & value)
-    { return wrap(tf, llvm::ConstantDataArray::getString(tf.context(), value)); }
+  inline constant operator%(type_factory const & tf, string_ref const & value)
+  {
+    return wrap(tf, llvm::ConstantDataArray::getString(tf.context(), value));
+  }
 }}
 
