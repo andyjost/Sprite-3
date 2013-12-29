@@ -46,18 +46,18 @@ namespace sprite { namespace backend { namespace aux
       std::enable_if<std::is_convertible<T*, GlobalValue*>::value, void *>
     ;
 
-  /// Enables a template only when T can be converted to llvm::StringRef.
+  /// Enables a template only when T can be converted to string_ref.
   template<typename T> using enable_if_convertible_to_string =
       std::enable_if<
-          std::is_convertible<T, llvm::StringRef>::value
+          std::is_convertible<T, string_ref>::value
         , void *
         >
     ;
 
-  /// Disables a template only when T can be converted to llvm::StringRef.
+  /// Disables a template only when T can be converted to string_ref.
   template<typename T> using DisableIfConvertibleToString =
       std::enable_if<
-          !std::is_convertible<T, llvm::StringRef>::value
+          !std::is_convertible<T, string_ref>::value
         , void *
         >
     ;

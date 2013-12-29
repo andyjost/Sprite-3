@@ -67,7 +67,7 @@ namespace sprite { namespace backend
     };
 
     inline void check_for_exactly_one_signed_flag(
-        operator_flags const & flags, StringRef const & what
+        operator_flags const & flags, string_ref const & what
       )
     {
       if(flags.signed_() && flags.unsigned_())
@@ -86,7 +86,7 @@ namespace sprite { namespace backend
     }
 
     inline void check_for_exactly_one_arithmetic_flag(
-        operator_flags const & flags, StringRef const & what
+        operator_flags const & flags, string_ref const & what
       )
     {
       if(flags.arithmetic() && flags.logical())

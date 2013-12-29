@@ -112,7 +112,7 @@ namespace sprite { namespace backend
      * @snippet types.cpp Creating opaque structs
      */
     struct_type
-    struct_(llvm::StringRef const & name) const;
+    struct_(string_ref const & name) const;
 
     /**
      * @brief Defines a struct.
@@ -124,7 +124,7 @@ namespace sprite { namespace backend
      */
     struct_type
     struct_(
-        llvm::StringRef const & name
+        string_ref const & name
       , ArrayRef<type> const & elements
       ) const;
   };

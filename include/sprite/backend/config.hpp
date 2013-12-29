@@ -116,7 +116,7 @@ namespace sprite { namespace backend
   // using llvm::APFloat;
 
   // ADTs.
-  using llvm::StringRef;
+  using string_ref = llvm::StringRef;
 
   /**
    * @brief Extends llvm::ArrayRef<T>.

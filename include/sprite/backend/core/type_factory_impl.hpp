@@ -47,7 +47,7 @@ namespace sprite { namespace backend
   }
 
   inline struct_type
-  type_factory::struct_(llvm::StringRef const & name) const
+  type_factory::struct_(string_ref const & name) const
   {
     llvm::StructType * type = _module->getTypeByName(name);
     if(!type)
@@ -57,7 +57,7 @@ namespace sprite { namespace backend
 
   inline struct_type
   type_factory::struct_(
-      llvm::StringRef const & name
+      string_ref const & name
     , ArrayRef<type> const & elements 
     ) const
   {

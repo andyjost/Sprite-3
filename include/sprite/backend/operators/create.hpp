@@ -116,10 +116,10 @@ namespace sprite { namespace backend
    *
    * @snippet constants.cpp Instantiating integer types from strings
    */
-  SPRITE_BINOP_PREAMBLE(ConstantInt, T, IntegerType, U, StringRef)
+  SPRITE_BINOP_PREAMBLE(ConstantInt, T, IntegerType, U, string_ref)
   operator%(typeobj<T> const & tp, U const & value_)
   {
-    StringRef value(value_);
+    string_ref value(value_);
     int radix = 10;
     if(value.size() > 0)
     {
@@ -131,7 +131,7 @@ namespace sprite { namespace backend
           if(value.data()[1] == 'x' || value.data()[1] == 'X')
           {
             radix = 16;
-            value = StringRef(value.data() + 2);
+            value = string_ref(value.data() + 2);
           }
           else
             radix = 8;
@@ -140,7 +140,7 @@ namespace sprite { namespace backend
 
         case 'b': case 'B':
           radix = 2;
-          value = StringRef(value.data() + 1);
+          value = string_ref(value.data() + 1);
       }
     }
 
@@ -189,12 +189,12 @@ namespace sprite { namespace backend
    *
    * @snippet constants.cpp Instantiating simple types
    */
-  SPRITE_BINOP_PREAMBLE(ConstantFP, T, FPType, U, StringRef)
+  SPRITE_BINOP_PREAMBLE(ConstantFP, T, FPType, U, string_ref)
   operator%(typeobj<T> const & tp, U const & value)
   {
     return wrap<ConstantFP>(
         tp.factory()
-      , ConstantFP::get(tp.ptr(), static_cast<StringRef const &>(value))
+      , ConstantFP::get(tp.ptr(), static_cast<string_ref const &>(value))
       );
   }
 
@@ -448,10 +448,10 @@ namespace sprite { namespace backend
    *
    * @snippet constants.cpp Instantiating char pointers
    */
-  SPRITE_BINOP_PREAMBLE(Constant, T, PointerType, U, StringRef)
+  SPRITE_BINOP_PREAMBLE(Constant, T, PointerType, U, string_ref)
   operator%(typeobj<T> const & tp, U const & value)
   {
-    StringRef const str(value);
+    string_ref const str(value);
     ArrayRef<char> const values(str.data(), str.size() + 1);
     return aux::create_global_pointer_from_constants(tp, values);
   }
@@ -466,7 +466,7 @@ namespace sprite { namespace backend
    *
    * @snippet constants.cpp Instantiating pointers as global arrays
    */
-  SPRITE_BINOP_PREAMBLE3(Constant, T, PointerType, U, any_array_ref, StringRef)
+  SPRITE_BINOP_PREAMBLE3(Constant, T, PointerType, U, any_array_ref, string_ref)
   operator%(typeobj<T> const & tp, U const & values_)
   {
     any_array_ref const values(values_);
@@ -509,11 +509,11 @@ namespace sprite { namespace backend
 
         /*    LHS Match     Allowed RHSs */
         /*    ------------  ------------ */
-      , case_< IntegerType,  null_arg, uint64_t, StringRef, llvm::APInt>
-      , case_< FPType,       null_arg, double, StringRef, llvm::APFloat, non_finite_value>
+      , case_< IntegerType,  null_arg, uint64_t, string_ref, llvm::APInt>
+      , case_< FPType,       null_arg, double, string_ref, llvm::APFloat, non_finite_value>
       , case_< StructType,   null_arg, any_array_ref, any_tuple_ref>
       , case_< ArrayType,    null_arg, any_array_ref, any_tuple_ref>
-      , case_< PointerType,  null_arg, StringRef>
+      , case_< PointerType,  null_arg, string_ref>
 
       > const handler;
 
@@ -540,7 +540,7 @@ namespace sprite { namespace backend
         || std::is_convertible<T, ArrayRef<uint64_t>>::value
         || std::is_convertible<T, ArrayRef<float>>::value
         || std::is_convertible<T, ArrayRef<double>>::value
-        || !std::is_convertible<T, StringRef>::value
+        || !std::is_convertible<T, string_ref>::value
     , constantobj<Constant>
     >::type
   operator%(type_factory const & tf, T const & value)
@@ -555,7 +555,7 @@ namespace sprite { namespace backend
    * @snippet constants.cpp Instantiating constant data arrays
    */
   inline constantobj<Constant>
-  operator%(type_factory const & tf, StringRef const & value)
+  operator%(type_factory const & tf, string_ref const & value)
     { return wrap(tf, llvm::ConstantDataArray::getString(tf.context(), value)); }
 }}
 
