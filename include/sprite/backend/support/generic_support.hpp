@@ -4,11 +4,11 @@
  */
 
 #pragma once
-#include "sprite/llvm/core/wrappers.hpp"
-#include "sprite/llvm/support/exceptions.hpp"
+#include "sprite/backend/core/wrappers.hpp"
+#include "sprite/backend/support/exceptions.hpp"
 #include <sstream>
 
-namespace sprite { namespace llvm { namespace generics
+namespace sprite { namespace backend { namespace generics
 {
   /**
    * @brief Used to specify one case for @p generic_handler.

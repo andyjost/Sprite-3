@@ -6,13 +6,13 @@
 // Note: no 80-column rule for this file.  Doxygen already uses a wide layout,
 // so there is no need to wrap these examples.
 
-#include "sprite/llvm.hpp"
+#include "sprite/backend.hpp"
 #include <cmath>
 #include <limits>
 
 int main()
 {
-  using namespace sprite::llvm;
+  using namespace sprite::backend;
 
   {
     /// [Global definitions with linkage]

@@ -4,9 +4,9 @@
  */
 
 #pragma once
-#include "sprite/llvm/core/context.hpp"
-#include "sprite/llvm/core/wrappers.hpp"
-#include "sprite/llvm/operators/create.hpp"
+#include "sprite/backend/core/context.hpp"
+#include "sprite/backend/core/wrappers.hpp"
+#include "sprite/backend/operators/create.hpp"
 
 #define SPRITE_INSTRUCTION_PREAMBLE_WRAPPED(RetTy, ArgTy)       \
     template<typename Arg>                                      \
@@ -24,12 +24,12 @@
       >::type                                                    \
   /**/
 
-namespace sprite { namespace llvm
+namespace sprite { namespace backend
 {
   /**
    * @brief Inserts a return instruction into the active context.
    */
-  instruction<llvm_::ReturnInst> return_(Value * value)
+  instruction<llvm::ReturnInst> return_(Value * value)
   {
     auto const & cxt = active_context();
     return wrap(cxt.factory(), cxt.builder().CreateRet(value));
@@ -40,7 +40,7 @@ namespace sprite { namespace llvm
    *
    * The argument is a @p constantobj.
    */
-  SPRITE_INSTRUCTION_PREAMBLE_WRAPPED(llvm_::ReturnInst, Constant)
+  SPRITE_INSTRUCTION_PREAMBLE_WRAPPED(llvm::ReturnInst, Constant)
   return_(Arg const & arg)
     { return return_(ptr(arg)); }
 
@@ -51,7 +51,7 @@ namespace sprite { namespace llvm
    * @p * by constructing the active function's return type using the supplied
    * value.
    */
-  SPRITE_INSTRUCTION_PREAMBLE_UNWRAPPED(llvm_::ReturnInst, Constant)
+  SPRITE_INSTRUCTION_PREAMBLE_UNWRAPPED(llvm::ReturnInst, Constant)
   return_(Arg const & arg)
   {
     auto const & cxt = active_context();

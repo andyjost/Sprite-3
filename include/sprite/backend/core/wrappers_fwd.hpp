@@ -1,7 +1,7 @@
 #pragma once
-#include "sprite/llvm/config.hpp"
+#include "sprite/backend/config.hpp"
 
-namespace sprite { namespace llvm
+namespace sprite { namespace backend
 {
   class type_factory;
   template<typename T, typename Factory=type_factory> class object;

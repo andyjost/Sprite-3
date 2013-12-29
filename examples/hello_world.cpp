@@ -11,7 +11,7 @@
 // the passing criteria.  LLVM does something similar, but I need to revisit
 // the details.
 
-#include "sprite/llvm.hpp"
+#include "sprite/backend.hpp"
 #include <cmath>
 #include <limits>
 
@@ -50,7 +50,7 @@ Problems:
 int main()
 {
   /// [Hello world]
-  using namespace sprite::llvm;
+  using namespace sprite::backend;
 
   llvm::Module * hello_module
     = new llvm::Module("hello", llvm::getGlobalContext());

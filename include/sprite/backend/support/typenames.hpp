@@ -12,7 +12,7 @@
 #include <string>
 #include <typeinfo>
 
-namespace sprite { namespace llvm
+namespace sprite { namespace backend
 {
   namespace aux
   {
@@ -42,11 +42,11 @@ namespace sprite { namespace llvm
     /**/
 
   /// Returns the name of an LLVM type object.
-  inline std::string llvm_typename(::llvm::Type * type)
+  inline std::string llvm_typename(llvm::Type * type)
   {
     assert(type);
     std::string str;
-    ::llvm::raw_string_ostream ss(str);
+    llvm::raw_string_ostream ss(str);
     type->print(ss);
     return str;
   }

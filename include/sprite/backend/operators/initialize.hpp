@@ -10,11 +10,11 @@
  */
 
 #pragma once
-#include "sprite/llvm/core/wrappers.hpp"
-#include "sprite/llvm/operators/preamble.hpp"
-#include "sprite/llvm/operators/create.hpp"
+#include "sprite/backend/core/wrappers.hpp"
+#include "sprite/backend/operators/preamble.hpp"
+#include "sprite/backend/operators/create.hpp"
 
-namespace sprite { namespace llvm
+namespace sprite { namespace backend
 {
   namespace aux
   {
@@ -23,10 +23,10 @@ namespace sprite { namespace llvm
      * its element type.
      */
     template<typename T, typename Factory>
-    std::pair<llvm_::GlobalVariable *, typeobj<Type, Factory>>
+    std::pair<llvm::GlobalVariable *, typeobj<Type, Factory>>
     get_global_and_type(T * arg, Factory const & f)
     {
-      if(auto const global = dyn_cast<llvm_::GlobalVariable>(arg))
+      if(auto const global = dyn_cast<llvm::GlobalVariable>(arg))
       {
         // Global variables are always pointer types.  Get the underlying
         // element type.

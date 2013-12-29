@@ -5,9 +5,9 @@
 
 #pragma once
 #include "llvm/Support/Casting.h"
-#include "sprite/llvm/core/wrappers_fwd.hpp"
-#include "sprite/llvm/support/special_values.hpp"
-#include "sprite/llvm/support/wrap.hpp"
+#include "sprite/backend/core/wrappers_fwd.hpp"
+#include "sprite/backend/support/special_values.hpp"
+#include "sprite/backend/support/wrap.hpp"
 #include <type_traits>
 
 // The specializations below are needed for the wrapper types to pass argument
@@ -20,11 +20,11 @@ namespace llvm
   struct simplify_type<Wrapper_<T,Factory>>
     : std::enable_if<
           std::is_base_of<
-              sprite::llvm::object<T, Factory>, Wrapper_<T, Factory>
+              sprite::backend::object<T, Factory>, Wrapper_<T, Factory>
             >::value
-        , sprite::llvm::null_arg
+        , sprite::backend::null_arg
         >::type
-  { typedef sprite::llvm::null_arg SimpleType; };
+  { typedef sprite::backend::null_arg SimpleType; };
 
   /// Disables llvm::cast_retty for wrappers.
   template<
@@ -37,27 +37,27 @@ namespace llvm
     >
     : std::enable_if<
           std::is_base_of<
-              sprite::llvm::object<From, Factory>, Wrapper_<From, Factory>
+              sprite::backend::object<From, Factory>, Wrapper_<From, Factory>
             >::value
-        , sprite::llvm::null_arg
+        , sprite::backend::null_arg
         >::type
   {};
 }
 
-namespace sprite { namespace llvm
+namespace sprite { namespace backend
 {
   /**
    * @brief Enables a casting function.
    *
    * Assumes the presence of Tgt, Src, and Wrapper_ template parameters.
    */
-  #define SPRITE_CAST_RETURN                                              \
-      typename std::enable_if<                                            \
-          std::is_base_of<                                                \
-              sprite::llvm::object<Src, Factory>, Wrapper_<Src, Factory> \
-            >::value                                                      \
-        , Wrapper_<Tgt, Factory>                                          \
-        >::type                                                           \
+  #define SPRITE_CAST_RETURN                                                \
+      typename std::enable_if<                                              \
+          std::is_base_of<                                                  \
+              sprite::backend::object<Src, Factory>, Wrapper_<Src, Factory> \
+            >::value                                                        \
+        , Wrapper_<Tgt, Factory>                                            \
+        >::type                                                             \
     /**/
 
   /**
@@ -96,7 +96,7 @@ namespace sprite { namespace llvm
         !std::is_pointer<Tgt>::value
       , "The target type must not be a pointer (did you add a * by accident?)"
       );
-    return wrap(src.factory(), llvm_::dyn_cast<Tgt>(src.ptr()));
+    return wrap(src.factory(), llvm::dyn_cast<Tgt>(src.ptr()));
   }
 
   #undef SPRITE_CAST_RETURN

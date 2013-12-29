@@ -1,16 +1,16 @@
 /**
  * @file
- * @brief Implementation details for sprite/llvm/wrappers.hpp.
+ * @brief Implementation details for sprite/backend/wrappers.hpp.
  */
 
 #include <limits>
-#include "sprite/llvm/operators/preamble.hpp"
-#include "sprite/llvm/support/exceptions.hpp"
-#include "sprite/llvm/support/casting.hpp"
+#include "sprite/backend/operators/preamble.hpp"
+#include "sprite/backend/support/exceptions.hpp"
+#include "sprite/backend/support/casting.hpp"
 #include <string>
 #include <utility>
 
-namespace sprite { namespace llvm { namespace aux
+namespace sprite { namespace backend { namespace aux
 {
   /**
    * @brief Loads function arguments into an array; handles an @p ellipsis as the final
@@ -39,7 +39,7 @@ namespace sprite { namespace llvm { namespace aux
   };
 }}}
 
-namespace sprite { namespace llvm
+namespace sprite { namespace backend
 {
   // ====== Implementation details for typeobj.
 
@@ -72,7 +72,7 @@ namespace sprite { namespace llvm
 
   template<typename Factory>
   template<typename... Args>
-  instruction<llvm_::CallInst, Factory>
+  instruction<llvm::CallInst, Factory>
   globalobj<Function, Factory>::operator()(Args &&... args) const
   {
     Value * tmp[sizeof...(args)];

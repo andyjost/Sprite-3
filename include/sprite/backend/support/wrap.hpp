@@ -1,19 +1,19 @@
 #pragma once
-#include "sprite/llvm/core/wrappers_fwd.hpp"
-#include "sprite/llvm/support/enablers.hpp"
+#include "sprite/backend/core/wrappers_fwd.hpp"
+#include "sprite/backend/support/enablers.hpp"
 
-namespace sprite { namespace llvm
+namespace sprite { namespace backend
 {
   // ====== Methods for wrapping LLVM objects.
 
-  /// Wraps an llvm_::Type object using the specified factory as context.
+  /// Wraps an llvm::Type object using the specified factory as context.
   template<typename T, typename Factory>
   typeobj<T,Factory> wrap(
       Factory const & f, T * arg, typename aux::enable_if_type<T>::type=0
     )
   { return typeobj<T, Factory>(arg, f); }
 
-  /// Wraps an llvm_::Constant object using the specified factory as context.
+  /// Wraps an llvm::Constant object using the specified factory as context.
   template<typename T, typename Factory>
   constantobj<T, Factory> wrap(
       Factory const & f, T * arg
@@ -29,14 +29,14 @@ namespace sprite { namespace llvm
     )
   { return globalobj<T, Factory>(arg, f); }
 
-  /// Wraps an llvm_::BasicBlock object.
+  /// Wraps an llvm::BasicBlock object.
   template<typename Factory>
   basic_block<Factory> wrap(
-      Factory const & f, llvm_::BasicBlock * arg
+      Factory const & f, llvm::BasicBlock * arg
     )
   { return basic_block<Factory>(arg, f); }
 
-  /// Wraps an llvm_::Instruction object.
+  /// Wraps an llvm::Instruction object.
   template<typename T, typename Factory>
   instruction<T> wrap(
       Factory const & f, T * arg
@@ -53,6 +53,6 @@ namespace sprite { namespace llvm
    */
   template<typename Tgt, typename Src, typename Factory>
   auto wrap(Factory const & f, Src * arg) -> decltype(wrap(f, (Tgt *)(0)))
-    { return wrap(f, llvm_::cast<Tgt>(arg)); }
+    { return wrap(f, llvm::cast<Tgt>(arg)); }
 }}
 

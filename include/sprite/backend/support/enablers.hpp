@@ -5,15 +5,15 @@
 
 #pragma once
 #include "llvm/IR/DerivedTypes.h"
-#include "sprite/llvm/config.hpp"
-#include "sprite/llvm/core/wrappers_fwd.hpp"
+#include "sprite/backend/config.hpp"
+#include "sprite/backend/core/wrappers_fwd.hpp"
 #include <type_traits>
 
-namespace sprite { namespace llvm { namespace aux
+namespace sprite { namespace backend { namespace aux
 {
   /// Enables a template only when T can be converted to llvm::Type.
   template<typename T> using enable_if_type = 
-      std::enable_if<std::is_convertible<T*, llvm_::Type*>::value, void *>
+      std::enable_if<std::is_convertible<T*, llvm::Type*>::value, void *>
     ;
 
   /**
@@ -25,7 +25,7 @@ namespace sprite { namespace llvm { namespace aux
    */
   template<typename T> using enable_if_constant_not_global =
       std::enable_if<
-          std::is_convertible<T*, llvm_::Constant*>::value
+          std::is_convertible<T*, llvm::Constant*>::value
               && !std::is_convertible<T*, GlobalValue*>::value
         , void *
         >
@@ -37,7 +37,7 @@ namespace sprite { namespace llvm { namespace aux
    */
   template<typename T> using enable_if_instruction =
       std::enable_if<
-          std::is_convertible<T*, llvm_::Instruction*>::value
+          std::is_convertible<T*, llvm::Instruction*>::value
         , void *
         >
     ;
@@ -49,7 +49,7 @@ namespace sprite { namespace llvm { namespace aux
   /// Enables a template only when T can be converted to llvm::StringRef.
   template<typename T> using enable_if_convertible_to_string =
       std::enable_if<
-          std::is_convertible<T, llvm_::StringRef>::value
+          std::is_convertible<T, llvm::StringRef>::value
         , void *
         >
     ;
@@ -57,7 +57,7 @@ namespace sprite { namespace llvm { namespace aux
   /// Disables a template only when T can be converted to llvm::StringRef.
   template<typename T> using DisableIfConvertibleToString =
       std::enable_if<
-          !std::is_convertible<T, llvm_::StringRef>::value
+          !std::is_convertible<T, llvm::StringRef>::value
         , void *
         >
     ;
@@ -75,7 +75,7 @@ namespace sprite { namespace llvm { namespace aux
   /// Enables a template only when T can be converted to an array of Constant *.
   template<typename T> using enable_if_convertible_to_constant_array =
       std::enable_if<
-          std::is_convertible<T, llvm_::ArrayRef<llvm_::Constant*>>::value
+          std::is_convertible<T, llvm::ArrayRef<llvm::Constant*>>::value
         , void *
         >
     ;
@@ -83,7 +83,7 @@ namespace sprite { namespace llvm { namespace aux
   /// Enables a template only when T can be converted to an array of Value *.
   template<typename T> using enable_if_convertible_to_value_array =
       std::enable_if<
-          std::is_convertible<T, llvm_::ArrayRef<Function*>>::value
+          std::is_convertible<T, llvm::ArrayRef<Function*>>::value
         , void *
         >
     ;
@@ -117,7 +117,7 @@ namespace sprite { namespace llvm { namespace aux
   }
 }}}
 
-namespace sprite { namespace llvm
+namespace sprite { namespace backend
 {
   using aux::ptr;
 }}

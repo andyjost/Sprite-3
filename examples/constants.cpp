@@ -6,13 +6,13 @@
 // Note: no 80-column rule for this file.  Doxygen already uses a wide layout,
 // so there is no need to wrap these examples.
 
-#include "sprite/llvm.hpp"
+#include "sprite/backend.hpp"
 #include <cmath>
 #include <limits>
 
 int main()
 {
-  using namespace sprite::llvm;
+  using namespace sprite::backend;
 
   {
     /// [Instantiating a NULL pointer]
@@ -183,7 +183,7 @@ int main()
     /// [Instantiating char pointers]
     // Expands to an expression that evaluates the length of a string constant.
     #define NELEM(arg) \
-        cast<llvm_::GlobalVariable>(arg->stripPointerCasts())->getInitializer()->getType()->getArrayNumElements() \
+        cast<llvm::GlobalVariable>(arg->stripPointerCasts())->getInitializer()->getType()->getArrayNumElements() \
       /**/
     type_factory const types;
     auto const char_ = types.int_(8);

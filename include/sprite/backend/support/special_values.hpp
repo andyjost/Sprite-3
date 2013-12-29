@@ -5,7 +5,7 @@
 
 #pragma once
 
-namespace sprite { namespace llvm
+namespace sprite { namespace backend
 {
   /// Represents the ... token in function type definitions.
   struct ellipsis {};

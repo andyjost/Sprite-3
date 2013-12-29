@@ -3,14 +3,14 @@
  * @brief Implements class context.
  */
 
-#include "sprite/llvm/core/context.hpp"
-#include "sprite/llvm/core/type_factory.hpp"
-#include "sprite/llvm/core/wrappers.hpp"
-#include "sprite/llvm/support/exceptions.hpp"
+#include "sprite/backend/core/context.hpp"
+#include "sprite/backend/core/type_factory.hpp"
+#include "sprite/backend/core/wrappers.hpp"
+#include "sprite/backend/support/exceptions.hpp"
 
 namespace
 {
-  using namespace sprite::llvm;
+  using namespace sprite::backend;
 
   /**
    * @brief Holds the global contexts.
@@ -22,12 +22,12 @@ namespace
   std::list<context_frame<>> g_context_list;
 }
 
-namespace sprite { namespace llvm
+namespace sprite { namespace backend
 {
   context::context(basic_block<type_factory> const & block)
   {
     g_context_list.emplace_front(
-        llvm_::IRBuilder<>(block.ptr()), block.factory()
+        llvm::IRBuilder<>(block.ptr()), block.factory()
       );
     frame = g_context_list.begin();
   }

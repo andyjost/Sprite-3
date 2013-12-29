@@ -7,17 +7,17 @@
 #include <limits>
 #include "llvm/IR/Constants.h"
 #include "llvm/ADT/SmallVector.h"
-#include "sprite/llvm/core/context.hpp"
-#include "sprite/llvm/core/wrappers_fwd.hpp"
-#include "sprite/llvm/core/value.hpp"
-#include "sprite/llvm/support/enablers.hpp"
-#include "sprite/llvm/support/special_values.hpp"
-#include "sprite/llvm/support/type_erasures.hpp"
+#include "sprite/backend/core/context.hpp"
+#include "sprite/backend/core/wrappers_fwd.hpp"
+#include "sprite/backend/core/value.hpp"
+#include "sprite/backend/support/enablers.hpp"
+#include "sprite/backend/support/special_values.hpp"
+#include "sprite/backend/support/type_erasures.hpp"
 #include <tuple>
 #include <type_traits>
 #include <utility>
 
-namespace sprite { namespace llvm
+namespace sprite { namespace backend
 {
   /**
    * @brief Base class used to wrap an LLVM API object.
@@ -91,9 +91,9 @@ namespace sprite { namespace llvm
    * A @p context may be used to set the destination for several instructions.
    */
   template<typename Factory>
-  struct basic_block : object<llvm_::BasicBlock, Factory>
+  struct basic_block : object<llvm::BasicBlock, Factory>
   {
-    typedef object<llvm_::BasicBlock, Factory> base_type;
+    typedef object<llvm::BasicBlock, Factory> base_type;
     using base_type::base_type;
   };
 
@@ -106,7 +106,7 @@ namespace sprite { namespace llvm
      * right-hand side initializer expression, or as function call argument.
      */
     template<typename Factory>
-    struct rvalue_sequence : std::vector<llvm_::Constant *>
+    struct rvalue_sequence : std::vector<llvm::Constant *>
     {
       /// Adds a constant value to this sequence.
       template<typename T>
@@ -149,12 +149,12 @@ namespace sprite { namespace llvm
     }
 
     /// Get the type of this constant.
-    llvm::typeobj<Type, Factory> type() const
+    typeobj<Type, Factory> type() const
       { return wrap(this->factory(), (*this)->getType()); }
 
     /// Get the value of this constant as the specified type.
     template<typename Target>
-    Target value() const { return sprite::llvm::value<Target>(*this); }
+    Target value() const { return sprite::backend::value<Target>(*this); }
 
   private:
 
@@ -178,7 +178,7 @@ namespace sprite { namespace llvm
   private:
 
     static_assert(
-        std::is_base_of<llvm_::Instruction, T>::value
+        std::is_base_of<llvm::Instruction, T>::value
       , "Expected an LLVM Instruction object"
       );
   };
@@ -203,7 +203,7 @@ namespace sprite { namespace llvm
     globalobj<T, Factory> const & get_base() const
       { return base; }
 
-    llvm_::SmallVector<Constant *, 4> const & get_indices() const
+    llvm::SmallVector<Constant *, 4> const & get_indices() const
       { return indices; }
 
   private:
@@ -215,7 +215,7 @@ namespace sprite { namespace llvm
     {}
 
     globalobj<T, Factory> base;
-    llvm_::SmallVector<Constant *, 4> indices;
+    llvm::SmallVector<Constant *, 4> indices;
   };
 
   /**
@@ -346,7 +346,7 @@ namespace sprite { namespace llvm
       assert(this->px);
       if(this->px->empty())
       {
-        llvm_::BasicBlock::Create(
+        llvm::BasicBlock::Create(
             this->factory().context(), ".entry", this->px
           );
       }
@@ -356,7 +356,7 @@ namespace sprite { namespace llvm
 
     // Inserts a call instruction in the current context.
     template<typename... Args>
-    instruction<llvm_::CallInst, Factory>
+    instruction<llvm::CallInst, Factory>
       operator()(Args &&... args) const;
   };
 
@@ -418,5 +418,5 @@ namespace sprite { namespace llvm
 }}
 
 // Include the implementation details.
-#include "sprite/llvm/core/wrappers_impl.hpp"
+#include "sprite/backend/core/wrappers_impl.hpp"
 

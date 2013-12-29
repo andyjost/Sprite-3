@@ -9,10 +9,10 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "sprite/llvm/core/wrappers.hpp"
-#include "sprite/llvm/support/wrap.hpp"
+#include "sprite/backend/core/wrappers.hpp"
+#include "sprite/backend/support/wrap.hpp"
 
-namespace sprite { namespace llvm
+namespace sprite { namespace backend
 {
   /**
    * @brief
@@ -28,7 +28,7 @@ namespace sprite { namespace llvm
   class type_factory
   {
     /// The module that types will be gotten from.
-    llvm_::Module * _module; 
+    llvm::Module * _module; 
 
     // The address space that pointer types will belong to.
     unsigned _addrSpace;
@@ -40,18 +40,18 @@ namespace sprite { namespace llvm
      *
      * If the module is NULL, then a new module is created.
      */
-    explicit type_factory(llvm_::Module * module=0, unsigned addrSpace=0);
+    explicit type_factory(llvm::Module * module=0, unsigned addrSpace=0);
 
     // Default copy, assignment, and destructor are fine.
 
     /// Gets the Module associated with this factory.
-    llvm_::Module * module() const { return _module; }
+    llvm::Module * module() const { return _module; }
 
     /// Gets the address space associated with this factory.
     unsigned addrSpace() const { return _addrSpace; }
 
     /// Gets the associated LLVM context.
-    llvm_::LLVMContext & context() const
+    llvm::LLVMContext & context() const
       { return this->module()->getContext(); }
 
     friend bool operator==(type_factory const & lhs, type_factory const & rhs)
@@ -86,9 +86,9 @@ namespace sprite { namespace llvm
     // ====== Type-Inspection Methods.
 
     /// Get the size, in bytes of a type.
-    uint64_t sizeof_(llvm_::Type * type) const
+    uint64_t sizeof_(Type * type) const
     {
-      llvm_::DataLayout layout("");
+      llvm::DataLayout layout("");
       return layout.getTypeAllocSize(type);
     }
 
@@ -112,7 +112,7 @@ namespace sprite { namespace llvm
      * @snippet types.cpp Creating opaque structs
      */
     struct_type
-    struct_(llvm_::StringRef const & name) const;
+    struct_(llvm::StringRef const & name) const;
 
     /**
      * @brief Defines a struct.
@@ -124,11 +124,11 @@ namespace sprite { namespace llvm
      */
     struct_type
     struct_(
-        llvm_::StringRef const & name
+        llvm::StringRef const & name
       , ArrayRef<type> const & elements
       ) const;
   };
 }}
 
-#include "sprite/llvm/core/type_factory_impl.hpp"
+#include "sprite/backend/core/type_factory_impl.hpp"
 

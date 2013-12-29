@@ -4,15 +4,15 @@
  */
 
 #pragma once
-#include "sprite/llvm/config.hpp"
-#include "sprite/llvm/core/wrappers_fwd.hpp"
-#include "sprite/llvm/support/wrap.hpp"
+#include "sprite/backend/config.hpp"
+#include "sprite/backend/core/wrappers_fwd.hpp"
+#include "sprite/backend/support/wrap.hpp"
 #include <functional>
 #include <memory>
 #include <tuple>
 #include <type_traits>
 
-namespace sprite { namespace llvm
+namespace sprite { namespace backend
 {
   namespace aux
   {
@@ -195,7 +195,7 @@ namespace sprite { namespace llvm
 
       /// Construct an any_arrayref_impl from a SmallVector.
       template<typename T, typename U>
-      any_arrayref_impl(const llvm_::SmallVectorTemplateCommon<T, U> &Vec)
+      any_arrayref_impl(const llvm::SmallVectorTemplateCommon<T, U> &Vec)
         { init(ArrayRef<T>(Vec)); }
 
       /// Construct an any_arrayref_impl from a std::vector.

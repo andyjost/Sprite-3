@@ -1,68 +1,68 @@
 /**
  * @file
- * @brief Implementation details for sprite/llvm/factory.hpp.
+ * @brief Implementation details for sprite/backend/factory.hpp.
  */
 
-#include "sprite/llvm/core/wrappers.hpp"
+#include "sprite/backend/core/wrappers.hpp"
 #include <vector>
 
-namespace sprite { namespace llvm
+namespace sprite { namespace backend
 {
-  inline type_factory::type_factory(llvm_::Module * module, unsigned addrSpace)
+  inline type_factory::type_factory(llvm::Module * module, unsigned addrSpace)
     : _module(module), _addrSpace(addrSpace)
   {
     if(!_module)
-      _module = new llvm_::Module("module", llvm_::getGlobalContext());
+      _module = new llvm::Module("module", llvm::getGlobalContext());
   }
 
   inline integer_type
   type_factory::int_(unsigned numBits) const
   {
     return wrap(
-        *this, llvm_::IntegerType::get(_module->getContext(), numBits)
+        *this, llvm::IntegerType::get(_module->getContext(), numBits)
       );
   }
 
   inline fp_type type_factory::float_() const
   {
-    auto const p = llvm_::Type::getFloatTy(_module->getContext());
+    auto const p = llvm::Type::getFloatTy(_module->getContext());
     return wrap(*this, reinterpret_cast<FPType*>(p));
   }
 
   inline fp_type type_factory::double_() const
   {
-    auto const p = llvm_::Type::getDoubleTy(_module->getContext());
+    auto const p = llvm::Type::getDoubleTy(_module->getContext());
     return wrap(*this, reinterpret_cast<FPType*>(p));
   }
 
   inline type type_factory::void_() const
-    { return wrap(*this, llvm_::Type::getVoidTy(_module->getContext())); }
+    { return wrap(*this, llvm::Type::getVoidTy(_module->getContext())); }
 
   inline struct_type
   type_factory::struct_(ArrayRef<type> const & elements) const
   {
-    std::vector<llvm_::Type*> tmp;
+    std::vector<llvm::Type*> tmp;
     for(auto e: elements) { tmp.emplace_back(e.ptr()); }
-    return wrap(*this, llvm_::StructType::get(_module->getContext(),tmp));
+    return wrap(*this, llvm::StructType::get(_module->getContext(),tmp));
   }
 
   inline struct_type
-  type_factory::struct_(llvm_::StringRef const & name) const
+  type_factory::struct_(llvm::StringRef const & name) const
   {
-    llvm_::StructType * type = _module->getTypeByName(name);
+    llvm::StructType * type = _module->getTypeByName(name);
     if(!type)
-      type = llvm_::StructType::create(_module->getContext(), name);
+      type = llvm::StructType::create(_module->getContext(), name);
     return wrap(*this, type);
   }
 
   inline struct_type
   type_factory::struct_(
-      llvm_::StringRef const & name
+      llvm::StringRef const & name
     , ArrayRef<type> const & elements 
     ) const
   {
     auto const type = this->struct_(name);
-    std::vector<llvm_::Type*> tmp;
+    std::vector<llvm::Type*> tmp;
     for(auto e: elements) { tmp.emplace_back(e.ptr()); }
     type->setBody(tmp, /*isPacked*/ false);
     return type;

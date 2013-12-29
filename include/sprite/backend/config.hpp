@@ -8,7 +8,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Function.h"
-#include "sprite/llvm/support/typenames.hpp"
+#include "sprite/backend/support/typenames.hpp"
 
 // Forward-declare some LLVM types that will be used.
 namespace llvm
@@ -37,18 +37,15 @@ namespace llvm
   class Instruction;
 }
 
-namespace sprite { namespace llvm
+namespace sprite { namespace backend
 {
-  // The actual LLVM API is prefixed as llvm_.
-  namespace llvm_ = ::llvm;
-
   // Types.
-  using llvm_::Type;
-  using llvm_::ArrayType;
-  using llvm_::FunctionType;
-  using llvm_::IntegerType;
-  using llvm_::PointerType;
-  using llvm_::StructType;
+  using llvm::Type;
+  using llvm::ArrayType;
+  using llvm::FunctionType;
+  using llvm::IntegerType;
+  using llvm::PointerType;
+  using llvm::StructType;
 
   SPRITE_DECLARE_TYPENAME(ArrayType)
   SPRITE_DECLARE_TYPENAME(FunctionType)
@@ -57,16 +54,16 @@ namespace sprite { namespace llvm
   SPRITE_DECLARE_TYPENAME(StructType)
 
   // Values.
-  using llvm_::Value;
-  using llvm_::Function;
-  using llvm_::GlobalValue;
-  using llvm_::Instruction;
+  using llvm::Value;
+  using llvm::Function;
+  using llvm::GlobalValue;
+  using llvm::Instruction;
 
   /// Returns a human-readable version of an LLVM type name.
   inline std::string typename_(Type & tp)
   {
     std::string buf;
-    llvm_::raw_string_ostream sbuf(buf);
+    llvm::raw_string_ostream sbuf(buf);
     sbuf << tp;
     return sbuf.str();
   }
@@ -91,7 +88,7 @@ namespace sprite { namespace llvm
    * (by an LLVM API function), it will be converted back to <tt>Type *</tt>,
    * since, obviously, no function defined by LLVM accepts this type.
    */
-  struct FPType : llvm_::Type
+  struct FPType : llvm::Type
   {
     static bool classof(Type const * tp)
       { return tp->isFloatingPointTy(); }
@@ -100,13 +97,13 @@ namespace sprite { namespace llvm
   SPRITE_DECLARE_TYPENAME(FPType)
 
   // Constants.
-  using llvm_::Constant;
-  using llvm_::ConstantAggregateZero;
-  using llvm_::ConstantArray;
-  using llvm_::ConstantFP;
-  using llvm_::ConstantInt;
-  using llvm_::ConstantPointerNull;
-  using llvm_::ConstantStruct;
+  using llvm::Constant;
+  using llvm::ConstantAggregateZero;
+  using llvm::ConstantArray;
+  using llvm::ConstantFP;
+  using llvm::ConstantInt;
+  using llvm::ConstantPointerNull;
+  using llvm::ConstantStruct;
 
   SPRITE_DECLARE_TYPENAME(ConstantAggregateZero);
   SPRITE_DECLARE_TYPENAME(ConstantArray);
@@ -115,11 +112,11 @@ namespace sprite { namespace llvm
   SPRITE_DECLARE_TYPENAME(ConstantPointerNull);
   SPRITE_DECLARE_TYPENAME(ConstantStruct);
 
-  // using llvm_::APInt;
-  // using llvm_::APFloat;
+  // using llvm::APInt;
+  // using llvm::APFloat;
 
   // ADTs.
-  using llvm_::StringRef;
+  using llvm::StringRef;
 
   /**
    * @brief Extends llvm::ArrayRef<T>.
@@ -129,17 +126,17 @@ namespace sprite { namespace llvm
    * an additional constructor for better initialization.
    */
   template<typename T>
-  struct ArrayRef : llvm_::ArrayRef<T>
+  struct ArrayRef : llvm::ArrayRef<T>
   {
-    using llvm_::ArrayRef<T>::ArrayRef;
+    using llvm::ArrayRef<T>::ArrayRef;
 
     /// Initializes using a brace-enclosed initializer list.
     ArrayRef(std::initializer_list<T> const & args)
-      : llvm_::ArrayRef<T>(args.begin(), args.size())
+      : llvm::ArrayRef<T>(args.begin(), args.size())
     {}
 
     ArrayRef(std::initializer_list<T> && args)
-      : llvm_::ArrayRef<T>(args.begin(), args.size())
+      : llvm::ArrayRef<T>(args.begin(), args.size())
     {}
   };
 }}

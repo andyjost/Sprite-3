@@ -8,7 +8,7 @@
 #include <exception>
 #include "llvm/ADT/Twine.h"
 
-namespace sprite { namespace llvm
+namespace sprite { namespace backend
 {
   /// Base class for all error types defined in this module.
   struct error : std::exception
@@ -36,9 +36,9 @@ namespace sprite { namespace llvm
   };
 
   /// Declares a new exception type.
-  #define SPRITE_DECLARE_ERROR_TYPE(name)                                      \
-      struct name : error                                                      \
-        { name(::llvm::Twine const & msg = "") : error(#name, msg.str()) {} }; \
+  #define SPRITE_DECLARE_ERROR_TYPE(name)                                    \
+      struct name : error                                                    \
+        { name(llvm::Twine const & msg = "") : error(#name, msg.str()) {} }; \
     /**/
 
   /// Indicates an incorrect object type was used.

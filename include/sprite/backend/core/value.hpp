@@ -1,13 +1,13 @@
 #pragma once
-#include "sprite/llvm/support/casting.hpp"
-#include "sprite/llvm/config.hpp"
-#include "sprite/llvm/core/wrappers_fwd.hpp"
-#include "sprite/llvm/support/exceptions.hpp"
-#include "sprite/llvm/support/typenames.hpp"
+#include "sprite/backend/support/casting.hpp"
+#include "sprite/backend/config.hpp"
+#include "sprite/backend/core/wrappers_fwd.hpp"
+#include "sprite/backend/support/exceptions.hpp"
+#include "sprite/backend/support/typenames.hpp"
 #include <type_traits>
 #include <utility>
 
-namespace sprite { namespace llvm
+namespace sprite { namespace backend
 {
   namespace aux
   {
@@ -49,7 +49,7 @@ namespace sprite { namespace llvm
   template<typename Target, typename T, typename Factory>
   inline
   typename std::enable_if<
-      std::is_constructible<Target, llvm_::APInt>::value
+      std::is_constructible<Target, llvm::APInt>::value
     , Target
     >::type
   value(constantobj<T, Factory> const & c)
@@ -65,7 +65,7 @@ namespace sprite { namespace llvm
   template<typename Target, typename T, typename Factory>
   inline
   typename std::enable_if<
-      std::is_same<Target, llvm_::APFloat>::value, Target const &
+      std::is_same<Target, llvm::APFloat>::value, Target const &
     >::type
   value(constantobj<T, Factory> const & c)
   {
@@ -82,11 +82,11 @@ namespace sprite { namespace llvm
     >::type
   value(constantobj<T, Factory> const & c)
   {
-    llvm_::APFloat const & val = value<llvm_::APFloat>(c);
-    llvm_::fltSemantics const & sem = val.getSemantics();
-    if(&sem == &llvm_::APFloat::IEEEsingle)
+    llvm::APFloat const & val = value<llvm::APFloat>(c);
+    llvm::fltSemantics const & sem = val.getSemantics();
+    if(&sem == &llvm::APFloat::IEEEsingle)
       return val.convertToFloat();
-    else if(&sem == &llvm_::APFloat::IEEEdouble)
+    else if(&sem == &llvm::APFloat::IEEEdouble)
       return static_cast<float>(val.convertToDouble());
     throw value_error("Unsupported float semantics");
   }
@@ -99,11 +99,11 @@ namespace sprite { namespace llvm
     >::type
   value(constantobj<T, Factory> const & c)
   {
-    llvm_::APFloat const & val = value<llvm_::APFloat>(c);
-    llvm_::fltSemantics const & sem = val.getSemantics();
-    if(&sem == &llvm_::APFloat::IEEEsingle)
+    llvm::APFloat const & val = value<llvm::APFloat>(c);
+    llvm::fltSemantics const & sem = val.getSemantics();
+    if(&sem == &llvm::APFloat::IEEEsingle)
       return val.convertToFloat();
-    else if(&sem == &llvm_::APFloat::IEEEdouble)
+    else if(&sem == &llvm::APFloat::IEEEdouble)
       return val.convertToDouble();
     throw value_error("Unsupported float semantics");
   }

@@ -1,8 +1,8 @@
 #pragma once
-#include "sprite/llvm/config.hpp"
-#include "sprite/llvm/support/exceptions.hpp"
+#include "sprite/backend/config.hpp"
+#include "sprite/backend/support/exceptions.hpp"
 
-namespace sprite { namespace llvm
+namespace sprite { namespace backend
 {
   inline unsigned getFPBitWidth(Type * type)
   {

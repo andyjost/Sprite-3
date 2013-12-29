@@ -6,7 +6,7 @@
 // FIXME: This does not belong in the examples directory, or the README needs
 // to be updated.
 
-#include "sprite/llvm.hpp"
+#include "sprite/backend.hpp"
 #include <cmath>
 #include <limits>
 #include <iostream>
@@ -48,7 +48,7 @@
 
 int main()
 {
-  using namespace sprite::llvm;
+  using namespace sprite::backend;
 
   llvm::Module * fib_module
     = new llvm::Module("fib", llvm::getGlobalContext());

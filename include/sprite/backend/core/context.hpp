@@ -4,29 +4,29 @@
  */
 
 #pragma once
-#include "sprite/llvm/core/wrappers_fwd.hpp"
+#include "sprite/backend/core/wrappers_fwd.hpp"
 #include "llvm/IR/IRBuilder.h"
 #include <list>
 
-namespace sprite { namespace llvm
+namespace sprite { namespace backend
 {
   template<typename Factory=type_factory>
   struct context_frame
   {
-    context_frame(llvm_::IRBuilder<> const & b, Factory const & f)
+    context_frame(llvm::IRBuilder<> const & b, Factory const & f)
       : m_builder(b), m_factory(f)
     {}
 
-    llvm_::IRBuilder<> & builder() const { return m_builder; }
+    llvm::IRBuilder<> & builder() const { return m_builder; }
 
     Factory const & factory() const { return m_factory; }
 
-    llvm_::LLVMContext & context() const { return m_factory.context(); }
+    llvm::LLVMContext & context() const { return m_factory.context(); }
 
   private:
 
     // Non-const IRBuilder is always needed by LLVM API.
-    mutable llvm_::IRBuilder<> m_builder;
+    mutable llvm::IRBuilder<> m_builder;
     Factory m_factory;
   };
 
