@@ -17,7 +17,7 @@ namespace sprite { namespace backend
   inline globalobj<Function> def(
       GlobalValue::LinkageTypes linkage
     , function_type const & type
-    , llvm::Twine const & name = ""
+    , twine const & name = ""
     )
   {
     return wrap(
@@ -51,7 +51,7 @@ namespace sprite { namespace backend
   inline global def(
       GlobalValue::LinkageTypes linkage
     , type const & type
-    , llvm::Twine const & name = ""
+    , twine const & name = ""
     )
   {
     // Create a function for function types.
@@ -61,7 +61,7 @@ namespace sprite { namespace backend
     // Create a global variable for other types.
     return wrap(
         type.factory()
-      , new llvm::GlobalVariable(
+      , new GlobalVariable(
             /* Module          */ *type.factory().module()
           , /* Type            */ type.ptr()
           , /* isConstant      */ false
@@ -69,7 +69,7 @@ namespace sprite { namespace backend
           , /* Initializer     */ 0
           , /* Name            */ name
           , /* InsertBefore    */ 0
-          , /* ThreadLocalMode */ llvm::GlobalVariable::NotThreadLocal
+          , /* ThreadLocalMode */ GlobalVariable::NotThreadLocal
           , /* AddressSpace    */ type.factory().addrSpace()
           )
       );
@@ -82,7 +82,7 @@ namespace sprite { namespace backend
    */
   inline global extern_(
       type const & type
-    , llvm::Twine const & name = ""
+    , twine const & name = ""
     )
   { return def(GlobalValue::ExternalLinkage, type, name); }
 
@@ -92,7 +92,7 @@ namespace sprite { namespace backend
   template<typename ReturnType>
   inline globalobj<ReturnType> extern_(
       type const & type
-    , llvm::Twine const & name = ""
+    , twine const & name = ""
     )
   { return dyn_cast<ReturnType>(extern_(type, name)); }
 
@@ -103,7 +103,7 @@ namespace sprite { namespace backend
    */
   inline global static_(
       type const & type
-    , llvm::Twine const & name = ""
+    , twine const & name = ""
     )
   { return def(GlobalValue::InternalLinkage, type, name); }
 
@@ -113,7 +113,7 @@ namespace sprite { namespace backend
   template<typename ReturnType>
   inline globalobj<ReturnType> static_(
       type const & type
-    , llvm::Twine const & name = ""
+    , twine const & name = ""
     )
   { return dyn_cast<ReturnType>(static_(type, name)); }
 
@@ -127,7 +127,7 @@ namespace sprite { namespace backend
    */
   inline global inline_(
       type const & type
-    , llvm::Twine const & name = ""
+    , twine const & name = ""
     )
   {
     // Only functions may be inline.
@@ -142,7 +142,7 @@ namespace sprite { namespace backend
   template<typename ReturnType>
   inline globalobj<ReturnType> inline_(
       type const & type
-    , llvm::Twine const & name = ""
+    , twine const & name = ""
     )
   { return dyn_cast<ReturnType>(inline_(type, name)); }
 }}

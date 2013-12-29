@@ -183,7 +183,7 @@ int main()
     /// [Instantiating char pointers]
     // Expands to an expression that evaluates the length of a string constant.
     #define NELEM(arg) \
-        cast<llvm::GlobalVariable>(arg->stripPointerCasts())->getInitializer()->getType()->getArrayNumElements() \
+        cast<GlobalVariable>(arg->stripPointerCasts())->getInitializer()->getType()->getArrayNumElements() \
       /**/
     type_factory const types;
     auto const char_ = types.int_(8);

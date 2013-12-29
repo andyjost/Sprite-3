@@ -5,7 +5,7 @@ using namespace sprite::backend;
 
 namespace
 {
-  basic_block<type_factory> new_block(llvm::Twine const & name)
+  basic_block<type_factory> new_block(twine const & name)
   {
     auto const & cxt = active_context();
     Function * parent = cxt.builder().GetInsertBlock()->getParent();
@@ -18,7 +18,7 @@ namespace
 
 namespace sprite { namespace backend
 {
-  label::label(llvm::Twine const & name)
+  label::label(twine const & name)
     : m_block(new_block(name))
   {
   }

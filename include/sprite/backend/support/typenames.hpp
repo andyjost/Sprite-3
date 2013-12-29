@@ -37,18 +37,22 @@ namespace sprite { namespace backend
 
   /// Declares a specialization of @p typename_impl.
   #define SPRITE_DECLARE_TYPENAME(name_)                  \
-      template<> struct typename_impl<name_>                   \
+      template<> struct typename_impl<name_>              \
         { static std::string name() { return #name_; } }; \
     /**/
 
-  /// Returns the name of an LLVM type object.
-  inline std::string llvm_typename(llvm::Type * type)
+  /// Returns a human-readable version of an LLVM type name.
+  inline std::string typename_(llvm::Type & tp)
   {
-    assert(type);
-    std::string str;
-    llvm::raw_string_ostream ss(str);
-    type->print(ss);
-    return str;
+    std::string buf;
+    llvm::raw_string_ostream sbuf(buf);
+    sbuf << tp;
+    return sbuf.str();
   }
+
+  /// Returns a human-readable version of an LLVM type name.
+  inline std::string typename_(llvm::Type * tp)
+    { return typename_(*tp); }
+
 }}
 

@@ -128,7 +128,7 @@ namespace sprite { namespace backend
    */
   inline constantobj<Constant>
   alignof_(type const & tp)
-    { return wrap(tp.factory(), llvm::ConstantExpr::getAlignOf(tp.ptr())); }
+    { return wrap(tp.factory(), ConstantExpr::getAlignOf(tp.ptr())); }
 
   // No wrapper for constant expression getSizeOf.  Use i64 % sizeof_(ty)
   // instead.
@@ -142,7 +142,7 @@ namespace sprite { namespace backend
   offsetof_(type const & tp, unsigned FieldNo)
   {
     auto const p = dyn_cast<StructType>(tp);
-    return wrap(tp.factory(), llvm::ConstantExpr::getOffsetOf(p.ptr(), FieldNo));
+    return wrap(tp.factory(), ConstantExpr::getOffsetOf(p.ptr(), FieldNo));
   }
 
   /**
@@ -153,7 +153,7 @@ namespace sprite { namespace backend
   inline constantobj<Constant>
   offsetof_(type const & tp, Constant * FieldNo)
   {
-    return wrap(tp.factory(), llvm::ConstantExpr::getOffsetOf(tp.ptr(), FieldNo));
+    return wrap(tp.factory(), ConstantExpr::getOffsetOf(tp.ptr(), FieldNo));
   }
 
   /**
@@ -169,7 +169,7 @@ namespace sprite { namespace backend
       SPRITE_ALLOW_FLAGS(c, "negation", operator_flags::NUW | operator_flags::NSW)
       return wrap(
           c.arg().factory()
-        , llvm::ConstantExpr::getNeg(
+        , ConstantExpr::getNeg(
               ptr(c), c.flags().nuw(), c.flags().nsw()
             )
         );
@@ -178,7 +178,7 @@ namespace sprite { namespace backend
     {
       SPRITE_ALLOW_FLAGS(c, "negation", operator_flags::SIGNED)
       return wrap(
-          c.arg().factory(), llvm::ConstantExpr::getFNeg(ptr(c))
+          c.arg().factory(), ConstantExpr::getFNeg(ptr(c))
         );
     }
     throw type_error("Expected ConstantInt or ConstantFP for negation");
@@ -200,7 +200,7 @@ namespace sprite { namespace backend
   inline constantobj<Constant> operator~(constantobj<Constant> const & c)
   {
     if(aux::has_arg_types<ConstantInt>(c))
-      return wrap(c.factory(), llvm::ConstantExpr::getNot(ptr(c)));
+      return wrap(c.factory(), ConstantExpr::getNot(ptr(c)));
     throw type_error("Expected ConstantInt for bitwise inversion");
   }
 
@@ -271,7 +271,7 @@ namespace sprite { namespace backend
       SPRITE_ALLOW_FLAGS(rhs, "addition", operator_flags::NUW | operator_flags::NSW)
       return wrap(
           rhs.arg().factory()
-        , llvm::ConstantExpr::getAdd(
+        , ConstantExpr::getAdd(
               ptr(lhs), ptr(rhs), rhs.flags().nuw(), rhs.flags().nsw()
             )
         );
@@ -281,7 +281,7 @@ namespace sprite { namespace backend
       SPRITE_ALLOW_FLAGS(rhs, "addition", operator_flags::SIGNED)
       return wrap(
           rhs.arg().factory()
-        , llvm::ConstantExpr::getFAdd(ptr(lhs), ptr(rhs))
+        , ConstantExpr::getFAdd(ptr(lhs), ptr(rhs))
         );
     }
     throw type_error("Expected ConstantInt or ConstantFP for addition");
@@ -319,7 +319,7 @@ namespace sprite { namespace backend
       SPRITE_ALLOW_FLAGS(rhs, "subtraction", operator_flags::NUW | operator_flags::NSW)
       return wrap(
           rhs.arg().factory()
-        , llvm::ConstantExpr::getSub(
+        , ConstantExpr::getSub(
               ptr(lhs), ptr(rhs), rhs.flags().nuw(), rhs.flags().nsw()
             )
         );
@@ -329,7 +329,7 @@ namespace sprite { namespace backend
       SPRITE_ALLOW_FLAGS(rhs, "subtraction", operator_flags::SIGNED)
       return wrap(
           rhs.arg().factory()
-        , llvm::ConstantExpr::getFSub(ptr(lhs), ptr(rhs))
+        , ConstantExpr::getFSub(ptr(lhs), ptr(rhs))
         );
     }
     throw type_error("Expected ConstantInt or ConstantFP for subtraction");
@@ -367,7 +367,7 @@ namespace sprite { namespace backend
       SPRITE_ALLOW_FLAGS(rhs, "multiplication", operator_flags::NUW | operator_flags::NSW)
       return wrap(
           rhs.arg().factory()
-        , llvm::ConstantExpr::getMul(
+        , ConstantExpr::getMul(
               ptr(lhs), ptr(rhs), rhs.flags().nuw(), rhs.flags().nsw()
             )
         );
@@ -377,7 +377,7 @@ namespace sprite { namespace backend
       SPRITE_ALLOW_FLAGS(rhs, "multiplication", operator_flags::SIGNED)
       return wrap(
           rhs.arg().factory()
-        , llvm::ConstantExpr::getFMul(ptr(lhs), ptr(rhs))
+        , ConstantExpr::getFMul(ptr(lhs), ptr(rhs))
         );
     }
     throw type_error("Expected ConstantInt or ConstantFP for multiplication");
@@ -421,7 +421,7 @@ namespace sprite { namespace backend
       {
         return wrap(
             rhs.arg().factory()
-          , llvm::ConstantExpr::getSDiv(
+          , ConstantExpr::getSDiv(
                 ptr(lhs), ptr(rhs), rhs.flags().exact()
               )
           );
@@ -430,7 +430,7 @@ namespace sprite { namespace backend
       {
         return wrap(
             rhs.arg().factory()
-          , llvm::ConstantExpr::getUDiv(
+          , ConstantExpr::getUDiv(
                 ptr(lhs), ptr(rhs), rhs.flags().exact()
               )
           );
@@ -441,7 +441,7 @@ namespace sprite { namespace backend
       SPRITE_ALLOW_FLAGS(rhs, "floating-point division", operator_flags::SIGNED)
       return wrap(
           rhs.arg().factory()
-        , llvm::ConstantExpr::getFDiv(ptr(lhs), ptr(rhs))
+        , ConstantExpr::getFDiv(ptr(lhs), ptr(rhs))
         );
     }
     throw type_error("Expected ConstantInt or ConstantFP for division");
@@ -485,14 +485,14 @@ namespace sprite { namespace backend
       {
         return wrap(
             rhs.arg().factory()
-          , llvm::ConstantExpr::getSRem(ptr(lhs), ptr(rhs))
+          , ConstantExpr::getSRem(ptr(lhs), ptr(rhs))
           );
       }
       else
       {
         return wrap(
             rhs.arg().factory()
-          , llvm::ConstantExpr::getURem(ptr(lhs), ptr(rhs))
+          , ConstantExpr::getURem(ptr(lhs), ptr(rhs))
           );
       }
     }
@@ -501,7 +501,7 @@ namespace sprite { namespace backend
       SPRITE_ALLOW_FLAGS(rhs, "floating-point remainder", operator_flags::SIGNED)
       return wrap(
           rhs.arg().factory()
-        , llvm::ConstantExpr::getFRem(ptr(lhs), ptr(rhs))
+        , ConstantExpr::getFRem(ptr(lhs), ptr(rhs))
         );
     }
     throw type_error("Expected ConstantInt or ConstantFP for remainder");
@@ -541,7 +541,7 @@ namespace sprite { namespace backend
     {
       return wrap(
           rhs_.factory()
-        , llvm::ConstantExpr::getAnd(ptr(lhs_), ptr(rhs_))
+        , ConstantExpr::getAnd(ptr(lhs_), ptr(rhs_))
         );
     }
     throw type_error("Expected ConstantInt for bitwise AND");
@@ -565,7 +565,7 @@ namespace sprite { namespace backend
     {
       return wrap(
           rhs_.factory()
-        , llvm::ConstantExpr::getOr(ptr(lhs_), ptr(rhs_))
+        , ConstantExpr::getOr(ptr(lhs_), ptr(rhs_))
         );
     }
     throw type_error("Expected ConstantInt for bitwise OR");
@@ -589,7 +589,7 @@ namespace sprite { namespace backend
     {
       return wrap(
           rhs_.factory()
-        , llvm::ConstantExpr::getXor(ptr(lhs_), ptr(rhs_))
+        , ConstantExpr::getXor(ptr(lhs_), ptr(rhs_))
         );
     }
     throw type_error("Expected ConstantInt for bitwise XOR");
@@ -611,7 +611,7 @@ namespace sprite { namespace backend
       SPRITE_ALLOW_FLAGS(rhs, "left shift", operator_flags::NUW | operator_flags::NSW)
       return wrap(
           rhs.arg().factory()
-        , llvm::ConstantExpr::getShl(
+        , ConstantExpr::getShl(
               ptr(lhs), ptr(rhs), rhs.flags().nuw(), rhs.flags().nsw()
             )
         );
@@ -657,7 +657,7 @@ namespace sprite { namespace backend
       {
         return wrap(
             rhs.arg().factory()
-          , llvm::ConstantExpr::getAShr(
+          , ConstantExpr::getAShr(
                 ptr(lhs), ptr(rhs), rhs.flags().exact()
               )
           );
@@ -666,7 +666,7 @@ namespace sprite { namespace backend
       {
         return wrap(
             rhs.arg().factory()
-          , llvm::ConstantExpr::getLShr(
+          , ConstantExpr::getLShr(
                 ptr(lhs), ptr(rhs), rhs.flags().exact()
               )
           );
@@ -707,14 +707,14 @@ namespace sprite { namespace backend
           {
             return wrap(
                 lhs.arg().factory()
-              , llvm::ConstantExpr::getSExt(ptr(lhs), type)
+              , ConstantExpr::getSExt(ptr(lhs), type)
               );
           }
           else
           {
             return wrap(
                 lhs.arg().factory()
-              , llvm::ConstantExpr::getZExt(ptr(lhs), type)
+              , ConstantExpr::getZExt(ptr(lhs), type)
               );
           }
         }
@@ -723,7 +723,7 @@ namespace sprite { namespace backend
           SPRITE_ALLOW_FLAGS(lhs, "integer truncation", 0)
           return wrap(
               lhs.arg().factory()
-            , llvm::ConstantExpr::getTrunc(ptr(lhs), type)
+            , ConstantExpr::getTrunc(ptr(lhs), type)
             );
         }
         return lhs.arg(); // no-op
@@ -742,14 +742,14 @@ namespace sprite { namespace backend
         {
           return wrap(
               lhs.arg().factory()
-            , llvm::ConstantExpr::getSIToFP(ptr(lhs), type)
+            , ConstantExpr::getSIToFP(ptr(lhs), type)
             );
         }
         else
         {
           return wrap(
               lhs.arg().factory()
-            , llvm::ConstantExpr::getUIToFP(ptr(lhs), type)
+            , ConstantExpr::getUIToFP(ptr(lhs), type)
             );
         }
       }
@@ -758,7 +758,7 @@ namespace sprite { namespace backend
         SPRITE_ALLOW_FLAGS(lhs, "integer-to-pointer conversion", 0)
         return wrap(
             lhs.arg().factory()
-          , llvm::ConstantExpr::getIntToPtr(ptr(lhs), type)
+          , ConstantExpr::getIntToPtr(ptr(lhs), type)
           );
       }
       throw type_error(
@@ -782,14 +782,14 @@ namespace sprite { namespace backend
         {
           return wrap(
               lhs.arg().factory()
-            , llvm::ConstantExpr::getFPToSI(ptr(lhs), type)
+            , ConstantExpr::getFPToSI(ptr(lhs), type)
             );
         }
         else
         {
           return wrap(
               lhs.arg().factory()
-            , llvm::ConstantExpr::getFPToUI(ptr(lhs), type)
+            , ConstantExpr::getFPToUI(ptr(lhs), type)
             );
         }
       }
@@ -802,7 +802,7 @@ namespace sprite { namespace backend
           SPRITE_ALLOW_FLAGS(lhs, "floating-point extension", operator_flags::SIGNED)
           return wrap(
               lhs.arg().factory()
-            , llvm::ConstantExpr::getFPExtend(ptr(lhs), type)
+            , ConstantExpr::getFPExtend(ptr(lhs), type)
             );
         }
         else if(rhsz < lhsz)
@@ -810,7 +810,7 @@ namespace sprite { namespace backend
           SPRITE_ALLOW_FLAGS(lhs, "floating-point truncation", operator_flags::SIGNED)
           return wrap(
               lhs.arg().factory()
-            , llvm::ConstantExpr::getFPTrunc(ptr(lhs), type)
+            , ConstantExpr::getFPTrunc(ptr(lhs), type)
             );
         }
         return lhs.arg(); // no-op
@@ -827,7 +827,7 @@ namespace sprite { namespace backend
         SPRITE_ALLOW_FLAGS(lhs, "pointer-to-integer conversion", 0)
         return wrap(
             lhs.arg().factory()
-          , llvm::ConstantExpr::getPtrToInt(ptr(lhs), type)
+          , ConstantExpr::getPtrToInt(ptr(lhs), type)
           );
       }
       throw type_error(
@@ -873,7 +873,7 @@ namespace sprite { namespace backend
     constantobj<Constant> lhs_ = aux::getlhs(lhs, rhs);
     return wrap(
         lhs_.factory()
-      , llvm::ConstantExpr::getBitCast(ptr(lhs_), ptr(rhs))
+      , ConstantExpr::getBitCast(ptr(lhs_), ptr(rhs))
       );
   }
 
@@ -893,7 +893,7 @@ namespace sprite { namespace backend
     constantobj<Constant> if__ = aux::getlhs(aux::getlhs(if_, then), else_);
     return wrap(
         if__.factory()
-      , llvm::ConstantExpr::getSelect(ptr(if_), ptr(then), ptr(else_))
+      , ConstantExpr::getSelect(ptr(if_), ptr(then), ptr(else_))
       );
   }
 
@@ -903,7 +903,7 @@ namespace sprite { namespace backend
   {
     return wrap(
         this->base.factory()
-      , llvm::ConstantExpr::getGetElementPtr(
+      , ConstantExpr::getGetElementPtr(
             ptr(this->base), this->indices
           )
       );
@@ -915,7 +915,7 @@ namespace sprite { namespace backend
   {
     return wrap(
         gvp.get_base().factory()
-      , llvm::ConstantExpr::getInBoundsGetElementPtr(
+      , ConstantExpr::getInBoundsGetElementPtr(
             ptr(gvp.get_base()), gvp.get_indices()
           )
       );
@@ -951,7 +951,7 @@ namespace sprite { namespace backend
     auto const i64 = this->factory().int_(64);
     return wrap(
         this->factory()
-      , llvm::ConstantExpr::getGetElementPtr(this->ptr(), ptr(i64 % 0))
+      , ConstantExpr::getGetElementPtr(this->ptr(), ptr(i64 % 0))
       );
   }
 

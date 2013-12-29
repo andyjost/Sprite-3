@@ -57,10 +57,10 @@ int main()
   type_factory const types(hello_module);
   auto const char_ = types.char_();
   auto const i32 = types.int_(32);
-  auto const puts = extern_<llvm::Function>(i32(*char_), "puts");
+  auto const puts = extern_<Function>(i32(*char_), "puts");
 
   /// [Using context]
-  auto const main = extern_<llvm::Function>(i32(), "main");
+  auto const main = extern_<Function>(i32(), "main");
   {
     context _ = main.entry();
     puts(*char_ % "hello world\n");

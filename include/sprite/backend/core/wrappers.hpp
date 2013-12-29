@@ -106,7 +106,7 @@ namespace sprite { namespace backend
      * right-hand side initializer expression, or as function call argument.
      */
     template<typename Factory>
-    struct rvalue_sequence : std::vector<llvm::Constant *>
+    struct rvalue_sequence : std::vector<Constant *>
     {
       /// Adds a constant value to this sequence.
       template<typename T>
@@ -178,7 +178,7 @@ namespace sprite { namespace backend
   private:
 
     static_assert(
-        std::is_base_of<llvm::Instruction, T>::value
+        std::is_base_of<Instruction, T>::value
       , "Expected an LLVM Instruction object"
       );
   };

@@ -5,9 +5,6 @@
 
 #pragma once
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/IR/Type.h"
-#include "llvm/IR/Function.h"
 #include "sprite/backend/support/typenames.hpp"
 
 // Forward-declare some LLVM types that will be used.
@@ -25,6 +22,7 @@ namespace llvm
   class Constant;
   class ConstantAggregateZero;
   class ConstantArray;
+  class ConstantExpr;
   class ConstantFP;
   class ConstantInt;
   class ConstantPointerNull;
@@ -34,7 +32,12 @@ namespace llvm
   class Value;
   class Function;
   class GlobalValue;
+  class GlobalVariable;
   class Instruction;
+
+  // ADTs.
+  class StringRef;
+  class Twine;
 }
 
 namespace sprite { namespace backend
@@ -47,6 +50,7 @@ namespace sprite { namespace backend
   using llvm::PointerType;
   using llvm::StructType;
 
+  SPRITE_DECLARE_TYPENAME(Type)
   SPRITE_DECLARE_TYPENAME(ArrayType)
   SPRITE_DECLARE_TYPENAME(FunctionType)
   SPRITE_DECLARE_TYPENAME(IntegerType)
@@ -57,20 +61,14 @@ namespace sprite { namespace backend
   using llvm::Value;
   using llvm::Function;
   using llvm::GlobalValue;
+  using llvm::GlobalVariable;
   using llvm::Instruction;
 
-  /// Returns a human-readable version of an LLVM type name.
-  inline std::string typename_(Type & tp)
-  {
-    std::string buf;
-    llvm::raw_string_ostream sbuf(buf);
-    sbuf << tp;
-    return sbuf.str();
-  }
-
-  /// Returns a human-readable version of an LLVM type name.
-  inline std::string typename_(Type * tp)
-    { return typename_(*tp); }
+  SPRITE_DECLARE_TYPENAME(Value)
+  SPRITE_DECLARE_TYPENAME(Function)
+  SPRITE_DECLARE_TYPENAME(GlobalValue)
+  SPRITE_DECLARE_TYPENAME(GlobalVariable)
+  SPRITE_DECLARE_TYPENAME(Instruction)
 
   /**
    * @brief Represents a floating-point type.
@@ -100,6 +98,7 @@ namespace sprite { namespace backend
   using llvm::Constant;
   using llvm::ConstantAggregateZero;
   using llvm::ConstantArray;
+  using llvm::ConstantExpr;
   using llvm::ConstantFP;
   using llvm::ConstantInt;
   using llvm::ConstantPointerNull;
@@ -107,6 +106,7 @@ namespace sprite { namespace backend
 
   SPRITE_DECLARE_TYPENAME(ConstantAggregateZero);
   SPRITE_DECLARE_TYPENAME(ConstantArray);
+  SPRITE_DECLARE_TYPENAME(ConstantExpr);
   SPRITE_DECLARE_TYPENAME(ConstantFP);
   SPRITE_DECLARE_TYPENAME(ConstantInt);
   SPRITE_DECLARE_TYPENAME(ConstantPointerNull);
@@ -115,10 +115,17 @@ namespace sprite { namespace backend
 
   // ADTs.
   using string_ref = llvm::StringRef;
+  using twine = llvm::Twine;
+
+  SPRITE_DECLARE_TYPENAME(string_ref);
+  SPRITE_DECLARE_TYPENAME(twine);
 
   // Arbitrary-precision intrinsic types.
   using llvm::APInt;
   using llvm::APFloat;
+
+  SPRITE_DECLARE_TYPENAME(APInt);
+  SPRITE_DECLARE_TYPENAME(APFloat);
 
   /**
    * @brief Extends llvm::ArrayRef<T>.

@@ -13,7 +13,7 @@ namespace sprite { namespace backend { namespace aux
 {
   /// Enables a template only when T can be converted to llvm::Type.
   template<typename T> using enable_if_type = 
-      std::enable_if<std::is_convertible<T*, llvm::Type*>::value, void *>
+      std::enable_if<std::is_convertible<T*, Type*>::value, void *>
     ;
 
   /**
@@ -25,7 +25,7 @@ namespace sprite { namespace backend { namespace aux
    */
   template<typename T> using enable_if_constant_not_global =
       std::enable_if<
-          std::is_convertible<T*, llvm::Constant*>::value
+          std::is_convertible<T*, Constant*>::value
               && !std::is_convertible<T*, GlobalValue*>::value
         , void *
         >
@@ -37,7 +37,7 @@ namespace sprite { namespace backend { namespace aux
    */
   template<typename T> using enable_if_instruction =
       std::enable_if<
-          std::is_convertible<T*, llvm::Instruction*>::value
+          std::is_convertible<T*, Instruction*>::value
         , void *
         >
     ;
@@ -75,7 +75,7 @@ namespace sprite { namespace backend { namespace aux
   /// Enables a template only when T can be converted to an array of Constant *.
   template<typename T> using enable_if_convertible_to_constant_array =
       std::enable_if<
-          std::is_convertible<T, llvm::ArrayRef<llvm::Constant*>>::value
+          std::is_convertible<T, llvm::ArrayRef<Constant*>>::value
         , void *
         >
     ;

@@ -6,7 +6,7 @@ namespace sprite { namespace backend
 {
   struct label
   {
-    label(llvm::Twine const & name = "");
+    label(twine const & name = "");
 
     basic_block<type_factory> block() const { return m_block; }
 

@@ -57,23 +57,10 @@ int main()
   auto const i32 = types.int_(32);
   auto const i64 = types.int_(64);
 
-  // Declare printf.
-  auto const printf = dyn_cast<llvm::Function>(
-      extern_(i32(*char_, dots), "printf")
-    );
-  printf->setCallingConv(llvm::CallingConv::C);
-
-  // Declare gets.
-  auto const gets = dyn_cast<llvm::Function>(
-      extern_((*char_)(*char_), "gets")
-    );
-  gets->setCallingConv(llvm::CallingConv::C);
-
-  // Declare atoi.
-  auto const atoi = dyn_cast<llvm::Function>(
-      extern_(i32(*char_), "atoi")
-    );
-  atoi->setCallingConv(llvm::CallingConv::C);
+  // Declare external functions.
+  auto const printf = extern_<Function>(i32(*char_, dots), "printf");
+  // auto const gets = extern_<Function>((*char_)(*char_), "gets");
+  // auto const atoi = extern_<Function>(i32(*char_), "atoi");
 
   // C Syntax:
   //
@@ -103,7 +90,7 @@ int main()
   //       }
   //     }
 
-  auto const fib = dyn_cast<llvm::Function>(extern_(i64(i64), "fib"));
+  auto const fib = dyn_cast<Function>(extern_(i64(i64), "fib"));
   {
     using namespace llvm;
     BasicBlock* entryb = BasicBlock::Create(getGlobalContext(), "entry", fib.ptr());
@@ -132,7 +119,7 @@ int main()
   }
 
   auto const main = extern_(i32(), "main");
-  auto const func_main = dyn_cast<llvm::Function>(main);
+  auto const func_main = dyn_cast<Function>(main);
 
   {
     using namespace llvm;

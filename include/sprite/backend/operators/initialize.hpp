@@ -23,10 +23,10 @@ namespace sprite { namespace backend
      * its element type.
      */
     template<typename T, typename Factory>
-    std::pair<llvm::GlobalVariable *, typeobj<Type, Factory>>
+    std::pair<GlobalVariable *, typeobj<Type, Factory>>
     get_global_and_type(T * arg, Factory const & f)
     {
-      if(auto const global = dyn_cast<llvm::GlobalVariable>(arg))
+      if(auto const global = dyn_cast<GlobalVariable>(arg))
       {
         // Global variables are always pointer types.  Get the underlying
         // element type.

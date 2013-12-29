@@ -416,7 +416,7 @@ namespace sprite { namespace backend
     {
       auto const elem_ty = wrap(tp.factory(), tp->getElementType());
       auto const array_ty = elem_ty[values.size()];
-      auto const global = new llvm::GlobalVariable(
+      auto const global = new GlobalVariable(
           /* Module      */ *tp.factory().module()
         , /* Type        */ array_ty.ptr()
         , /* isConstant  */ true
@@ -424,6 +424,8 @@ namespace sprite { namespace backend
         , /* Initializer */ (array_ty % values).ptr()
         , /* Name        */ ".str"
         );
+
+      global->setUnnamedAddr(true);
 
       // llc -march=cpp sets the alignment for small element types.  This may
       // not really be required.
@@ -436,7 +438,7 @@ namespace sprite { namespace backend
         case 16: global->setAlignment(16); break;
       }
       auto const zero = (tp.factory().int_(32) % 0).ptr();
-      auto const ptr = llvm::ConstantExpr::getGetElementPtr(
+      auto const ptr = ConstantExpr::getGetElementPtr(
           global, array_ref<Constant *>{zero, zero}
         );
       return wrap(tp.factory(), ptr);

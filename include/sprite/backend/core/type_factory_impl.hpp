@@ -19,39 +19,39 @@ namespace sprite { namespace backend
   type_factory::int_(unsigned numBits) const
   {
     return wrap(
-        *this, llvm::IntegerType::get(_module->getContext(), numBits)
+        *this, IntegerType::get(_module->getContext(), numBits)
       );
   }
 
   inline fp_type type_factory::float_() const
   {
-    auto const p = llvm::Type::getFloatTy(_module->getContext());
+    auto const p = Type::getFloatTy(_module->getContext());
     return wrap(*this, reinterpret_cast<FPType*>(p));
   }
 
   inline fp_type type_factory::double_() const
   {
-    auto const p = llvm::Type::getDoubleTy(_module->getContext());
+    auto const p = Type::getDoubleTy(_module->getContext());
     return wrap(*this, reinterpret_cast<FPType*>(p));
   }
 
   inline type type_factory::void_() const
-    { return wrap(*this, llvm::Type::getVoidTy(_module->getContext())); }
+    { return wrap(*this, Type::getVoidTy(_module->getContext())); }
 
   inline struct_type
   type_factory::struct_(array_ref<type> const & elements) const
   {
-    std::vector<llvm::Type*> tmp;
+    std::vector<Type*> tmp;
     for(auto e: elements) { tmp.emplace_back(e.ptr()); }
-    return wrap(*this, llvm::StructType::get(_module->getContext(),tmp));
+    return wrap(*this, StructType::get(_module->getContext(),tmp));
   }
 
   inline struct_type
   type_factory::struct_(string_ref const & name) const
   {
-    llvm::StructType * type = _module->getTypeByName(name);
+    StructType * type = _module->getTypeByName(name);
     if(!type)
-      type = llvm::StructType::create(_module->getContext(), name);
+      type = StructType::create(_module->getContext(), name);
     return wrap(*this, type);
   }
 
@@ -62,7 +62,7 @@ namespace sprite { namespace backend
     ) const
   {
     auto const type = this->struct_(name);
-    std::vector<llvm::Type*> tmp;
+    std::vector<Type*> tmp;
     for(auto e: elements) { tmp.emplace_back(e.ptr()); }
     type->setBody(tmp, /*isPacked*/ false);
     return type;

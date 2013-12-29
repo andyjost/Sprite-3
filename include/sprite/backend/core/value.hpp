@@ -41,7 +41,7 @@ namespace sprite { namespace backend
       throw value_error("Integer value is too large to return");
     }
     throw type_error(
-        "Expected integer value, not " + llvm_typename(c->getType())
+        "Expected integer value, not " + typename_(c->getType())
       );
   }
 
@@ -57,7 +57,7 @@ namespace sprite { namespace backend
     if(ConstantInt * ci = dyn_cast<ConstantInt>(c.ptr()))
       return ci->getValue();
     throw type_error(
-        "Expected integer value, not " + llvm_typename(c->getType())
+        "Expected integer value, not " + typename_(c->getType())
       );
   }
 
