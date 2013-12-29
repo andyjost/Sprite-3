@@ -112,11 +112,13 @@ namespace sprite { namespace backend
   SPRITE_DECLARE_TYPENAME(ConstantPointerNull);
   SPRITE_DECLARE_TYPENAME(ConstantStruct);
 
-  // using llvm::APInt;
-  // using llvm::APFloat;
 
   // ADTs.
   using string_ref = llvm::StringRef;
+
+  // Arbitrary-precision intrinsic types.
+  using llvm::APInt;
+  using llvm::APFloat;
 
   /**
    * @brief Extends llvm::ArrayRef<T>.

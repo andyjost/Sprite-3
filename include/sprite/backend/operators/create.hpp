@@ -152,13 +152,13 @@ namespace sprite { namespace backend
    *
    * @snippet constants.cpp Instantiating simple types
    */
-  SPRITE_BINOP_PREAMBLE(ConstantInt, T, IntegerType, U, llvm::APInt)
+  SPRITE_BINOP_PREAMBLE(ConstantInt, T, IntegerType, U, APInt)
   operator%(typeobj<T> const & tp, U const & value)
   {
     return wrap(
         tp.factory()
       , ConstantInt::get(
-            tp.factory().context(), static_cast<llvm::APInt const &>(value)
+            tp.factory().context(), static_cast<APInt const &>(value)
           )
       );
   }
@@ -203,13 +203,13 @@ namespace sprite { namespace backend
    *
    * @snippet constants.cpp Instantiating simple types
    */
-  SPRITE_BINOP_PREAMBLE(ConstantFP, T, FPType, U, llvm::APFloat)
+  SPRITE_BINOP_PREAMBLE(ConstantFP, T, FPType, U, APFloat)
   operator%(typeobj<T> const & tp, U const & value)
   {
     return wrap(
         tp.factory()
       , ConstantFP::get(
-            tp.factory().context(), static_cast<llvm::APFloat const &>(value)
+            tp.factory().context(), static_cast<APFloat const &>(value)
           )
       );
   }
@@ -227,13 +227,13 @@ namespace sprite { namespace backend
     switch(nfv.kind())
     {
       case non_finite_value::Inf:
-        return tp % llvm::APFloat::getInf(sem, nfv.negative());
+        return tp % APFloat::getInf(sem, nfv.negative());
       case non_finite_value::Nan:
-        return tp % llvm::APFloat::getNaN(sem, nfv.negative());
+        return tp % APFloat::getNaN(sem, nfv.negative());
       case non_finite_value::Qnan:
-        return tp % llvm::APFloat::getQNaN(sem, nfv.negative());
+        return tp % APFloat::getQNaN(sem, nfv.negative());
       case non_finite_value::Snan:
-        return tp % llvm::APFloat::getSNaN(sem, nfv.negative());
+        return tp % APFloat::getSNaN(sem, nfv.negative());
     }
     throw runtime_error("Bad non-finite value specifier");
   }
@@ -509,8 +509,8 @@ namespace sprite { namespace backend
 
         /*    LHS Match     Allowed RHSs */
         /*    ------------  ------------ */
-      , case_< IntegerType,  null_arg, uint64_t, string_ref, llvm::APInt>
-      , case_< FPType,       null_arg, double, string_ref, llvm::APFloat, non_finite_value>
+      , case_< IntegerType,  null_arg, uint64_t, string_ref, APInt>
+      , case_< FPType,       null_arg, double, string_ref, APFloat, non_finite_value>
       , case_< StructType,   null_arg, any_array_ref, any_tuple_ref>
       , case_< ArrayType,    null_arg, any_array_ref, any_tuple_ref>
       , case_< PointerType,  null_arg, string_ref>

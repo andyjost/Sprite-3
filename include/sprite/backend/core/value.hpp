@@ -49,7 +49,7 @@ namespace sprite { namespace backend
   template<typename Target, typename T, typename Factory>
   inline
   typename std::enable_if<
-      std::is_constructible<Target, llvm::APInt>::value
+      std::is_constructible<Target, APInt>::value
     , Target
     >::type
   value(constantobj<T, Factory> const & c)
@@ -61,11 +61,11 @@ namespace sprite { namespace backend
       );
   }
 
-  /// Get the value of a constant as an llvm::APFloat.
+  /// Get the value of a constant as an APFloat.
   template<typename Target, typename T, typename Factory>
   inline
   typename std::enable_if<
-      std::is_same<Target, llvm::APFloat>::value, Target const &
+      std::is_same<Target, APFloat>::value, Target const &
     >::type
   value(constantobj<T, Factory> const & c)
   {
@@ -82,11 +82,11 @@ namespace sprite { namespace backend
     >::type
   value(constantobj<T, Factory> const & c)
   {
-    llvm::APFloat const & val = value<llvm::APFloat>(c);
+    APFloat const & val = value<APFloat>(c);
     llvm::fltSemantics const & sem = val.getSemantics();
-    if(&sem == &llvm::APFloat::IEEEsingle)
+    if(&sem == &APFloat::IEEEsingle)
       return val.convertToFloat();
-    else if(&sem == &llvm::APFloat::IEEEdouble)
+    else if(&sem == &APFloat::IEEEdouble)
       return static_cast<float>(val.convertToDouble());
     throw value_error("Unsupported float semantics");
   }
@@ -99,11 +99,11 @@ namespace sprite { namespace backend
     >::type
   value(constantobj<T, Factory> const & c)
   {
-    llvm::APFloat const & val = value<llvm::APFloat>(c);
+    APFloat const & val = value<APFloat>(c);
     llvm::fltSemantics const & sem = val.getSemantics();
-    if(&sem == &llvm::APFloat::IEEEsingle)
+    if(&sem == &APFloat::IEEEsingle)
       return val.convertToFloat();
-    else if(&sem == &llvm::APFloat::IEEEdouble)
+    else if(&sem == &APFloat::IEEEdouble)
       return val.convertToDouble();
     throw value_error("Unsupported float semantics");
   }

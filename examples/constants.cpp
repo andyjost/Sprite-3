@@ -67,8 +67,8 @@ int main()
     auto const false_ = bool_ % false;
     auto const a = char_ % 'a';
     auto const fortytwo = i32 % 42;
-    auto const fortytwo2 = i32 % llvm::APInt(32, 42);
-    auto const pi = float_ % llvm::APFloat(3.1415);
+    auto const fortytwo2 = i32 % APInt(32, 42);
+    auto const pi = float_ % APFloat(3.1415);
     auto const zero = float_ % 0.0f;
     auto const zero2 = float_ % 0;
     auto const zero3 = float_ % null;

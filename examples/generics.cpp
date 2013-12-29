@@ -53,8 +53,8 @@ int main()
   MYCHECK(i32 % "0xdeadbeef", 0xdeadbeef);
   MYCHECK(i32 % "0777", 0777);
   MYCHECK(i32 % "b101", 5);
-  MYCHECK(i32 % llvm::APInt(8, 37), 37);
-  MYCHECK(i32 % llvm::APInt(8, -2, true), -2);
+  MYCHECK(i32 % APInt(8, 37), 37);
+  MYCHECK(i32 % APInt(8, -2, true), -2);
 
   MYCHECK(float_ % null, 0.0f);
   MYCHECK(float_ % 1, 1.0f);
