@@ -239,6 +239,13 @@ int main()
     auto e = types % array_ref<float>{1, 2, 3, 4};
     auto f = types % array_ref<double>{1, 2, 3, 4};
     auto g = types % "hello";
+
+    auto a2 = types % std::array<uint8_t,3>{'a', 'b', 'c'};
+    auto b2 = types % std::array<uint16_t,4>{1, 2, 3, 4};
+    auto c2 = types % std::array<uint32_t,4>{1, 2, 3, 4};
+    auto d2 = types % std::array<uint64_t,4>{1, 2, 3, 4};
+    auto e2 = types % std::array<float,4>{1, 2, 3, 4};
+    auto f2 = types % std::array<double,4>{1, 2, 3, 4};
     /// [Instantiating constant data arrays]
     (void) a;
     (void) b;
@@ -247,6 +254,12 @@ int main()
     (void) e;
     (void) f;
     (void) g;
+    (void) a2;
+    (void) b2;
+    (void) c2;
+    (void) d2;
+    (void) e2;
+    (void) f2;
   }
 
   return 0;

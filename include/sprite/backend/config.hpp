@@ -4,6 +4,7 @@
  */
 
 #pragma once
+#include <array>
 #include "llvm/ADT/ArrayRef.h"
 #include "sprite/backend/support/typenames.hpp"
 
@@ -146,6 +147,17 @@ namespace sprite { namespace backend
 
     array_ref(std::initializer_list<T> && args)
       : llvm::ArrayRef<T>(args.begin(), args.size())
+    {}
+
+    /// Initializes from std::array.
+    template<size_t N>
+    array_ref(std::array<T,N> const & args)
+      : llvm::ArrayRef<T>(args.begin(), N)
+    {}
+
+    template<size_t N>
+    array_ref(std::array<T,N> && args)
+      : llvm::ArrayRef<T>(args.begin(), N)
     {}
   };
 }}

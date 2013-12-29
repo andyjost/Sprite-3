@@ -522,6 +522,7 @@ namespace sprite { namespace backend
     return handler(tp, arg);
   }
 
+  //@{
   /**
    * @brief Instantiates a constant data array.
    *
@@ -534,19 +535,30 @@ namespace sprite { namespace backend
    * @snippet constants.cpp Instantiating constant data arrays
    */
 
-  template<typename T>
-  inline typename std::enable_if<
-      std::is_convertible<T, array_ref<uint8_t>>::value
-        || std::is_convertible<T, array_ref<uint16_t>>::value
-        || std::is_convertible<T, array_ref<uint32_t>>::value
-        || std::is_convertible<T, array_ref<uint64_t>>::value
-        || std::is_convertible<T, array_ref<float>>::value
-        || std::is_convertible<T, array_ref<double>>::value
-        || !std::is_convertible<T, string_ref>::value
-    , constantobj<Constant>
-    >::type
-  operator%(type_factory const & tf, T const & value)
+  inline constantobj<Constant>
+  operator%(type_factory const & tf, array_ref<uint8_t> const & value)
     { return wrap(tf, llvm::ConstantDataArray::get(tf.context(), value)); }
+
+  inline constantobj<Constant>
+  operator%(type_factory const & tf, array_ref<uint16_t> const & value)
+    { return wrap(tf, llvm::ConstantDataArray::get(tf.context(), value)); }
+
+  inline constantobj<Constant>
+  operator%(type_factory const & tf, array_ref<uint32_t> const & value)
+    { return wrap(tf, llvm::ConstantDataArray::get(tf.context(), value)); }
+
+  inline constantobj<Constant>
+  operator%(type_factory const & tf, array_ref<uint64_t> const & value)
+    { return wrap(tf, llvm::ConstantDataArray::get(tf.context(), value)); }
+
+  inline constantobj<Constant>
+  operator%(type_factory const & tf, array_ref<float> const & value)
+    { return wrap(tf, llvm::ConstantDataArray::get(tf.context(), value)); }
+
+  inline constantobj<Constant>
+  operator%(type_factory const & tf, array_ref<double> const & value)
+    { return wrap(tf, llvm::ConstantDataArray::get(tf.context(), value)); }
+  //@}
 
   /**
    * @brief Instantiates a constant data array from string data.
