@@ -197,7 +197,7 @@ int main()
     assert(NELEM(hello2) == 6);
 
     // A non-null-terminated char array.
-    auto const hello3 = *char_ % ArrayRef<char>(letters); // length: 5
+    auto const hello3 = *char_ % array_ref<char>(letters); // length: 5
     assert(NELEM(hello3) == 5);
 
     // Arrays of char *.
@@ -232,12 +232,12 @@ int main()
   {
     /// [Instantiating constant data arrays]
     type_factory const types;
-    auto a = types % ArrayRef<uint8_t>{'a', 'b', 'c'};
-    auto b = types % ArrayRef<uint16_t>{1, 2, 3, 4};
-    auto c = types % ArrayRef<uint32_t>{1, 2, 3, 4};
-    auto d = types % ArrayRef<uint64_t>{1, 2, 3, 4};
-    auto e = types % ArrayRef<float>{1, 2, 3, 4};
-    auto f = types % ArrayRef<double>{1, 2, 3, 4};
+    auto a = types % array_ref<uint8_t>{'a', 'b', 'c'};
+    auto b = types % array_ref<uint16_t>{1, 2, 3, 4};
+    auto c = types % array_ref<uint32_t>{1, 2, 3, 4};
+    auto d = types % array_ref<uint64_t>{1, 2, 3, 4};
+    auto e = types % array_ref<float>{1, 2, 3, 4};
+    auto f = types % array_ref<double>{1, 2, 3, 4};
     auto g = types % "hello";
     /// [Instantiating constant data arrays]
     (void) a;

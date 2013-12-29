@@ -280,17 +280,17 @@ namespace sprite { namespace backend
    * instantiated values.
    */
   constantobj<Constant>
-  _modulo(struct_type const & tp, ArrayRef<Constant*> const & values)
+  _modulo(struct_type const & tp, array_ref<Constant*> const & values)
   {
     auto const p = ConstantStruct::get(
-        tp.ptr(), static_cast<ArrayRef<Constant*> const &>(values)
+        tp.ptr(), static_cast<array_ref<Constant*> const &>(values)
       );
     return wrap(tp.factory(), p);
   }
 
   template<typename T>
   constantobj<Constant>
-  _modulo(struct_type const & tp, ArrayRef<T> const & values)
+  _modulo(struct_type const & tp, array_ref<T> const & values)
   {
     if(values.size() > 0 && tp->indexValid(values.size() - 1))
       throw type_error("Too many values to extract in struct instantiation");
@@ -362,10 +362,10 @@ namespace sprite { namespace backend
    * instantiated values.
    */
   constantobj<Constant>
-  _modulo(array_type const & tp, ArrayRef<Constant*> const & values)
+  _modulo(array_type const & tp, array_ref<Constant*> const & values)
   {
     auto const p = ConstantArray::get(
-        tp.ptr(), static_cast<ArrayRef<Constant*> const &>(values)
+        tp.ptr(), static_cast<array_ref<Constant*> const &>(values)
       );
     return wrap(tp.factory(), p);
   }
@@ -376,7 +376,7 @@ namespace sprite { namespace backend
    */
   template<typename T>
   constantobj<Constant>
-  _modulo(array_type const & tp, ArrayRef<T> const & values)
+  _modulo(array_type const & tp, array_ref<T> const & values)
   {
     auto const elem_ty = wrap(tp.factory(), tp->getElementType());
     std::vector<Constant*> args;
@@ -437,7 +437,7 @@ namespace sprite { namespace backend
       }
       auto const zero = (tp.factory().int_(32) % 0).ptr();
       auto const ptr = llvm::ConstantExpr::getGetElementPtr(
-          global, ArrayRef<Constant *>{zero, zero}
+          global, array_ref<Constant *>{zero, zero}
         );
       return wrap(tp.factory(), ptr);
     }
@@ -452,7 +452,7 @@ namespace sprite { namespace backend
   operator%(typeobj<T> const & tp, U const & value)
   {
     string_ref const str(value);
-    ArrayRef<char> const values(str.data(), str.size() + 1);
+    array_ref<char> const values(str.data(), str.size() + 1);
     return aux::create_global_pointer_from_constants(tp, values);
   }
 
@@ -534,12 +534,12 @@ namespace sprite { namespace backend
 
   template<typename T>
   inline typename std::enable_if<
-      std::is_convertible<T, ArrayRef<uint8_t>>::value
-        || std::is_convertible<T, ArrayRef<uint16_t>>::value
-        || std::is_convertible<T, ArrayRef<uint32_t>>::value
-        || std::is_convertible<T, ArrayRef<uint64_t>>::value
-        || std::is_convertible<T, ArrayRef<float>>::value
-        || std::is_convertible<T, ArrayRef<double>>::value
+      std::is_convertible<T, array_ref<uint8_t>>::value
+        || std::is_convertible<T, array_ref<uint16_t>>::value
+        || std::is_convertible<T, array_ref<uint32_t>>::value
+        || std::is_convertible<T, array_ref<uint64_t>>::value
+        || std::is_convertible<T, array_ref<float>>::value
+        || std::is_convertible<T, array_ref<double>>::value
         || !std::is_convertible<T, string_ref>::value
     , constantobj<Constant>
     >::type
@@ -550,7 +550,7 @@ namespace sprite { namespace backend
    * @brief Instantiates a constant data array from string data.
    *
    * A null-terminator will be appended.  To avoid this behavior, pass the data
-   * explicitly as @p ArrayRef<char>.
+   * explicitly as @p array_ref<char>.
    *
    * @snippet constants.cpp Instantiating constant data arrays
    */

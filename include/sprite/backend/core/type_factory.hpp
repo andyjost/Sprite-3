@@ -4,7 +4,6 @@
  */
 
 #pragma once
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/LLVMContext.h"
@@ -102,7 +101,7 @@ namespace sprite { namespace backend
      * @snippet types.cpp Creating an anonymous struct
      */
     struct_type
-    struct_(ArrayRef<type> const & elements) const;
+    struct_(array_ref<type> const & elements) const;
 
     /**
      * @brief Gets a struct by name.
@@ -125,7 +124,7 @@ namespace sprite { namespace backend
     struct_type
     struct_(
         string_ref const & name
-      , ArrayRef<type> const & elements
+      , array_ref<type> const & elements
       ) const;
   };
 }}

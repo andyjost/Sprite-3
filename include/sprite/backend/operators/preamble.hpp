@@ -10,14 +10,14 @@
     inline Quals typename std::enable_if<                             \
         std::is_base_of<EnTy, Lhs>::value                             \
             && std::is_convertible<Rhs, ArgTy>::value                 \
-      , constantobj<RetTy>                                        \
+      , constantobj<RetTy>                                            \
       >::type                                                         \
   /**/
 
-#define SPRITE_BINOP_PREAMBLE2(RetTy, T, EnTy, More...)         \
-    typename std::enable_if<                                    \
+#define SPRITE_BINOP_PREAMBLE2(RetTy, T, EnTy, More...)     \
+    typename std::enable_if<                                \
         std::is_base_of<EnTy, T>::value, constantobj<RetTy> \
-      >::type                                                   \
+      >::type                                               \
   /**/
 
 #define SPRITE_BINOP_PREAMBLE3(RetTy, Lhs, EnTy, Rhs, ArgTy, NotArgTy) \
@@ -26,7 +26,7 @@
         std::is_base_of<EnTy, Lhs>::value                              \
             && std::is_convertible<Rhs, ArgTy>::value                  \
             && !std::is_convertible<Rhs, NotArgTy>::value              \
-      , constantobj<RetTy>                                         \
+      , constantobj<RetTy>                                             \
       >::type                                                          \
   /**/
 

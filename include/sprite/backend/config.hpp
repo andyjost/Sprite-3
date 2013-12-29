@@ -126,16 +126,16 @@ namespace sprite { namespace backend
    * an additional constructor for better initialization.
    */
   template<typename T>
-  struct ArrayRef : llvm::ArrayRef<T>
+  struct array_ref : llvm::ArrayRef<T>
   {
     using llvm::ArrayRef<T>::ArrayRef;
 
     /// Initializes using a brace-enclosed initializer list.
-    ArrayRef(std::initializer_list<T> const & args)
+    array_ref(std::initializer_list<T> const & args)
       : llvm::ArrayRef<T>(args.begin(), args.size())
     {}
 
-    ArrayRef(std::initializer_list<T> && args)
+    array_ref(std::initializer_list<T> && args)
       : llvm::ArrayRef<T>(args.begin(), args.size())
     {}
   };

@@ -39,7 +39,7 @@ namespace sprite { namespace backend
     { return wrap(*this, llvm::Type::getVoidTy(_module->getContext())); }
 
   inline struct_type
-  type_factory::struct_(ArrayRef<type> const & elements) const
+  type_factory::struct_(array_ref<type> const & elements) const
   {
     std::vector<llvm::Type*> tmp;
     for(auto e: elements) { tmp.emplace_back(e.ptr()); }
@@ -58,7 +58,7 @@ namespace sprite { namespace backend
   inline struct_type
   type_factory::struct_(
       string_ref const & name
-    , ArrayRef<type> const & elements 
+    , array_ref<type> const & elements 
     ) const
   {
     auto const type = this->struct_(name);

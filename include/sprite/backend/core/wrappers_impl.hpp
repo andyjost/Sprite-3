@@ -64,7 +64,7 @@ namespace sprite { namespace backend
   {
     Type * tmp[sizeof...(argtypes)];
     Type ** end = aux::function_arg_loader<Type>()(&tmp[0], argtypes...);
-    ArrayRef<Type*> args(&tmp[0], end);
+    array_ref<Type*> args(&tmp[0], end);
     bool const varargs = (args.size() == sizeof...(argtypes) - 1);
     assert(varargs || args.size() == sizeof...(argtypes));
     return wrap(this->factory(), FunctionType::get(this->ptr(), args, varargs));
@@ -77,7 +77,7 @@ namespace sprite { namespace backend
   {
     Value * tmp[sizeof...(args)];
     Value ** end = aux::function_arg_loader<Value>()(&tmp[0], args...);
-    ArrayRef<Value*> args_(&tmp[0], end);
+    array_ref<Value*> args_(&tmp[0], end);
     if(args_.size() != sizeof...(args))
     {
       throw parameter_error(
