@@ -1,6 +1,6 @@
 #pragma once
 #include "sprite/backend/core/wrappers.hpp"
-#include "sprite/backend/core/type_factory.hpp"
+#include "sprite/backend/core/module.hpp"
 
 namespace sprite { namespace backend
 {

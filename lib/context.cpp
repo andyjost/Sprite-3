@@ -4,7 +4,7 @@
  */
 
 #include "sprite/backend/core/context.hpp"
-#include "sprite/backend/core/type_factory.hpp"
+#include "sprite/backend/core/module.hpp"
 #include "sprite/backend/core/wrappers.hpp"
 #include "sprite/backend/support/exceptions.hpp"
 

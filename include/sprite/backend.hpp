@@ -18,7 +18,7 @@ namespace sprite
 }
 
 
-#include <sprite/backend/core/type_factory.hpp>
+#include <sprite/backend/core/module.hpp>
 #include <sprite/backend/core/def.hpp>
 #include <sprite/backend/core/value.hpp>
 #include <sprite/backend/core/wrappers.hpp>

@@ -129,5 +129,5 @@ namespace sprite { namespace backend
   };
 }}
 
-#include "sprite/backend/core/type_factory_impl.hpp"
+#include "sprite/backend/core/module_impl.hpp"
 
