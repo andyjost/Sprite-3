@@ -50,12 +50,10 @@ int main()
 {
   using namespace sprite::backend;
 
-  llvm::Module * fib_module
-    = new llvm::Module("fib", llvm::getGlobalContext());
-  type_factory const types(fib_module);
-  auto const char_ = types.char_();
-  auto const i32 = types.int_(32);
-  auto const i64 = types.int_(64);
+  module const fib_module("fib");
+  auto const char_ = fib_module.char_();
+  auto const i32 = fib_module.int_(32);
+  auto const i64 = fib_module.int_(64);
 
   // Declare external functions.
   auto const printf = extern_<Function>(i32(*char_, dots), "printf");
@@ -133,10 +131,10 @@ int main()
 
   {
     using namespace llvm;
-    verifyModule(*fib_module, PrintMessageAction);
+    verifyModule(*fib_module.ptr(), PrintMessageAction);
     PassManager pm;
     pm.add(createPrintModulePass(&outs()));
-    pm.run(*fib_module);
+    pm.run(*fib_module.ptr());
   }
 
   return 0;

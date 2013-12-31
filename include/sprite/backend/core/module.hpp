@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Defines the type_factory class.
+ * @brief Defines the module class.
  */
 
 #pragma once
@@ -8,26 +8,29 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "sprite/backend/core/object.hpp"
 #include "sprite/backend/core/wrappers.hpp"
 #include "sprite/backend/support/wrap.hpp"
 
 namespace sprite { namespace backend
 {
+  struct Scaffolding {}; // To be deleted.
+
   /**
    * @brief
-   * Provides a convenient interface for building LLVM types.
+   * Represents an LLVM module.
    *
    * @details
-   * LLVM types are created using named type-creation methods.
+   * Provides a convenient interface for building LLVM types.  LLVM types are
+   * created using named type-creation methods.
    *
    * Example:
    *
    * @snippet types.cpp Creating basic types
    */
-  class type_factory
+  struct module : object<llvm::Module, Scaffolding>
   {
-    /// The module that types will be gotten from.
-    llvm::Module * _module; 
+    typedef object<llvm::Module, Scaffolding> base_type;
 
     // The address space that pointer types will belong to.
     unsigned _addrSpace;
@@ -35,31 +38,31 @@ namespace sprite { namespace backend
   public:
 
     /**
-     * @brief Creates a new type_factory.
+     * @brief Creates a new module.
      *
      * If the module is NULL, then a new module is created.
      */
-    explicit type_factory(llvm::Module * module=0, unsigned addrSpace=0);
+    explicit module(llvm::Module * module=0, unsigned addrSpace=0);
+
+    /// Creates a new module.
+    explicit module(string_ref const &, unsigned addrSpace=0);
 
     // Default copy, assignment, and destructor are fine.
-
-    /// Gets the Module associated with this factory.
-    llvm::Module * module() const { return _module; }
 
     /// Gets the address space associated with this factory.
     unsigned addrSpace() const { return _addrSpace; }
 
     /// Gets the associated LLVM context.
     llvm::LLVMContext & context() const
-      { return this->module()->getContext(); }
+      { return ptr()->getContext(); }
 
-    friend bool operator==(type_factory const & lhs, type_factory const & rhs)
+    friend bool operator==(module const & lhs, module const & rhs)
     {
-      return lhs.module() == rhs.module()
+      return lhs.ptr() == rhs.ptr()
         && lhs.addrSpace() == rhs.addrSpace();
     }
 
-    friend bool operator!=(type_factory const & lhs, type_factory const & rhs)
+    friend bool operator!=(module const & lhs, module const & rhs)
       { return !(lhs == rhs); }
 
     // ====== Type-Creation Methods.

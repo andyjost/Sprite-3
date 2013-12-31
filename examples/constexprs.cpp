@@ -16,8 +16,8 @@ int main()
 
   {
     /// [alignof_]
-    type_factory const types;
-    auto i32 = types.int_(32);
+    module const mod;
+    auto i32 = mod.int_(32);
     auto four = alignof_(i32);
     /// [alignof_]
     (void) four;
@@ -25,9 +25,9 @@ int main()
 
   {
     /// [offsetof_]
-    type_factory const types;
-    auto i32 = types.int_(32);
-    auto st = types.struct_({i32, i32});
+    module const mod;
+    auto i32 = mod.int_(32);
+    auto st = mod.struct_({i32, i32});
     auto four = offsetof_(st, 1);
     /// [offsetof_]
     (void) four;
@@ -35,13 +35,13 @@ int main()
 
   {
     /// [neg]
-    type_factory const types;
-    auto i32 = types.int_(32);
+    module const mod;
+    auto i32 = mod.int_(32);
     auto six = (i32 % 6);
     auto nsix = -six;
     auto nsix_nsw = -nuw (six);
 
-    auto float_ = types.float_();
+    auto float_ = mod.float_();
     auto two = (float_ % 2.0f);
     auto ntwo = -two;
     /// [neg]
@@ -52,8 +52,8 @@ int main()
 
   {
     /// [pos]
-    type_factory const types;
-    auto i32 = types.int_(32);
+    module const mod;
+    auto i32 = mod.int_(32);
     auto six = (i32 % 6);
     auto still_six = +six;
     /// [pos]
@@ -62,8 +62,8 @@ int main()
 
   {
     /// [inv]
-    type_factory const types;
-    auto i8 = types.int_(8);
+    module const mod;
+    auto i8 = mod.int_(8);
     auto b11010010 = (i8 % "b11010010");
     auto b00101101 = ~b11010010;
     /// [inv]
@@ -72,8 +72,8 @@ int main()
 
   {
     /// [add]
-    type_factory const types;
-    auto i32 = types.int_(32);
+    module const mod;
+    auto i32 = mod.int_(32);
     auto six = i32 % 6;
     auto twelve = six + six;
     auto also_twelve = six +nuw (six);
@@ -86,8 +86,8 @@ int main()
 
   {
     /// [sub]
-    type_factory const types;
-    auto i32 = types.int_(32);
+    module const mod;
+    auto i32 = mod.int_(32);
     auto six = i32 % 6;
     auto zero = six - six;
     auto also_zero = six -nuw (six);
@@ -100,8 +100,8 @@ int main()
 
   {
     /// [mul]
-    type_factory const types;
-    auto i32 = types.int_(32);
+    module const mod;
+    auto i32 = mod.int_(32);
     auto six = i32 % 6;
     auto thirtysix = six * six;
     auto also_thirtysix = six *nuw (six);
@@ -114,8 +114,8 @@ int main()
 
   {
     /// [div]
-    type_factory const types;
-    auto i32 = types.int_(32);
+    module const mod;
+    auto i32 = mod.int_(32);
     auto six = i32 % 6;
     auto neg_one = i32 % -1;
     auto neg_six = six /signed_ (neg_one);
@@ -129,8 +129,8 @@ int main()
 
   {
     /// [rem]
-    type_factory const types;
-    auto i32 = types.int_(32);
+    module const mod;
+    auto i32 = mod.int_(32);
     auto six = i32 % 6;
     auto four = i32 % 4;
     auto neg_one = i32 % -1;
@@ -143,8 +143,8 @@ int main()
 
   {
     /// [and]
-    type_factory const types;
-    auto i32 = types.int_(32);
+    module const mod;
+    auto i32 = mod.int_(32);
     auto twelve = i32 % "01100";
     auto ten = i32 % "01010";
     auto eight = twelve & ten;
@@ -154,8 +154,8 @@ int main()
 
   {
     /// [or]
-    type_factory const types;
-    auto i32 = types.int_(32);
+    module const mod;
+    auto i32 = mod.int_(32);
     auto twelve = i32 % "01100";
     auto ten = i32 % "01010";
     auto fourteen = twelve | ten;
@@ -165,8 +165,8 @@ int main()
 
   {
     /// [xor]
-    type_factory const types;
-    auto i32 = types.int_(32);
+    module const mod;
+    auto i32 = mod.int_(32);
     auto twelve = i32 % "01100";
     auto ten = i32 % "01010";
     auto six = twelve ^ ten;
@@ -176,8 +176,8 @@ int main()
 
   {
     /// [shl]
-    type_factory const types;
-    auto i32 = types.int_(32);
+    module const mod;
+    auto i32 = mod.int_(32);
     auto one = i32 % 1;
     auto two = one << one;
     auto also_two = one <<nuw (one);
@@ -190,8 +190,8 @@ int main()
 
   {
     /// [shr]
-    type_factory const types;
-    auto i8 = types.int_(8);
+    module const mod;
+    auto i8 = mod.int_(8);
     auto neg_one = i8 % -1; // 11111111
     auto four = i8 % 4;
     auto fifteen = neg_one >>logical (four); // 00001111
@@ -206,11 +206,11 @@ int main()
 
   {
     /// [typecast]
-    type_factory const types;
-    auto i8 = types.int_(8);
-    auto i32 = types.int_(32);
-    auto float_ = types.float_();
-    auto double_ = types.double_();
+    module const mod;
+    auto i8 = mod.int_(8);
+    auto i32 = mod.int_(32);
+    auto float_ = mod.float_();
+    auto double_ = mod.double_();
 
     auto trunc = typecast(i32 % 256, i8); // i8 1
     auto sext = typecast(signed_(i8 % -1), i32); // i32 -1
@@ -240,9 +240,9 @@ int main()
 
   {
     /// [bitcast]
-    type_factory const types;
-    auto i32 = types.int_(32);
-    auto float_ = types.float_();
+    module const mod;
+    auto i32 = mod.int_(32);
+    auto float_ = mod.float_();
     auto qnan = bitcast(i32 % -1, float_);
     /// [bitcast]
     (void) qnan;
@@ -250,9 +250,9 @@ int main()
 
   {
     /// [select]
-    type_factory const types;
-    auto i32 = types.int_(32);
-    auto bool_ = types.bool_();
+    module const mod;
+    auto i32 = mod.int_(32);
+    auto bool_ = mod.bool_();
     auto one = select(bool_ % true, i32 % 1, i32 % 2);
     /// [select]
     (void) one;
@@ -260,8 +260,8 @@ int main()
 
   {
     /// [Computing addresses]
-    type_factory const types;
-    auto i32 = types.int_(32);
+    module const mod;
+    auto i32 = mod.int_(32);
     auto myarray = (extern_(i32[2], "myarray") = {1,2});
     auto address_of_myarray = &myarray;
     auto address_of_two = &myarray[1];

@@ -410,7 +410,7 @@ namespace sprite { namespace backend
       auto const elem_ty = wrap(tp.factory(), tp->getElementType());
       auto const array_ty = elem_ty[values.size()];
       auto const global = new GlobalVariable(
-          /* Module      */ *tp.factory().module()
+          /* Module      */ *tp.factory().ptr()
         , /* Type        */ array_ty.ptr()
         , /* isConstant  */ true
         , /* Linkage     */ GlobalValue::PrivateLinkage
@@ -518,7 +518,7 @@ namespace sprite { namespace backend
   /**
    * @brief Instantiates a constant data array.
    *
-   * This method takes a @p type_factory, not a @p typeobj, as the left-hand
+   * This method takes a @p module, not a @p typeobj, as the left-hand
    * side.  An array of the appropriate element type and length is deduced.
    *
    * The right-hand side type is constrained by @p ConstantDataArray, meaning
@@ -528,27 +528,27 @@ namespace sprite { namespace backend
    */
 
   inline constant
-  operator%(type_factory const & tf, array_ref<uint8_t> const & value)
+  operator%(module const & tf, array_ref<uint8_t> const & value)
     { return wrap(tf, llvm::ConstantDataArray::get(tf.context(), value)); }
 
   inline constant
-  operator%(type_factory const & tf, array_ref<uint16_t> const & value)
+  operator%(module const & tf, array_ref<uint16_t> const & value)
     { return wrap(tf, llvm::ConstantDataArray::get(tf.context(), value)); }
 
   inline constant
-  operator%(type_factory const & tf, array_ref<uint32_t> const & value)
+  operator%(module const & tf, array_ref<uint32_t> const & value)
     { return wrap(tf, llvm::ConstantDataArray::get(tf.context(), value)); }
 
   inline constant
-  operator%(type_factory const & tf, array_ref<uint64_t> const & value)
+  operator%(module const & tf, array_ref<uint64_t> const & value)
     { return wrap(tf, llvm::ConstantDataArray::get(tf.context(), value)); }
 
   inline constant
-  operator%(type_factory const & tf, array_ref<float> const & value)
+  operator%(module const & tf, array_ref<float> const & value)
     { return wrap(tf, llvm::ConstantDataArray::get(tf.context(), value)); }
 
   inline constant
-  operator%(type_factory const & tf, array_ref<double> const & value)
+  operator%(module const & tf, array_ref<double> const & value)
     { return wrap(tf, llvm::ConstantDataArray::get(tf.context(), value)); }
   //@}
 
@@ -560,7 +560,7 @@ namespace sprite { namespace backend
    *
    * @snippet constants.cpp Instantiating constant data arrays
    */
-  inline constant operator%(type_factory const & tf, string_ref const & value)
+  inline constant operator%(module const & tf, string_ref const & value)
   {
     return wrap(tf, llvm::ConstantDataArray::getString(tf.context(), value));
   }

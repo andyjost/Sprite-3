@@ -5,7 +5,7 @@ using namespace sprite::backend;
 
 namespace
 {
-  basic_block<type_factory> new_block(twine const & name)
+  basic_block<module> new_block(twine const & name)
   {
     auto const & cxt = active_context();
     Function * parent = cxt.builder().GetInsertBlock()->getParent();

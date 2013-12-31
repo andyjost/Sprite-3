@@ -8,10 +8,10 @@ namespace sprite { namespace backend
   {
     label(twine const & name = "");
 
-    basic_block<type_factory> block() const { return m_block; }
+    basic_block<module> block() const { return m_block; }
 
   private:
 
-    basic_block<type_factory> m_block;
+    basic_block<module> m_block;
   };
 }}

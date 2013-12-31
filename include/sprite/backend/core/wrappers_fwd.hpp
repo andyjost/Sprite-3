@@ -3,15 +3,15 @@
 
 namespace sprite { namespace backend
 {
-  class type_factory;
-  template<typename T, typename Factory=type_factory> class object;
-  template<typename T=Type, typename Factory=type_factory> class typeobj;
-  template<typename T=Constant, typename Factory=type_factory> class constantobj;
-  template<typename T=GlobalValue, typename Factory=type_factory> class globalobj;
-  template<typename T=Instruction, typename Factory=type_factory> class instruction;
+  class module;
+  template<typename T, typename Factory=module> class object;
+  template<typename T=Type, typename Factory=module> class typeobj;
+  template<typename T=Constant, typename Factory=module> class constantobj;
+  template<typename T=GlobalValue, typename Factory=module> class globalobj;
+  template<typename T=Instruction, typename Factory=module> class instruction;
 
   // Always wraps an llvm::BasicBlock.
-  template<typename Factory=type_factory> class basic_block;
+  template<typename Factory=module> class basic_block;
 
   // Types.
   using type = typeobj<>;

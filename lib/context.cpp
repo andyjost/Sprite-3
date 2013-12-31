@@ -24,7 +24,7 @@ namespace
 
 namespace sprite { namespace backend
 {
-  context::context(basic_block<type_factory> const & block)
+  context::context(basic_block<module> const & block)
   {
     g_context_list.emplace_front(
         llvm::IRBuilder<>(block.ptr()), block.factory()

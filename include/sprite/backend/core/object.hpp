@@ -13,7 +13,7 @@ namespace sprite { namespace backend
    *
    * It is assumed LLVM will manage the lifetime of the raw pointer.  An
    * instance of this type can be created directly, though normally it's easier
-   * to use one of the type_factory::wrap methods.
+   * to use one of the module::wrap methods.
    */
   template<typename T, typename Factory> class object
   {
@@ -22,7 +22,7 @@ namespace sprite { namespace backend
     /// The wrapped pointer to an LLVM object.
     T * px;
 
-    /// The @p type_factory associated with this object.
+    /// The @p module associated with this object.
     Factory fx;
 
   public:

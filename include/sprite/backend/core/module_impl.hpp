@@ -8,55 +8,64 @@
 
 namespace sprite { namespace backend
 {
-  inline type_factory::type_factory(llvm::Module * module, unsigned addrSpace)
-    : _module(module), _addrSpace(addrSpace)
+  inline module::module(llvm::Module * module, unsigned addrSpace)
+    : base_type(module, Scaffolding()), _addrSpace(addrSpace)
   {
-    if(!_module)
-      _module = new llvm::Module("module", llvm::getGlobalContext());
+    if(!this->px)
+      this->px = new llvm::Module("module", llvm::getGlobalContext());
+  }
+
+  inline module::module(string_ref const & name, unsigned addrSpace)
+    : base_type(
+          new llvm::Module(name, llvm::getGlobalContext()), Scaffolding()
+        )
+    , _addrSpace(addrSpace)
+  {
+    this->px = new llvm::Module(name, llvm::getGlobalContext());
   }
 
   inline integer_type
-  type_factory::int_(unsigned numBits) const
+  module::int_(unsigned numBits) const
   {
     return wrap(
-        *this, IntegerType::get(_module->getContext(), numBits)
+        *this, IntegerType::get(ptr()->getContext(), numBits)
       );
   }
 
-  inline fp_type type_factory::float_() const
+  inline fp_type module::float_() const
   {
-    auto const p = Type::getFloatTy(_module->getContext());
+    auto const p = Type::getFloatTy(ptr()->getContext());
     return wrap(*this, reinterpret_cast<FPType*>(p));
   }
 
-  inline fp_type type_factory::double_() const
+  inline fp_type module::double_() const
   {
-    auto const p = Type::getDoubleTy(_module->getContext());
+    auto const p = Type::getDoubleTy(ptr()->getContext());
     return wrap(*this, reinterpret_cast<FPType*>(p));
   }
 
-  inline type type_factory::void_() const
-    { return wrap(*this, Type::getVoidTy(_module->getContext())); }
+  inline type module::void_() const
+    { return wrap(*this, Type::getVoidTy(ptr()->getContext())); }
 
   inline struct_type
-  type_factory::struct_(array_ref<type> const & elements) const
+  module::struct_(array_ref<type> const & elements) const
   {
     std::vector<Type*> tmp;
     for(auto e: elements) { tmp.emplace_back(e.ptr()); }
-    return wrap(*this, StructType::get(_module->getContext(),tmp));
+    return wrap(*this, StructType::get(ptr()->getContext(),tmp));
   }
 
   inline struct_type
-  type_factory::struct_(string_ref const & name) const
+  module::struct_(string_ref const & name) const
   {
-    StructType * type = _module->getTypeByName(name);
+    StructType * type = ptr()->getTypeByName(name);
     if(!type)
-      type = StructType::create(_module->getContext(), name);
+      type = StructType::create(ptr()->getContext(), name);
     return wrap(*this, type);
   }
 
   inline struct_type
-  type_factory::struct_(
+  module::struct_(
       string_ref const & name
     , array_ref<type> const & elements 
     ) const

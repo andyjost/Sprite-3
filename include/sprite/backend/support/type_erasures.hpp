@@ -16,8 +16,8 @@ namespace sprite { namespace backend
 {
   namespace aux
   {
-    template<typename Factory=type_factory> struct any_arrayref_impl;
-    template<typename Factory=type_factory> struct any_tupleref_impl;
+    template<typename Factory=module> struct any_arrayref_impl;
+    template<typename Factory=module> struct any_tupleref_impl;
   }
 
   /**

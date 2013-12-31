@@ -23,7 +23,7 @@ namespace sprite { namespace backend
     return wrap(
         type.factory()
       , Function::Create(
-            type.ptr(), linkage, name, type.factory().module()
+            type.ptr(), linkage, name, type.factory().ptr()
           )
       );
   }
@@ -62,7 +62,7 @@ namespace sprite { namespace backend
     return wrap(
         type.factory()
       , new GlobalVariable(
-            /* Module          */ *type.factory().module()
+            /* Module          */ *type.factory().ptr()
           , /* Type            */ type.ptr()
           , /* isConstant      */ false
           , /* Linkage         */ linkage

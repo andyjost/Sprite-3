@@ -10,7 +10,7 @@
 
 namespace sprite { namespace backend
 {
-  template<typename Factory=type_factory>
+  template<typename Factory=module>
   struct context_frame
   {
     context_frame(llvm::IRBuilder<> const & b, Factory const & f)
@@ -43,7 +43,7 @@ namespace sprite { namespace backend
   class context
   {
   public:
-    context(basic_block<type_factory> const &);
+    context(basic_block<module> const &);
     context(context &&);
     ~context();
     context(context const &) = delete;

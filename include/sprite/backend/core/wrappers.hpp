@@ -299,7 +299,7 @@ namespace sprite { namespace backend
   /**
    * @brief object for @p llvm::Type objects.
    *
-   * Instances are returned when @p type_factory produces a new type.
+   * Instances are returned when @p module produces a new type.
    *
    * Elaborated types can be created by using the @p * operator (to create
    * pointers), the @p [] operator (to create arrays), or the @p () operator

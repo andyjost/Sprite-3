@@ -17,8 +17,8 @@ int main()
   {
     /// [Instantiating a NULL pointer]
     // Instantiate a null pointer.
-    type_factory const types;
-    auto const i32 = types.int_(32);
+    module const mod;
+    auto const i32 = mod.int_(32);
     auto const null_i32_p = *i32 % null;
     /// [Instantiating a NULL pointer]
     (void) null_i32_p;
@@ -27,9 +27,9 @@ int main()
   {
     /// [Instantiating a NULL struct]
     // Instantiate a null struct.
-    type_factory const types;
-    auto const i32 = types.int_(32);
-    auto const tp = types.struct_("mystruct.1", {i32, i32, i32});
+    module const mod;
+    auto const i32 = mod.int_(32);
+    auto const tp = mod.struct_("mystruct.1", {i32, i32, i32});
     auto const null_struct = tp % null;
     /// [Instantiating a NULL struct]
     (void) null_struct;
@@ -38,8 +38,8 @@ int main()
   {
     /// [Instantiating a NULL integer]
     // Instantiate a null array.
-    type_factory const types;
-    auto const i32 = types.int_(32);
+    module const mod;
+    auto const i32 = mod.int_(32);
     auto const null_int = i32 % null;
     /// [Instantiating a NULL integer]
     assert(null_int.value<int>() == 0);
@@ -48,8 +48,8 @@ int main()
   {
     /// [Instantiating a NULL array]
     // Instantiate a null array.
-    type_factory const types;
-    auto const i32 = types.int_(32);
+    module const mod;
+    auto const i32 = mod.int_(32);
     auto const null_array = i32[2] % null;
     /// [Instantiating a NULL array]
     (void) null_array;
@@ -57,11 +57,11 @@ int main()
 
   {
     /// [Instantiating simple types]
-    type_factory const types;
-    auto const bool_ = types.int_(1);
-    auto const char_ = types.int_(8);
-    auto const i32 = types.int_(32);
-    auto const float_ = types.float_();
+    module const mod;
+    auto const bool_ = mod.int_(1);
+    auto const char_ = mod.int_(8);
+    auto const i32 = mod.int_(32);
+    auto const float_ = mod.float_();
 
     auto const true_ = bool_ % true;
     auto const false_ = bool_ % false;
@@ -92,9 +92,9 @@ int main()
 
   {
     /// [Instantiating non-finite floating-point types]
-    type_factory const types;
-    auto const float_ = types.float_();
-    auto const double_ = types.double_();
+    module const mod;
+    auto const float_ = mod.float_();
+    auto const double_ = mod.double_();
 
     // Instantiate infinite values.
     auto const pfinf = float_ % +inf_; // explicitly positive
@@ -118,8 +118,8 @@ int main()
 
   {
     /// [Instantiating integer types from strings]
-    type_factory const types;
-    auto const i32 = types.int_(32);
+    module const mod;
+    auto const i32 = mod.int_(32);
 
     auto const decimal = i32 % "197";
     auto const hex = i32 % "0xdeadbeef";
@@ -134,11 +134,11 @@ int main()
 
   {
     /// [Instantiating types]
-    type_factory const types;
-    auto const char_ = types.int_(8);
-    auto const i32 = types.int_(32);
-    auto const float_ = types.float_();
-    auto const struct_ = types.struct_("mystruct.2", {i32, float_});
+    module const mod;
+    auto const char_ = mod.int_(8);
+    auto const i32 = mod.int_(32);
+    auto const float_ = mod.float_();
+    auto const struct_ = mod.struct_("mystruct.2", {i32, float_});
 
     auto const fortytwo = i32 % 42;
     auto const hello = char_[12] % "hello world";
@@ -154,8 +154,8 @@ int main()
 
   {
     /// [Instantiating an array from a sequence]
-    type_factory const types;
-    auto const i32 = types.int_(32);
+    module const mod;
+    auto const i32 = mod.int_(32);
     auto const one_two = i32[2] % (i32 % 1, i32 % 2);
     /// [Instantiating an array from a sequence]
     (void) one_two;
@@ -163,8 +163,8 @@ int main()
 
   {
     /// [Instantiating arrays as aggregates]
-    type_factory const types;
-    auto const char_ = types.int_(8);
+    module const mod;
+    auto const char_ = mod.int_(8);
     auto const ab = char_[2] % _a{'a', 'b'}; // same as char_[2] % (char_ % 'a', char_ % 'b');
     /// [Instantiating arrays as aggregates]
     (void) ab;
@@ -172,8 +172,8 @@ int main()
 
   {
     /// [Instantiating arrays from tuples]
-    type_factory const types;
-    auto const double_ = types.double_();
+    module const mod;
+    auto const double_ = mod.double_();
     auto const doubles = double_[2] % _t(1.0f, 2.0);
     /// [Instantiating arrays from tuples]
     (void) doubles;
@@ -185,8 +185,8 @@ int main()
     #define NELEM(arg) \
         cast<GlobalVariable>(arg->stripPointerCasts())->getInitializer()->getType()->getArrayNumElements() \
       /**/
-    type_factory const types;
-    auto const char_ = types.int_(8);
+    module const mod;
+    auto const char_ = mod.int_(8);
     // A null-terminated string.
     auto const hello = *char_ % "hello world"; // length: 12
     assert(NELEM(hello) == 12);
@@ -216,9 +216,9 @@ int main()
 
   {
     /// [Instantiating pointers as global arrays]
-    type_factory const types;
-    auto const i32 = types.int_(32);
-    auto const double_ = types.double_();
+    module const mod;
+    auto const i32 = mod.int_(32);
+    auto const double_ = mod.double_();
 
     auto const array1 = *i32 % _a{1, 2, 3, 4};
     auto const array2 = *double_ % std::vector<double>{1.0, 2.0, 3.0, 4.0};
@@ -231,21 +231,21 @@ int main()
 
   {
     /// [Instantiating constant data arrays]
-    type_factory const types;
-    auto a = types % array_ref<uint8_t>{'a', 'b', 'c'};
-    auto b = types % array_ref<uint16_t>{1, 2, 3, 4};
-    auto c = types % array_ref<uint32_t>{1, 2, 3, 4};
-    auto d = types % array_ref<uint64_t>{1, 2, 3, 4};
-    auto e = types % array_ref<float>{1, 2, 3, 4};
-    auto f = types % array_ref<double>{1, 2, 3, 4};
-    auto g = types % "hello";
+    module const mod;
+    auto a = mod % array_ref<uint8_t>{'a', 'b', 'c'};
+    auto b = mod % array_ref<uint16_t>{1, 2, 3, 4};
+    auto c = mod % array_ref<uint32_t>{1, 2, 3, 4};
+    auto d = mod % array_ref<uint64_t>{1, 2, 3, 4};
+    auto e = mod % array_ref<float>{1, 2, 3, 4};
+    auto f = mod % array_ref<double>{1, 2, 3, 4};
+    auto g = mod % "hello";
 
-    auto a2 = types % std::array<uint8_t,3>{'a', 'b', 'c'};
-    auto b2 = types % std::array<uint16_t,4>{1, 2, 3, 4};
-    auto c2 = types % std::array<uint32_t,4>{1, 2, 3, 4};
-    auto d2 = types % std::array<uint64_t,4>{1, 2, 3, 4};
-    auto e2 = types % std::array<float,4>{1, 2, 3, 4};
-    auto f2 = types % std::array<double,4>{1, 2, 3, 4};
+    auto a2 = mod % std::array<uint8_t,3>{'a', 'b', 'c'};
+    auto b2 = mod % std::array<uint16_t,4>{1, 2, 3, 4};
+    auto c2 = mod % std::array<uint32_t,4>{1, 2, 3, 4};
+    auto d2 = mod % std::array<uint64_t,4>{1, 2, 3, 4};
+    auto e2 = mod % std::array<float,4>{1, 2, 3, 4};
+    auto f2 = mod % std::array<double,4>{1, 2, 3, 4};
     /// [Instantiating constant data arrays]
     (void) a;
     (void) b;

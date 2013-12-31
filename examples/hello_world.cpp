@@ -52,11 +52,9 @@ int main()
   /// [Hello world]
   using namespace sprite::backend;
 
-  llvm::Module * hello_module
-    = new llvm::Module("hello", llvm::getGlobalContext());
-  type_factory const types(hello_module);
-  auto const char_ = types.char_();
-  auto const i32 = types.int_(32);
+  module const hello_module("hello");
+  auto const char_ = hello_module.char_();
+  auto const i32 = hello_module.int_(32);
   auto const puts = extern_<Function>(i32(*char_), "puts");
 
   /// [Using context]
@@ -71,10 +69,10 @@ int main()
 
   {
     using namespace llvm;
-    verifyModule(*hello_module, PrintMessageAction);
+    verifyModule(*hello_module.ptr(), PrintMessageAction);
     PassManager pm;
     pm.add(createPrintModulePass(&outs()));
-    pm.run(*hello_module);
+    pm.run(*hello_module.ptr());
   }
 
   return 0;
