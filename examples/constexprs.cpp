@@ -262,7 +262,7 @@ int main()
     /// [Computing addresses]
     module const mod;
     auto i32 = mod.int_(32);
-    auto myarray = (extern_(i32[2], "myarray") = {1,2});
+    auto myarray = (extern_(i32[2], "myarray").set_initializer({1,2}));
     auto address_of_myarray = &myarray;
     auto address_of_two = &myarray[1];
     auto address_of_two_inbounds = address_inbounds(myarray[1]);

@@ -185,8 +185,7 @@ namespace sprite { namespace backend
      * @snippet defs.cpp Initializing a global from a value
      */
     template<typename U>
-    globalobj & operator=(U const & value)
-      { return this->set_initializer(value); }
+    globalobj & set_initializer(U const & value);
 
     /**
      * @brief Sets the initializer for a global variable using an aggregate.
@@ -198,8 +197,8 @@ namespace sprite { namespace backend
      * @snippet defs.cpp Initializing a global from an aggregate
      */
     template<typename U>
-    globalobj & operator=(std::initializer_list<U> values)
-      { return this->set_initializer(values); }
+    globalobj &
+    set_initializer(std::initializer_list<U> const & values);
 
     /**
      * @brief Sets the initializer for a global variable from heterogeneous
@@ -210,32 +209,6 @@ namespace sprite { namespace backend
      * type, or it may be used to initialize a struct.
      *
      * @snippet defs.cpp Initializing a global from heterogeneous data
-     */
-    template<typename...U>
-    globalobj & operator=(std::tuple<U...> const & values)
-      { return this->set_initializer(values); }
-
-    /**
-     * @brief Sets the initializer for a global variable from a single value.
-     *
-     * Synonymous with @p operator=.
-     */
-    template<typename U>
-    globalobj & set_initializer(U const & value);
-
-    /**
-     * @brief Sets the initializer for a global variable using an aggregate.
-     *
-     * Synonymous with @p operator=.
-     */
-    template<typename U>
-    globalobj &
-    set_initializer(std::initializer_list<U> const & values);
-
-    /**
-     * @brief Sets the initializer for a global variable from heterogeneous data.
-     *
-     * Synonymous with @p operator=.
      */
     template<typename...U>
     globalobj &

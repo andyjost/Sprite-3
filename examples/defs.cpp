@@ -28,7 +28,7 @@ int main()
 
     // Creates an external array, ga2, of three int32 values with an initializer.
     auto const ga2 =
-        extern_(i32[3], "ga2") = { 1, 2, 3 };
+        extern_(i32[3], "ga2").set_initializer({ 1, 2, 3 });
     /// [Global definitions with linkage]
     (void) myfunction;
     (void) ga;
@@ -40,7 +40,7 @@ int main()
     // Create a global integer variable initialized to the value 5.
     module const mod;
     auto const i32 = mod.int_(32);
-    extern_(i32) = 5;
+    extern_(i32).set_initializer(5);
     /// [Initializing a global from a value]
   }
 
@@ -49,7 +49,7 @@ int main()
     // Create a global array variable initialized to the value {1, 2}.
     module const mod;
     auto const i32 = mod.int_(32);
-    extern_(i32[2]) = {1, 2};
+    extern_(i32[2]).set_initializer({1, 2});
     /// [Initializing a global from an aggregate]
   }
 
@@ -58,7 +58,7 @@ int main()
     // Create a global array varible initialized to the value {1.0, 3.14, 97.0}.
     module const mod;
     auto const double_ = mod.double_();
-    extern_(double_[3]) = _t(1, 3.14, 'a');
+    extern_(double_[3]).set_initializer(_t(1, 3.14, 'a'));
     /// [Initializing a global from heterogeneous data]
   }
 
@@ -73,18 +73,17 @@ int main()
     // Creates an external array, ga, of three int32 values with no initializer.
     auto const i32 = mod.int_(32);
     auto ga = extern_(i32[3], "ga");
-    ga = {1, 2, 3}; // Set the initializer.
-    ga.set_initializer({1, 2, 3}); // Synonym for operator= (sets the initializer).
+    ga.set_initializer({1, 2, 3}); // Set the initializer.
 
     // Creates an external array named hello_world containing C-string pointers "hello" and "world".
     auto const char_ = mod.int_(8);
     auto hello_world =
-        extern_((*char_)[2], "hello_world") = {"hello", "world"};
+        extern_((*char_)[2], "hello_world").set_initializer({"hello", "world"});
 
     // Creates an external array from different initializer types.
     std::string const world("world");
     auto hello_world2 =
-        extern_((*char_)[2], "hello_world") = _t("hello", world);
+        extern_((*char_)[2], "hello_world").set_initializer(_t("hello", world));
 
     /// [Using extern_]
     (void) myfunction;
@@ -104,7 +103,7 @@ int main()
     // Creates a global, internal float variable initialized to the value 1.0.
     auto const float_ = mod.float_();
     auto global_float = 
-        static_(float_, "global_float") = 1.0;
+        static_(float_, "global_float").set_initializer(1.0);
     /// [Using static_]
     (void) myfunction;
     (void) global_float;
