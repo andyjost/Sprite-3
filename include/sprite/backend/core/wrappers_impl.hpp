@@ -46,11 +46,7 @@ namespace sprite { namespace backend
   template<typename T, typename Factory>
   typeobj<PointerType, Factory>
   typeobj<T, Factory>::operator*() const
-  {
-    return wrap(
-        this->factory(), (*this)->getPointerTo(this->factory().addrSpace())
-      );
-  }
+    { return wrap(this->factory(), (*this)->getPointerTo()); }
     
   template<typename T, typename Factory>
   typeobj<ArrayType, Factory>

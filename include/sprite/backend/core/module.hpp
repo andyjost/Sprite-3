@@ -21,8 +21,8 @@ namespace sprite { namespace backend
    * Represents an LLVM module.
    *
    * @details
-   * Provides a convenient interface for building LLVM types.  LLVM types are
-   * created using named type-creation methods.
+   * Among other things, provides a convenient interface for building LLVM
+   * types.  LLVM types are created using named type-creation methods.
    *
    * Example:
    *
@@ -32,35 +32,25 @@ namespace sprite { namespace backend
   {
     typedef object<llvm::Module, Scaffolding> base_type;
 
-    // The address space that pointer types will belong to.
-    unsigned _addrSpace;
-
   public:
 
-    /**
-     * @brief Creates a new module.
-     *
-     * If the module is NULL, then a new module is created.
-     */
-    explicit module(llvm::Module * module=0, unsigned addrSpace=0);
-
+    //@{
     /// Creates a new module.
-    explicit module(string_ref const &, unsigned addrSpace=0);
+    explicit module(
+        string_ref const & name=".anon"
+      , llvm::LLVMContext & = llvm::getGlobalContext()
+      );
+
+    explicit module(llvm::Module & module);
+    //@}
 
     // Default copy, assignment, and destructor are fine.
 
-    /// Gets the address space associated with this factory.
-    unsigned addrSpace() const { return _addrSpace; }
-
     /// Gets the associated LLVM context.
-    llvm::LLVMContext & context() const
-      { return ptr()->getContext(); }
+    llvm::LLVMContext & context() const { return ptr()->getContext(); }
 
     friend bool operator==(module const & lhs, module const & rhs)
-    {
-      return lhs.ptr() == rhs.ptr()
-        && lhs.addrSpace() == rhs.addrSpace();
-    }
+      { return lhs.ptr() == rhs.ptr(); }
 
     friend bool operator!=(module const & lhs, module const & rhs)
       { return !(lhs == rhs); }
@@ -103,8 +93,7 @@ namespace sprite { namespace backend
      *
      * @snippet types.cpp Creating an anonymous struct
      */
-    struct_type
-    struct_(array_ref<type> const & elements) const;
+    struct_type struct_(array_ref<type> const & elements) const;
 
     /**
      * @brief Gets a struct by name.
@@ -113,8 +102,7 @@ namespace sprite { namespace backend
      *
      * @snippet types.cpp Creating opaque structs
      */
-    struct_type
-    struct_(string_ref const & name) const;
+    struct_type struct_(string_ref const & name) const;
 
     /**
      * @brief Defines a struct.
@@ -124,10 +112,8 @@ namespace sprite { namespace backend
      *
      * @snippet types.cpp Creating structs
      */
-    struct_type
-    struct_(
-        string_ref const & name
-      , array_ref<type> const & elements
+    struct_type struct_(
+        string_ref const & name, array_ref<type> const & elements
       ) const;
   };
 }}

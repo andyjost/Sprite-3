@@ -8,20 +8,14 @@
 
 namespace sprite { namespace backend
 {
-  inline module::module(llvm::Module * module, unsigned addrSpace)
-    : base_type(module, Scaffolding()), _addrSpace(addrSpace)
+  inline module::module(llvm::Module & module)
+    : base_type(&module, Scaffolding())
   {
-    if(!this->px)
-      this->px = new llvm::Module("module", llvm::getGlobalContext());
   }
 
-  inline module::module(string_ref const & name, unsigned addrSpace)
-    : base_type(
-          new llvm::Module(name, llvm::getGlobalContext()), Scaffolding()
-        )
-    , _addrSpace(addrSpace)
+  inline module::module(string_ref const & name, llvm::LLVMContext & context)
+    : base_type(new llvm::Module(name, context), Scaffolding())
   {
-    this->px = new llvm::Module(name, llvm::getGlobalContext());
   }
 
   inline integer_type

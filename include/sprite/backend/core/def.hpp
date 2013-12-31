@@ -68,9 +68,6 @@ namespace sprite { namespace backend
           , /* Linkage         */ linkage
           , /* Initializer     */ 0
           , /* Name            */ name
-          , /* InsertBefore    */ 0
-          , /* ThreadLocalMode */ GlobalVariable::NotThreadLocal
-          , /* AddressSpace    */ type.factory().addrSpace()
           )
       );
   }
