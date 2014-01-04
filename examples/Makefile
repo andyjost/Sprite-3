@@ -2,8 +2,9 @@ SOURCES = $(wildcard *.cpp)
 OBJECTS = $(SOURCES:.cpp=.o)
 EXECUTABLES = $(OBJECTS:.o=.exe)
 TESTS = $(EXECUTABLES:.exe=.test)
+BAREWORDS = $(EXECUTABLES:.exe=)
 
-.PHONY : all clean
+.PHONY : all clean $(BAREWORDS)
 .SECONDARY : $(EXECUTABLES)
 
 all : $(TESTS)
@@ -25,6 +26,11 @@ $(EXECUTABLES) : $(SPRITE_RT_LIB)
 
 %.exe : %.o
 	$(CC) $< $(SPRITE_RT_LIB) $(LDFLAGS) -o $@
+
+# Allow a bareword to be used as a target.  E.g., allow invocation as "make
+# hello" instead of requiring "make hello.test".
+$(BAREWORDS) :
+	@$(MAKE) $@.test
 
 # Runs a test program.  A log file ending with .test is created to indicate the
 # test was run successfully.  If the test program fails, .failed is appended to
