@@ -17,13 +17,20 @@ namespace sprite
   namespace backend {}
 }
 
-
-#include <sprite/backend/core/module.hpp>
+#include <sprite/backend/core/constant.hpp>
+#include <sprite/backend/core/constexpr.hpp>
 #include <sprite/backend/core/def.hpp>
-#include <sprite/backend/core/value.hpp>
-#include <sprite/backend/core/wrappers.hpp>
+#include <sprite/backend/core/function.hpp>
+#include <sprite/backend/core/fwd.hpp>
+#include <sprite/backend/core/get_constant.hpp>
+#include <sprite/backend/core/global.hpp>
+#include <sprite/backend/core/instruction.hpp>
 #include <sprite/backend/core/instructions.hpp>
-#include <sprite/backend/operators/create.hpp>
-#include <sprite/backend/operators/initialize.hpp>
-#include <sprite/backend/operators/constexpr.hpp>
+#include <sprite/backend/core/label.hpp>
+#include <sprite/backend/core/module.hpp>
+#include <sprite/backend/core/object.hpp>
+#include <sprite/backend/core/scope.hpp>
+#include <sprite/backend/core/type.hpp>
+#include <sprite/backend/core/value.hpp>
+#include <sprite/backend/core/valueof.hpp>
 

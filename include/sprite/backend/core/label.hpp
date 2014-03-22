@@ -1,17 +1,13 @@
 #pragma once
-#include "sprite/backend/core/wrappers.hpp"
-#include "sprite/backend/core/module.hpp"
+#include "sprite/backend/config.hpp"
+#include "sprite/backend/core/object.hpp"
 
 namespace sprite { namespace backend
 {
-  struct label
+  template<>
+  struct valueobj<llvm::BasicBlock> : object<llvm::BasicBlock>
   {
-    label(twine const & name = "");
-
-    basic_block<module> block() const { return m_block; }
-
-  private:
-
-    basic_block<module> m_block;
+    using object<llvm::BasicBlock>::object;
   };
 }}
+

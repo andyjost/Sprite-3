@@ -1,3 +1,4 @@
+# Requires make >=3.81 for lastword.
 TOPDIR := $(dir $(lastword $(MAKEFILE_LIST)))
 LLVM_CFLAGS = $(shell llvm-config --cppflags --libs core)
 LLVM_LDFLAGS = $(shell llvm-config --ldflags --libs core)

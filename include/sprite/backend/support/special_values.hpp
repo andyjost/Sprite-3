@@ -13,6 +13,12 @@ namespace sprite { namespace backend
   /// May be used to refer to an ellipsis in a function type declaration.
   ellipsis const dots;
 
+  /**
+   * @brief Returns a null pointer (by convention) when @p ellipsis is used as a
+   * type.
+   */
+  inline Type * ptr(ellipsis const &) { return nullptr; }
+
   /// Represents the value of a NULL pointer.
   struct null_arg {};
   /// May be used to refer to a NULL pointer value.

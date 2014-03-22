@@ -52,4 +52,7 @@ namespace sprite { namespace backend
 
   /// Indicates an error at runtime.
   SPRITE_DECLARE_ERROR_TYPE(runtime_error)
+
+  /// Indicates an error using class scope.
+  SPRITE_DECLARE_ERROR_TYPE(scope_error)
 }}

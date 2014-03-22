@@ -1,33 +1,12 @@
-/**
- * @file
- * @brief Defines methods for making top-level definitions (functions and
- * global variables).
- */
-
 #pragma once
-#include "llvm/IR/GlobalVariable.h"
-#include "sprite/backend/core/wrappers.hpp"
+#include "sprite/backend/core/function.hpp"
+#include "sprite/backend/core/global.hpp"
+#include "sprite/backend/core/type.hpp"
 #include "sprite/backend/support/casting.hpp"
 
 namespace sprite { namespace backend
 {
-  /**
-   * @brief Declares a function with user-specified linkage.
-   */
-  inline function def(
-      GlobalValue::LinkageTypes linkage
-    , function_type const & type
-    , twine const & name = ""
-    )
-  {
-    return wrap(
-        type.factory()
-      , Function::Create(
-            type.ptr(), linkage, name, type.factory().ptr()
-          )
-      );
-  }
-
+  //@{
   /**
    * @brief Declares a global variable or function with user-specified linkage.
    *
@@ -48,67 +27,62 @@ namespace sprite { namespace backend
    *
    * @snippet defs.cpp Global definitions with linkage
    */
-  inline global def(
+  global def(
       GlobalValue::LinkageTypes linkage
     , type const & type
     , twine const & name = ""
+    );
+
+  function def(
+      GlobalValue::LinkageTypes linkage
+    , function_type const &
+    , twine const & name = ""
+    );
+
+  template<typename T>
+  inline globalobj<T> def(
+      GlobalValue::LinkageTypes linkage
+    , type const & tp
+    , twine const & name = ""
     )
-  {
-    // Create a function for function types.
-    if(auto const ftype = dyn_cast<FunctionType>(type))
-      return def(linkage, ftype, name);
+  { return dyn_cast<T>(def(linkage, tp, name)); }
+  //@}
 
-    // Create a global variable for other types.
-    return wrap(
-        type.factory()
-      , new GlobalVariable(
-            /* Module          */ *type.factory().ptr()
-          , /* Type            */ type.ptr()
-          , /* isConstant      */ false
-          , /* Linkage         */ linkage
-          , /* Initializer     */ 0
-          , /* Name            */ name
-          )
-      );
-  }
-
+  //@{
   /**
    * @brief Declares a global variable or function with external linkage.
    *
    * @snippet defs.cpp Using extern_
    */
-  inline global extern_(type const & type, twine const & name = "")
-  { return def(GlobalValue::ExternalLinkage, type, name); }
+  inline global extern_(type const & tp, twine const & name = "")
+    { return def(GlobalValue::ExternalLinkage, tp, name); }
 
-  /**
-   * @brief Version of extern_ that takes a return type specifier.
-   */
-  template<typename SymbolType>
-  inline globalobj<SymbolType>
-  extern_(type const & type, twine const & name = "")
-    { return dyn_cast<SymbolType>(extern_(type, name)); }
+  inline function extern_(function_type const & tp, twine const & name = "")
+    { return def(GlobalValue::ExternalLinkage, tp, name); }
 
+  template<typename T>
+  inline globalobj<T> extern_(type const & tp, twine const & name = "")
+    { return dyn_cast<T>(extern_(tp, name)); }
+  //@}
+
+  //@{
   /**
    * @brief Declares a global variable or function with internal linkage.
    *
    * @snippet defs.cpp Using static_
    */
-  inline global static_(
-      type const & type
-    , twine const & name = ""
-    )
-  { return def(GlobalValue::InternalLinkage, type, name); }
+  inline global static_(type const & tp, twine const & name = "")
+    { return def(GlobalValue::InternalLinkage, tp, name); }
 
-  /**
-   * @brief Version of static_ that takes a return type specifier.
-   */
-  template<typename ReturnType>
-  inline globalobj<ReturnType> static_(
-      type const & type
-    , twine const & name = ""
-    )
-  { return dyn_cast<ReturnType>(static_(type, name)); }
+  inline function static_(function_type const & tp, twine const & name = "")
+    { return def(GlobalValue::InternalLinkage, tp, name); }
 
+  template<typename T>
+  inline globalobj<T> static_(type const & tp, twine const & name = "")
+    { return dyn_cast<T>(static_(tp, name)); }
+  //@}
+
+  //@{
   /**
    * @brief Declares an inline function.
    *
@@ -117,24 +91,23 @@ namespace sprite { namespace backend
    *
    * @snippet defs.cpp Using inline_
    */
-  inline global inline_(
-      type const & type
-    , twine const & name = ""
-    )
+  inline function inline_(function_type const & tp, twine const & name = "")
+    { return def(GlobalValue::LinkOnceAnyLinkage, tp, name); }
+
+  inline function inline_(type const & tp, twine const & name = "")
   {
     // Only functions may be inline.
-    if(!llvm::dyn_cast<FunctionType>(type.ptr()))
-      throw type_error();
-    return def(GlobalValue::LinkOnceAnyLinkage, type, name);
+    if(function_type fun_type = dyn_cast<FunctionType>(tp))
+      return inline_(fun_type, name);
+    throw type_error("Function type required for inline definition.");
   }
 
   /**
    * @brief Version of inline_ that takes a return type specifier.
    */
-  template<typename ReturnType>
-  inline globalobj<ReturnType> inline_(
-      type const & type
-    , twine const & name = ""
-    )
-  { return dyn_cast<ReturnType>(inline_(type, name)); }
+  template<typename T>
+  inline globalobj<T> inline_(type const & tp, twine const & name = "")
+    { return dyn_cast<T>(inline_(tp, name)); }
+  //@}
 }}
+

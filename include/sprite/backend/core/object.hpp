@@ -4,6 +4,8 @@
  */
 
 #pragma once
+#include "sprite/backend/core/fwd.hpp"
+#include <cstddef>
 #include <type_traits>
 
 namespace sprite { namespace backend
@@ -15,44 +17,41 @@ namespace sprite { namespace backend
    * instance of this type can be created directly, though normally it's easier
    * to use one of the module::wrap methods.
    */
-  template<typename T, typename Factory> class object
+  template<typename T> class object
   {
   protected:
 
     /// The wrapped pointer to an LLVM object.
     T * px;
 
-    /// The @p module associated with this object.
-    Factory fx;
-
   public:
 
     /// The underlying LLVM type.
     typedef T element_type;
 
-    /// The type factory type.
-    typedef Factory factory_type;
+    /// Explicit null construction.
+    object(std::nullptr_t) : px(nullptr) {}
 
     /// Regular constructor to capture an LLVM API object.
     template<
         typename U
       , typename = typename std::enable_if<std::is_base_of<T,U>::value>::type
       >
-    object(U * p, Factory const & factory) : px(p), fx(factory) {}
+    explicit object(U * p) : px(p)
+    {}
 
     /// Implicitly-converting constructor.
     template<
         typename U
       , typename = typename std::enable_if<std::is_base_of<T,U>::value>::type
       >
-    object(object<U, Factory> const & arg)
-      : px(arg.ptr()), fx(arg.factory())
+    object(object<U> const & arg) : px(arg.ptr())
     {}
 
     // Default copy and assignment are OK.
 
     friend bool operator==(object const & lhs, object const & rhs)
-      { return lhs.px == rhs.px && lhs.fx == rhs.fx; }
+      { return lhs.px == rhs.px; }
 
     friend bool operator!=(object const & lhs, object const & rhs)
       { return !(lhs == rhs); }
@@ -61,16 +60,21 @@ namespace sprite { namespace backend
     explicit operator bool() const { return px; }
 
     /// Conversion to the LLVM object.
-    explicit operator T *() const { assert(px); return px; }
+    explicit operator T *() const { return px; }
 
     /// Named conversion to the LLVM object.
-    T * ptr() const { assert(px); return px; }
+    T * ptr() const { return px; }
 
     /// Member access for the LLVM object.
     T * operator->() const { assert(px); return px; }
-
-    /// Get the associated type factory.
-    Factory const & factory() const { return fx; }
   };
+
+  // ptr() extracts an LLVM API pointer from any suitable object.
+  template<typename T> T * ptr(object<T> const & tp) { return tp.ptr(); }
+  template<typename T> T * ptr(T * t) { return t; }
+  // This version allows more flexibilty with constant expressions (cf.
+  // is_constarg, which needs to match a function signature for arguments it
+  // will eventually reject).  There is no definition.
+  void * ptr(...);
 }}
 

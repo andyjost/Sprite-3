@@ -13,24 +13,25 @@ int main()
 
   // Note that the generic type Type in each wrapper makes operator% go through
   // the generic dispatch.
-  module const mod;
-  type bool_ = mod.int_(1);
-  type char_ = mod.int_(8);
-  type i32 = mod.int_(32);
-  type float_ = mod.float_();
-  type double_ = mod.double_();
+  module const m("generics");
+  scope _ = m;
+  type bool_ = types::int_(1);
+  type char_ = types::int_(8);
+  type i32 = types::int_(32);
+  type float_ = types::float_();
+  type double_ = types::double_();
 
-  #define MYCHECK(expr, expected)                            \
-      {                                                      \
-        auto const tmp = expr;                               \
-        assert(tmp.value<decltype(expected)>() == expected); \
-      }                                                      \
+  #define MYCHECK(expr, expected)                             \
+      {                                                       \
+        auto const tmp = expr;                                \
+        assert(valueof<decltype(expected)>(tmp) == expected); \
+      }                                                       \
     /**/
 
   #define MYCHECKNAN(expr, type)               \
       {                                        \
         auto const tmp = expr;                 \
-        auto const x = tmp.value<type>();      \
+        auto const x = valueof<type>(tmp);     \
         assert(x != x && "x should be a nan"); \
       }                                        \
     /**/

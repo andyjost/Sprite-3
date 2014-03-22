@@ -16,7 +16,7 @@ include ../Make.include
 -include $(OBJECTS:.o=.d)
 
 clean :
-	rm -f $(EXECUTABLES) $(OBJECTS) $(TESTS) *.d
+	rm -f $(EXECUTABLES) $(OBJECTS) $(TESTS) $(TESTS:=.failed) *.d
 
 .cpp.o :
 	$(CC) $(CFLAGS) -c $< -o $@

@@ -53,22 +53,18 @@ int main()
   using namespace sprite::backend;
 
   module const hello_module("hello");
-  scope _ = hello_module;
-  auto const char_ = types::char_();
-  auto const i32 = types::int_(32);
-  // auto const i32 = typeof<int>();
-
-  // Declare puts, which will be linked in from libc.
+  auto const char_ = hello_module.char_();
+  auto const i32 = hello_module.int_(32);
   auto const puts = extern_<Function>(i32(*char_), "puts");
 
-  /// [Using scope]
+  /// [Using context]
   auto const main = extern_<Function>(i32(), "main");
   {
-    scope _ = main;
-    puts("hello world\n");
+    context _ = main.entry();
+    puts(*char_ % "hello world\n");
     return_(0);
   }
-  /// [Using scope]
+  /// [Using context]
   /// [Hello world]
 
   {

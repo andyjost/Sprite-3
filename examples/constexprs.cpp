@@ -13,11 +13,12 @@
 int main()
 {
   using namespace sprite::backend;
+  module const m("contexprs");
+  scope _ = m;
 
   {
     /// [alignof_]
-    module const mod;
-    auto i32 = mod.int_(32);
+    auto i32 = types::int_(32);
     auto four = alignof_(i32);
     /// [alignof_]
     (void) four;
@@ -25,9 +26,8 @@ int main()
 
   {
     /// [offsetof_]
-    module const mod;
-    auto i32 = mod.int_(32);
-    auto st = mod.struct_({i32, i32});
+    auto i32 = types::int_(32);
+    auto st = types::struct_({i32, i32});
     auto four = offsetof_(st, 1);
     /// [offsetof_]
     (void) four;
@@ -35,13 +35,12 @@ int main()
 
   {
     /// [neg]
-    module const mod;
-    auto i32 = mod.int_(32);
+    auto i32 = types::int_(32);
     auto six = (i32 % 6);
     auto nsix = -six;
     auto nsix_nsw = -nuw (six);
 
-    auto float_ = mod.float_();
+    auto float_ = types::float_();
     auto two = (float_ % 2.0f);
     auto ntwo = -two;
     /// [neg]
@@ -52,8 +51,7 @@ int main()
 
   {
     /// [pos]
-    module const mod;
-    auto i32 = mod.int_(32);
+    auto i32 = types::int_(32);
     auto six = (i32 % 6);
     auto still_six = +six;
     /// [pos]
@@ -62,8 +60,7 @@ int main()
 
   {
     /// [inv]
-    module const mod;
-    auto i8 = mod.int_(8);
+    auto i8 = types::int_(8);
     auto b11010010 = (i8 % "b11010010");
     auto b00101101 = ~b11010010;
     /// [inv]
@@ -72,8 +69,7 @@ int main()
 
   {
     /// [add]
-    module const mod;
-    auto i32 = mod.int_(32);
+    auto i32 = types::int_(32);
     auto six = i32 % 6;
     auto twelve = six + six;
     auto also_twelve = six +nuw (six);
@@ -86,8 +82,7 @@ int main()
 
   {
     /// [sub]
-    module const mod;
-    auto i32 = mod.int_(32);
+    auto i32 = types::int_(32);
     auto six = i32 % 6;
     auto zero = six - six;
     auto also_zero = six -nuw (six);
@@ -100,8 +95,7 @@ int main()
 
   {
     /// [mul]
-    module const mod;
-    auto i32 = mod.int_(32);
+    auto i32 = types::int_(32);
     auto six = i32 % 6;
     auto thirtysix = six * six;
     auto also_thirtysix = six *nuw (six);
@@ -114,8 +108,7 @@ int main()
 
   {
     /// [div]
-    module const mod;
-    auto i32 = mod.int_(32);
+    auto i32 = types::int_(32);
     auto six = i32 % 6;
     auto neg_one = i32 % -1;
     auto neg_six = six /signed_ (neg_one);
@@ -129,8 +122,7 @@ int main()
 
   {
     /// [rem]
-    module const mod;
-    auto i32 = mod.int_(32);
+    auto i32 = types::int_(32);
     auto six = i32 % 6;
     auto four = i32 % 4;
     auto neg_one = i32 % -1;
@@ -143,8 +135,7 @@ int main()
 
   {
     /// [and]
-    module const mod;
-    auto i32 = mod.int_(32);
+    auto i32 = types::int_(32);
     auto twelve = i32 % "01100";
     auto ten = i32 % "01010";
     auto eight = twelve & ten;
@@ -154,8 +145,7 @@ int main()
 
   {
     /// [or]
-    module const mod;
-    auto i32 = mod.int_(32);
+    auto i32 = types::int_(32);
     auto twelve = i32 % "01100";
     auto ten = i32 % "01010";
     auto fourteen = twelve | ten;
@@ -165,8 +155,7 @@ int main()
 
   {
     /// [xor]
-    module const mod;
-    auto i32 = mod.int_(32);
+    auto i32 = types::int_(32);
     auto twelve = i32 % "01100";
     auto ten = i32 % "01010";
     auto six = twelve ^ ten;
@@ -176,8 +165,7 @@ int main()
 
   {
     /// [shl]
-    module const mod;
-    auto i32 = mod.int_(32);
+    auto i32 = types::int_(32);
     auto one = i32 % 1;
     auto two = one << one;
     auto also_two = one <<nuw (one);
@@ -190,8 +178,7 @@ int main()
 
   {
     /// [shr]
-    module const mod;
-    auto i8 = mod.int_(8);
+    auto i8 = types::int_(8);
     auto neg_one = i8 % -1; // 11111111
     auto four = i8 % 4;
     auto fifteen = neg_one >>logical (four); // 00001111
@@ -199,28 +186,27 @@ int main()
     auto two = four >>(logical,exact) (one);
     auto also_neg_one = neg_one >>(arithmetic) (four); // 11111111
     /// [shr]
-    assert(fifteen.value<int>() == 15);
-    assert(two.value<int>() == 2);
-    assert(also_neg_one.value<int>() == -1);
+    assert(valueof<int>(fifteen) == 15);
+    assert(valueof<int>(two) == 2);
+    assert(valueof<int>(also_neg_one) == -1);
   }
 
   {
     /// [typecast]
-    module const mod;
-    auto i8 = mod.int_(8);
-    auto i32 = mod.int_(32);
-    auto float_ = mod.float_();
-    auto double_ = mod.double_();
+    auto i8 = types::int_(8);
+    auto i32 = types::int_(32);
+    auto float_ = types::float_();
+    auto double_ = types::double_();
 
     auto trunc = typecast(i32 % 256, i8); // i8 1
-    auto sext = typecast(signed_(i8 % -1), i32); // i32 -1
-    auto zext = typecast(unsigned_(i8 % 255), i32); // i32 255
+    auto sext = typecast(i8 % -1, signed_(i32)); // i32 -1
+    auto zext = typecast(i8 % 255, unsigned_(i32)); // i32 255
     auto fptrunc = typecast(double_ % 1.5, float_); // float 1.5f
     auto fpextend = typecast(float_ % 1.5f, double_); // double 1.5
-    auto uitofp = typecast(unsigned_(i8 % -1), float_); // float 255.0f
-    auto sitofp = typecast(signed_(i8 % -1), float_); // float -1.0f
-    auto fptoui = typecast(unsigned_(float_ % 1.0), i32); // i32 1
-    auto fptosi = typecast(signed_(float_ % -1.0), i32); // i32 -1
+    auto uitofp = typecast(i8 % -1, unsigned_(float_)); // float 255.0f
+    auto sitofp = typecast(i8 % -1, signed_(float_)); // float -1.0f
+    auto fptoui = typecast(float_ % 1.0, unsigned_(i32)); // i32 1
+    auto fptosi = typecast(float_ % -1.0, signed_(i32)); // i32 -1
     auto ptrtoint = typecast(*i8 % null, i32); // i32 0
     auto inttoptr = typecast(i32 % "0xdeadbeef", *i8); // i8* 0xdeadbeef
 
@@ -240,9 +226,8 @@ int main()
 
   {
     /// [bitcast]
-    module const mod;
-    auto i32 = mod.int_(32);
-    auto float_ = mod.float_();
+    auto i32 = types::int_(32);
+    auto float_ = types::float_();
     auto qnan = bitcast(i32 % -1, float_);
     /// [bitcast]
     (void) qnan;
@@ -250,9 +235,8 @@ int main()
 
   {
     /// [select]
-    module const mod;
-    auto i32 = mod.int_(32);
-    auto bool_ = mod.bool_();
+    auto i32 = types::int_(32);
+    auto bool_ = types::bool_();
     auto one = select(bool_ % true, i32 % 1, i32 % 2);
     /// [select]
     (void) one;
@@ -260,17 +244,14 @@ int main()
 
   {
     /// [Computing addresses]
-    module const mod;
-    auto i32 = mod.int_(32);
+    auto i32 = types::int_(32);
     auto myarray = (extern_(i32[2], "myarray").set_initializer({1,2}));
     auto address_of_myarray = &myarray;
     auto address_of_two = &myarray[1];
-    auto address_of_two_inbounds = address_inbounds(myarray[1]);
     /// [Computing addresses]
     (void) myarray;
     (void) address_of_myarray;
     (void) address_of_two;
-    (void) address_of_two_inbounds;
   }
   
   
@@ -301,7 +282,7 @@ int main()
   }
 
   auto ab = struct_({i32|"a", *i8|"b"}) % (i32 % 1, *i8 % "hello");
-  int64 a = ab.attr("a").value<int64>();
+  int64 a = valueof<int64>(ab.attr("a"));
 
   auto Widget = struct_("Widget", {*i8, i32, i1[4]});
   auto awidget = Widget % (null, 42, {true, false, false, true});

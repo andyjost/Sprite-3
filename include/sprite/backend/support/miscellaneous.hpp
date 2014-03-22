@@ -6,7 +6,7 @@ namespace sprite { namespace backend
 {
   inline unsigned getFPBitWidth(Type * type)
   {
-    switch(type->getTypeID())
+    switch(SPRITE_APICALL(type->getTypeID()))
     {
       case Type::HalfTyID: return 16;
       case Type::FloatTyID: return 32;

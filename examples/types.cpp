@@ -13,18 +13,19 @@
 int main()
 {
   using namespace sprite::backend;
+  // Create a new module.
+  module const m("types");
+  scope _ = m;
 
   {
     /// [Creating basic types]
-    // Create a new module and module.
-    module const mod("mymodule");
 
     // Get a few basic types.
-    auto const char_ = mod.int_(8); // get the char type
-    auto const double_ = mod.double_(); // get the 64-bit double type
-    auto const float_ = mod.float_(); // get the 32-bit float type
-    auto const i32 = mod.int_(32); // get the 32-bit integer type
-    auto const void_ = mod.void_(); // get the void type
+    auto const char_ = types::int_(8); // get the char type
+    auto const double_ = types::double_(); // get the 64-bit double type
+    auto const float_ = types::float_(); // get the 32-bit float type
+    auto const i32 = types::int_(32); // get the 32-bit integer type
+    auto const void_ = types::void_(); // get the void type
     /// [Creating basic types]
     (void) char_;
     (void) double_;
@@ -35,8 +36,7 @@ int main()
 
   {
     /// [Creating array types]
-    module const mod;
-    auto const i32 = mod.int_(32);
+    auto const i32 = types::int_(32);
     auto const i32_x2 = i32[2]; // get the i32[2] type
     /// [Creating array types]
     (void) i32_x2;
@@ -44,8 +44,7 @@ int main()
 
   {
     /// [Creating pointer types]
-    module const mod;
-    auto const i32 = mod.int_(32);
+    auto const i32 = types::int_(32);
     auto const i32_p = *i32; // get the i32 * type
     /// [Creating pointer types]
     (void) i32_p;
@@ -53,11 +52,10 @@ int main()
 
   {
     /// [Creating function types]
-    module const mod;
-    auto const char_ = mod.int_(8);
-    auto const float_ = mod.float_();
-    auto const i32 = mod.int_(32);
-    auto const void_ = mod.void_();
+    auto const char_ = types::int_(8);
+    auto const float_ = types::float_();
+    auto const i32 = types::int_(32);
+    auto const void_ = types::void_();
 
     // Type of function taking i32 and float, returning nothing.
     auto const func1_t = void_(i32, float_);
@@ -72,9 +70,8 @@ int main()
   {
     /// [Creating an anonymous struct]
     // A struct consisting of two 32-bit integers.
-    module const mod;
-    auto const i32 = mod.int_(32);
-    auto const anon = mod.struct_({i32, i32});
+    auto const i32 = types::int_(32);
+    auto const anon = types::struct_({i32, i32});
     /// [Creating an anonymous struct]
     (void) anon;
   }
@@ -82,25 +79,22 @@ int main()
   {
     /// [Creating opaque structs]
     // Creates an opaque struct.
-    module const mod;
-    auto const opaque = mod.struct_("OpaqueStruct");
+    auto const opaque = types::struct_("my.opaque.struct");
     /// [Creating opaque structs]
     (void) opaque;
   }
 
   {
     /// [Creating structs]
-    module const mod;
-
     // Creates an empty (not opaque) struct.
-    auto const empty = mod.struct_("empty", {});
+    auto const empty = types::struct_("empty", {});
 
     // Creates a named struct consisting of a pointer to function pointers (taking varargs and returning i32), and an i32.
-    auto const i32 = mod.int_(32);
-    auto const my_struct = mod.struct_("MyStruct", {**(i32(dots)), i32});
+    auto const i32 = types::int_(32);
+    auto const my_struct = types::struct_("my.struct", {**(i32(dots)), i32});
 
     // Gets the previously-created named struct.
-    auto const my_struct2 = mod.struct_("MyStruct");
+    auto const my_struct2 = types::struct_("my.struct");
     /// [Creating structs]
     (void) empty;
     (void) my_struct;

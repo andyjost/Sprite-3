@@ -4,18 +4,16 @@
  */
 
 #pragma once
+#include "sprite/backend/config.hpp"
+#include "sprite/backend/core/object.hpp"
+#include "sprite/backend/support/array_ref.hpp"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "sprite/backend/core/object.hpp"
-#include "sprite/backend/core/wrappers.hpp"
-#include "sprite/backend/support/wrap.hpp"
 
 namespace sprite { namespace backend
 {
-  struct Scaffolding {}; // To be deleted.
-
   /**
    * @brief
    * Represents an LLVM module.
@@ -28,26 +26,29 @@ namespace sprite { namespace backend
    *
    * @snippet types.cpp Creating basic types
    */
-  struct module : object<llvm::Module, Scaffolding>
+  struct module : object<llvm::Module>
   {
-    typedef object<llvm::Module, Scaffolding> base_type;
+    typedef object<llvm::Module> base_type;
 
   public:
 
-    //@{
+    using object<llvm::Module>::object;
+
     /// Creates a new module.
     explicit module(
         string_ref const & name=".anon"
-      , llvm::LLVMContext & = llvm::getGlobalContext()
-      );
-
-    explicit module(llvm::Module & module);
-    //@}
+      , llvm::LLVMContext & context = SPRITE_APICALL(llvm::getGlobalContext())
+      )
+      : base_type(SPRITE_APICALL(new llvm::Module(name, context)))
+    {}
 
     // Default copy, assignment, and destructor are fine.
 
     /// Gets the associated LLVM context.
-    llvm::LLVMContext & context() const { return ptr()->getContext(); }
+    llvm::LLVMContext & context() const
+    {
+      return px ? px->getContext() : SPRITE_APICALL(llvm::getGlobalContext());
+    }
 
     friend bool operator==(module const & lhs, module const & rhs)
       { return lhs.ptr() == rhs.ptr(); }
@@ -57,6 +58,7 @@ namespace sprite { namespace backend
 
     // ====== Type-Creation Methods.
 
+    #if 0
     /// Creates an integer type.
     integer_type int_(unsigned numBits) const;
 
@@ -115,18 +117,10 @@ namespace sprite { namespace backend
     struct_type struct_(
         string_ref const & name, array_ref<type> const & elements
       ) const;
+    #endif
   };
 
-  inline module::module(llvm::Module & module)
-    : base_type(&module, Scaffolding())
-  {
-  }
-
-  inline module::module(string_ref const & name, llvm::LLVMContext & context)
-    : base_type(new llvm::Module(name, context), Scaffolding())
-  {
-  }
-
+  #if 0
   inline integer_type
   module::int_(unsigned numBits) const
   {
@@ -183,6 +177,6 @@ namespace sprite { namespace backend
   template<typename T>
   uint64_t sizeof_(typeobj<T> const & wrapper)
     { return wrapper.factory().sizeof_(wrapper.ptr()); }
-
+  #endif
 }}
 

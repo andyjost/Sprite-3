@@ -8,3 +8,5 @@ sandbox/*
 dev/*
 doxygen-out/*
 tags
+setup.csh
+

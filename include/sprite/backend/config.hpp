@@ -5,12 +5,41 @@
 
 #pragma once
 #include <array>
-#include "llvm/ADT/ArrayRef.h"
 #include "sprite/backend/support/typenames.hpp"
+// DEBUG
+#include <iostream>
+
+/**
+ * @brief Calls to the LLVM C++-API are wrapped in this macro.
+ *
+ * If the program is compiled with @p -MSPRITE_SHOW_LLVM_API_CALLS, then the
+ * calls are printed to the output.
+ */
+// #define SPRITE_SHOW_LLVM_API_CALLS
+#ifdef SPRITE_SHOW_LLVM_API_CALLS
+#include <iostream>
+#include <string>
+namespace sprite { namespace backend { namespace aux {
+  inline std::string _location(std::string const & file, size_t line)
+    { return " at " + file + ":" + std::to_string(line) + "\n"; }
+}}}
+#define SPRITE_APICALL(...)                                        \
+    (                                                              \
+        (std::cout << "LLVM-API CALL: " << #__VA_ARGS__            \
+          << ::sprite::backend::aux::_location(__FILE__, __LINE__) \
+          )                                                        \
+      , __VA_ARGS__                                                \
+      )                                                            \
+  /**/
+#else
+#define SPRITE_APICALL(...) __VA_ARGS__
+#endif
 
 // Forward-declare some LLVM types that will be used.
 namespace llvm
 {
+  class Module;
+
   // Derived types.
   class Type;
   class ArrayType;
@@ -31,9 +60,12 @@ namespace llvm
 
   // Values.
   class Value;
+  class BasicBlock;
   class Function;
   class GlobalValue;
   class GlobalVariable;
+
+  // Instructions.
   class Instruction;
 
   // ADTs.
@@ -58,19 +90,6 @@ namespace sprite { namespace backend
   SPRITE_DECLARE_TYPENAME(PointerType)
   SPRITE_DECLARE_TYPENAME(StructType)
 
-  // Values.
-  using llvm::Value;
-  using llvm::Function;
-  using llvm::GlobalValue;
-  using llvm::GlobalVariable;
-  using llvm::Instruction;
-
-  SPRITE_DECLARE_TYPENAME(Value)
-  SPRITE_DECLARE_TYPENAME(Function)
-  SPRITE_DECLARE_TYPENAME(GlobalValue)
-  SPRITE_DECLARE_TYPENAME(GlobalVariable)
-  SPRITE_DECLARE_TYPENAME(Instruction)
-
   /**
    * @brief Represents a floating-point type.
    *
@@ -94,6 +113,21 @@ namespace sprite { namespace backend
   };
 
   SPRITE_DECLARE_TYPENAME(FPType)
+
+  // Values.
+  using llvm::Value;
+  using llvm::BasicBlock;
+  using llvm::Function;
+  using llvm::GlobalValue;
+  using llvm::GlobalVariable;
+  using llvm::Instruction;
+
+  SPRITE_DECLARE_TYPENAME(Value)
+  SPRITE_DECLARE_TYPENAME(BasicBlock)
+  SPRITE_DECLARE_TYPENAME(Function)
+  SPRITE_DECLARE_TYPENAME(GlobalValue)
+  SPRITE_DECLARE_TYPENAME(GlobalVariable)
+  SPRITE_DECLARE_TYPENAME(Instruction)
 
   // Constants.
   using llvm::Constant;
@@ -127,37 +161,4 @@ namespace sprite { namespace backend
 
   SPRITE_DECLARE_TYPENAME(APInt);
   SPRITE_DECLARE_TYPENAME(APFloat);
-
-  /**
-   * @brief Extends llvm::ArrayRef<T>.
-   *
-   * The LLVM @p ArrayRef cannot be constructed from a @p
-   * std::initializer_list.  This class behaves just like that class but adds
-   * an additional constructor for better initialization.
-   */
-  template<typename T>
-  struct array_ref : llvm::ArrayRef<T>
-  {
-    using llvm::ArrayRef<T>::ArrayRef;
-
-    /// Initializes using a brace-enclosed initializer list.
-    array_ref(std::initializer_list<T> const & args)
-      : llvm::ArrayRef<T>(args.begin(), args.size())
-    {}
-
-    array_ref(std::initializer_list<T> && args)
-      : llvm::ArrayRef<T>(args.begin(), args.size())
-    {}
-
-    /// Initializes from std::array.
-    template<size_t N>
-    array_ref(std::array<T,N> const & args)
-      : llvm::ArrayRef<T>(args.begin(), N)
-    {}
-
-    template<size_t N>
-    array_ref(std::array<T,N> && args)
-      : llvm::ArrayRef<T>(args.begin(), N)
-    {}
-  };
 }}

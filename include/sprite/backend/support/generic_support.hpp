@@ -4,7 +4,7 @@
  */
 
 #pragma once
-#include "sprite/backend/core/wrappers.hpp"
+#include "sprite/backend/core/type.hpp"
 #include "sprite/backend/support/exceptions.hpp"
 #include <sstream>
 
@@ -26,7 +26,7 @@ namespace sprite { namespace backend { namespace generics
 
     /// The dispatcher type to call when the LHS matches.
     template<template<typename...> class What>
-    struct dispatcher { typedef What<Lhs, Us...> type;
+    struct dispatcher { typedef What<Us...> type;
     };
   };
 
@@ -41,27 +41,28 @@ namespace sprite { namespace backend { namespace generics
     };
 
     /// Implements the generic modulo (%) operator.
-    template<typename EH, typename Lhs, typename...Us> struct modulo_impl;
+    template<typename EH, typename...Us> struct modulo_impl;
     
     /// Iterating specialization.
-    template<typename EH, typename Lhs, typename U, typename...Us>
-    struct modulo_impl<EH, Lhs, U, Us...> : modulo_impl<EH, Lhs, Us...>
+    template<typename EH, typename U, typename...Us>
+    struct modulo_impl<EH, U, Us...> : modulo_impl<EH, Us...>
     {
-      using modulo_impl<EH, Lhs, Us...>::operator();
+      using modulo_impl<EH, Us...>::operator();
     
+      template<typename Lhs>
       auto operator()(
-          typeobj<Lhs> const & lhs, U const & arg
+          Lhs const & lhs, U const & arg
         ) const -> decltype(lhs % arg)
       { return lhs % arg; }
     };
     
     /// Terminal specialization.
-    template<typename EH, typename Lhs> struct modulo_impl<EH, Lhs>
+    template<typename EH> struct modulo_impl<EH>
     {
       // Called when no other case (above) matches.
-      template<typename V>
+      template<typename Lhs, typename V>
       typename std::enable_if<EH::template MatchErrors<V>::value, weak_return>::type
-      operator()(typeobj<Lhs> const & lhs, V const & arg) const
+      operator()(Lhs const & lhs, V const & arg) const
         { throw EH::error(lhs, arg); }
     };
 
@@ -126,9 +127,9 @@ namespace sprite { namespace backend { namespace generics
    * @brief Dispatches to the modulo (@p %) operator.  Used in conjunction with
    * @p generic_handler.
    */
-  template<typename Lhs, typename...Us>
+  template<typename...Us>
   struct modulo
-    : aux::modulo_impl<aux::modulo_eh<Us...>, Lhs, Us...>
+    : aux::modulo_impl<aux::modulo_eh<Us...>, Us...>
   {
   };
 
@@ -138,17 +139,20 @@ namespace sprite { namespace backend { namespace generics
     struct generic_handler_impl;
     
     /// Iterating specialization.
-    template<typename EH, typename ReturnType, template<typename...> class What, typename case_, typename...Cases>
-    struct generic_handler_impl<EH, ReturnType, What, case_, Cases...>
+    template<
+        typename EH, typename ReturnType, template<typename...> class What
+      , typename Case, typename...Cases
+      >
+    struct generic_handler_impl<EH, ReturnType, What, Case, Cases...>
     {
       template<typename T, typename U>
       ReturnType operator()(T const & lhs, U const & arg) const
       {
         // If the generic LHS argument can be cast to the target type, then
         // dispatch the operation.
-        if(auto const p = dyn_cast<typename case_::Target>(lhs))
+        if(auto const p = dyn_cast<typename Case::Target>(lhs))
         {
-          static typename case_::template dispatcher<What>::type const dispatcher;
+          static typename Case::template dispatcher<What>::type const dispatcher;
           return dispatcher(p, arg);
         }
     
@@ -183,9 +187,9 @@ namespace sprite { namespace backend { namespace generics
     private:
 
       // One case.
-      template<typename case_, typename Os>
+      template<typename Case, typename Os>
       static void append_typenames(Os & os)
-        { os << typename_impl<typename case_::Target>::name(); }
+        { os << typename_impl<typename Case::Target>::name(); }
 
       // Two cases.
       template<typename Case0, typename Case1, typename Os>
