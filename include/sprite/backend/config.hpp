@@ -75,6 +75,9 @@ namespace llvm
 
 namespace sprite { namespace backend
 {
+  // A unique type for use with enable_if.
+  struct En_ {};
+
   // Types.
   using llvm::Type;
   using llvm::ArrayType;

@@ -1,8 +1,3 @@
-/**
- * @file
- * @brief A program that produces the hello world LLVM module.
- */
-
 // FIXME: This does not belong in the examples directory, or the README needs
 // to be updated.
 
@@ -51,9 +46,10 @@ int main()
   using namespace sprite::backend;
 
   module const fib_module("fib");
-  auto const char_ = fib_module.char_();
-  auto const i32 = fib_module.int_(32);
-  auto const i64 = fib_module.int_(64);
+  scope _ = fib_module;
+  auto const char_ = types::char_();
+  auto const i32 = types::int_(32);
+  auto const i64 = types::int_(64);
 
   // Declare external functions.
   auto const printf = extern_<Function>(i32(*char_, dots), "printf");
@@ -88,45 +84,55 @@ int main()
   //       }
   //     }
 
-  auto const fib = dyn_cast<Function>(extern_(i64(i64), "fib"));
+  // auto const fib = dyn_cast<Function>(extern_(i64(i64), "fib"));
+  auto const fib = extern_(i64(i64), "fib");
   {
-    using namespace llvm;
-    BasicBlock* entryb = BasicBlock::Create(getGlobalContext(), "entry", fib.ptr());
-    BasicBlock* terminateb = BasicBlock::Create(getGlobalContext(), "terminate", fib.ptr());
-    BasicBlock* recurseb = BasicBlock::Create(getGlobalContext(), "recurse", fib.ptr());
+    scope _ = fib;
+    // value a = param[0];
 
-    // label: entry
-    IRBuilder<> entry(entryb);
-    auto const n = fib->arg_begin();
-    auto const test = entry.CreateICmpULT(n, (i64 % 2).ptr());
-    entry.CreateCondBr(test, terminateb, recurseb);
+    // label loop, end;
+    // if_(a > 1, loop, end)
+    // {
+    //   scope _ = loop;
+    //   return_(fib(a-1) + fib(a-2));
+    // }
+    // {
+    //   scope _ = end;
+    //   return_(1);
+    // }
 
-    // label: terminate
-    IRBuilder<> terminate(terminateb);
-    terminate.CreateRet((i64 % 1).ptr());
+    // using namespace llvm;
+    // BasicBlock* entryb = BasicBlock::Create(getGlobalContext(), "entry", fib.ptr());
+    // BasicBlock* terminateb = BasicBlock::Create(getGlobalContext(), "terminate", fib.ptr());
+    // BasicBlock* recurseb = BasicBlock::Create(getGlobalContext(), "recurse", fib.ptr());
 
-    // label: recurse
-    IRBuilder<> recurse(recurseb);
-    auto const a = recurse.CreateSub(n, (i64 % 1).ptr());
-    auto const b = recurse.CreateSub(n, (i64 % 2).ptr());
-    auto const c = recurse.CreateCall(fib.ptr(), a);
-    auto const d = recurse.CreateCall(fib.ptr(), b);
-    auto const e = recurse.CreateAdd(c, d);
-    recurse.CreateRet(e);
+    // // label: entry
+    // IRBuilder<> entry(entryb);
+    // auto const n = fib->arg_begin();
+    // auto const test = entry.CreateICmpULT(n, (i64 % 2).ptr());
+    // entry.CreateCondBr(test, terminateb, recurseb);
 
+    // // label: terminate
+    // IRBuilder<> terminate(terminateb);
+    // terminate.CreateRet((i64 % 1).ptr());
+
+    // // label: recurse
+    // IRBuilder<> recurse(recurseb);
+    // auto const a = recurse.CreateSub(n, (i64 % 1).ptr());
+    // auto const b = recurse.CreateSub(n, (i64 % 2).ptr());
+    // auto const c = recurse.CreateCall(fib.ptr(), a);
+    // auto const d = recurse.CreateCall(fib.ptr(), b);
+    // auto const e = recurse.CreateAdd(c, d);
+    // recurse.CreateRet(e);
+    return_(42);
   }
 
   auto const main = extern_(i32(), "main");
-  auto const func_main = dyn_cast<Function>(main);
-
   {
-    using namespace llvm;
-    // TODO
-    BasicBlock* entryb = BasicBlock::Create(getGlobalContext(), "entry", func_main.ptr());
-    IRBuilder<> entry(entryb);
-    auto const x = entry.CreateCall(fib.ptr(), (i64 % 6).ptr());
-    entry.CreateCall2(printf.ptr(), (*char_ % "%d\n").ptr(), x);
-    entry.CreateRet((i32 % 0).ptr());
+    scope _ = main;
+    value const x = fib(5);
+    printf("fib(5)=%d\n", x);
+    return_(0);
   }
 
   {
