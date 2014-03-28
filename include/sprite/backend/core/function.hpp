@@ -28,6 +28,12 @@ namespace sprite { namespace backend
     /// Returns the function entry point.
     label entry() const;
   };
+
+  /// Get an argument (by its position) for the function currently in scope.
+  value arg(size_t);
+
+  /// Get an argument (by its name) for the function currently in scope.
+  value arg(string_ref const &);
 }}
 
 #include "sprite/backend/core/detail/function_impl.hpp"

@@ -175,5 +175,25 @@ namespace sprite { namespace backend
 
   value bitcast(value const & src, type tgt)
     { return apply_cast<llvm::Instruction::BitCast>(src.ptr(), tgt.ptr()); }
+
+  type coerce(type const & lhs, type const & rhs)
+  {
+    if(lhs->isIntegerTy())
+    {
+      if(rhs->isIntegerTy())
+        return lhs->getScalarSizeInBits() < rhs->getScalarSizeInBits()
+          ? rhs : lhs;
+      else if(rhs->isFloatingPointTy())
+        return rhs;
+    }
+    else if(lhs->isFloatingPointTy())
+    {
+      if(rhs->isIntegerTy())
+        return lhs;
+      else if(rhs->isFloatingPointTy())
+        return getFPBitWidth(lhs.ptr()) < getFPBitWidth(rhs.ptr()) ? rhs : lhs;
+    }
+    throw type_error("Expected an integer or floating-point type in coerce");
+  }
 }}
 

@@ -68,11 +68,12 @@ int main()
   //
   // Goal Syntax:
   //
-  //     auto fib = extern_(i64(i64 | "n"), "fib");
+  //     auto fib = extern_(i64(i64), "fib", {"n"});
   //     {
   //       scope _ = fib;
   //       auto const n = arg("n");
   //       label terminate, recurse;
+  //       if_(n < 2, []{return_(1)}) // could this work??
   //       if_(n < 2, terminate, recurse);
   //       {
   //         scope _ = terminate;
@@ -84,47 +85,12 @@ int main()
   //       }
   //     }
 
-  // auto const fib = dyn_cast<Function>(extern_(i64(i64), "fib"));
-  auto const fib = extern_(i64(i64), "fib");
+  auto const fib = extern_(i64(i64), "fib", {"n"});
   {
     scope _ = fib;
-    // value a = param[0];
-
-    // label loop, end;
-    // if_(a > 1, loop, end)
-    // {
-    //   scope _ = loop;
-    //   return_(fib(a-1) + fib(a-2));
-    // }
-    // {
-    //   scope _ = end;
-    //   return_(1);
-    // }
-
-    // using namespace llvm;
-    // BasicBlock* entryb = BasicBlock::Create(getGlobalContext(), "entry", fib.ptr());
-    // BasicBlock* terminateb = BasicBlock::Create(getGlobalContext(), "terminate", fib.ptr());
-    // BasicBlock* recurseb = BasicBlock::Create(getGlobalContext(), "recurse", fib.ptr());
-
-    // // label: entry
-    // IRBuilder<> entry(entryb);
-    // auto const n = fib->arg_begin();
-    // auto const test = entry.CreateICmpULT(n, (i64 % 2).ptr());
-    // entry.CreateCondBr(test, terminateb, recurseb);
-
-    // // label: terminate
-    // IRBuilder<> terminate(terminateb);
-    // terminate.CreateRet((i64 % 1).ptr());
-
-    // // label: recurse
-    // IRBuilder<> recurse(recurseb);
-    // auto const a = recurse.CreateSub(n, (i64 % 1).ptr());
-    // auto const b = recurse.CreateSub(n, (i64 % 2).ptr());
-    // auto const c = recurse.CreateCall(fib.ptr(), a);
-    // auto const d = recurse.CreateCall(fib.ptr(), b);
-    // auto const e = recurse.CreateAdd(c, d);
-    // recurse.CreateRet(e);
-    return_(42);
+    value n = arg("n");
+    if_(n < 2, []{return_(1);});
+    return_(fib(n-2) + fib(n-1));
   }
 
   auto const main = extern_(i32(), "main");

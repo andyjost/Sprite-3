@@ -36,6 +36,9 @@ namespace sprite { namespace backend
     static function current_function();
     static label current_label();
 
+    /// Replaces the current label with a new one.
+    static void set_continuation(label const &);
+
     // The context comes from the current module, but exposing it in this way
     // may allow some compilation units to avoid a dependency on module.hpp.
     static llvm::LLVMContext & current_context();

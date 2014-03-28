@@ -3,8 +3,8 @@
 #include "sprite/backend/core/object.hpp"
 #include "sprite/backend/support/array_ref.hpp"
 #include "sprite/backend/support/special_values.hpp"
+#include "sprite/backend/support/type_traits.hpp"
 #include "llvm/IR/DerivedTypes.h"
-#include <type_traits>
 
 namespace sprite { namespace backend
 {
@@ -246,6 +246,43 @@ namespace sprite { namespace backend
   inline typename std::enable_if<(sizeof...(T) != 1), struct_type>::type
   get_type()
     { return get_type<std::tuple<T...>>(); }
+  //@}
+
+  //@{
+  /**
+   * @brief Gets a type from any suitable argument.
+   *
+   * If the input object is already an LLVM Type, then its API pointer value
+   * is extracted.  Otherwise, i.e., in the case of a raw initializer, a
+   * constant value is created using @p get_constant.
+   */
+  // Applies when T can produce an LLVM Type.
+  template<typename T>
+  inline type get_type(T && arg
+    , typename std::enable_if<is_typearg<T>::value, En_>::type = En_()
+    )
+  { return type(ptr(std::forward<T>(arg))); }
+
+  // Applies when T can produce an LLVM Value.
+  template<typename T>
+  inline type get_type(T && arg
+    , typename std::enable_if<is_valuearg<T>::value, En_>::type = En_()
+    )
+  { return type(ptr(std::forward<T>(arg))->getType()); }
+
+  // Applies when T is a raw initializer (e.g., an int).  Returns the
+  // best-matching LLVM type.
+  template<typename T>
+  inline type get_type(T && arg
+    , typename std::enable_if<
+          !is_typearg<T>::value && !is_valuearg<T>::value, En_
+        >::type = En_()
+    )
+  {
+    using BasicT = typename std::remove_reference<T>::type;
+    using T_ = typename std::decay<BasicT>::type;
+    return get_type<T_>();
+  }
   //@}
 }}
 

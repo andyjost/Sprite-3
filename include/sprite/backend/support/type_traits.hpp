@@ -270,6 +270,144 @@ namespace sprite { namespace backend
     : std::true_type
   {};
   //@}
+
+  namespace aux
+  {
+    template<typename T, bool IsClass = std::is_class<T>::value>
+    struct is_callable_impl;
+    
+    template<typename T>
+    struct is_callable_impl<T,false>
+      : std::integral_constant<
+            bool
+          , std::is_function<T>::value
+              || std::is_function<typename std::remove_pointer<T>::type>::value
+          >
+    {};
+    
+    template<typename T>
+    class is_callable_impl<T,true>
+    {
+      typedef char(&yes)[1];
+      typedef char(&no)[2];
+    
+      struct Fallback { void operator()(); };
+      struct Derived : T, Fallback { };
+    
+      template<typename U, U> struct Check;
+    
+      template<typename>
+      static yes test(...);
+    
+      template<typename C>
+      static no test(Check<void (Fallback::*)(), &C::operator()>*);
+    
+    public:
+
+      static const bool value = sizeof(test<Derived>(0)) == sizeof(yes);
+    };
+  }
+  
+  /**
+   * @brief Indicates whether @p T is callable.
+   *
+   * Works for functions, function pointers, and objects with operator().
+   */
+  template<typename T> struct is_callable : aux::is_callable_impl<T> {};
+  
+  
+  //@{
+  // From http://functionalcpp.wordpress.com/2013/08/05/function-traits/
+  /// Gives information about function-like types.
+  template<typename F> struct function_traits;
+   
+  // function pointer
+  template<typename R, typename... Args>
+  struct function_traits<R(*)(Args...)> : public function_traits<R(Args...)>
+  {};
+   
+  template<typename R, typename... Args>
+  struct function_traits<R(Args...)>
+  {
+      using return_type = R;
+   
+      static constexpr std::size_t arity = sizeof...(Args);
+   
+      template <std::size_t N>
+      struct argument
+      {
+          static_assert(N < arity, "error: invalid parameter index.");
+          using type = typename std::tuple_element<N,std::tuple<Args...>>::type;
+      };
+  };
+  
+  // member function pointer
+  template<typename C, typename R, typename... Args>
+  struct function_traits<R(C::*)(Args...)> : public function_traits<R(C&,Args...)>
+  {};
+   
+  // const member function pointer
+  template<typename C, typename R, typename... Args>
+  struct function_traits<R(C::*)(Args...) const> : public function_traits<R(C&,Args...)>
+  {};
+   
+  // member object pointer
+  template<typename C, typename R>
+  struct function_traits<R(C::*)> : public function_traits<R(C&)>
+  {};
+  
+  // functor
+  template<typename F>
+  struct function_traits
+  {
+  private:
+
+    using call_type = function_traits<decltype(&F::operator())>;
+
+  public:
+
+    using return_type = typename call_type::return_type;
+  
+    static constexpr std::size_t arity = call_type::arity - 1;
+  
+    template <std::size_t N>
+    struct argument
+    {
+      static_assert(N < arity, "error: invalid parameter index.");
+      using type = typename call_type::template argument<N+1>::type;
+    };
+  };
+   
+  template<typename F>
+  struct function_traits<F&> : public function_traits<F>
+  {};
+   
+  template<typename F>
+  struct function_traits<F&&> : public function_traits<F>
+  {};
+  //@}
+
+  namespace aux
+  {
+    template<typename T, bool IsCallable=is_callable<T>::value>
+    struct is_code_block_specifier_impl;
+
+    template<typename T>
+    struct is_code_block_specifier_impl<T,true>
+      : std::integral_constant<bool, function_traits<T>::arity == 0>
+    {};
+
+    template<typename T>
+    struct is_code_block_specifier_impl<T,false>
+      : std::false_type
+    {};
+  }
+
+  /// A code block specifier is a nullary function (usually a lambda).
+  template<typename T>
+  struct is_code_block_specifier
+    : aux::is_code_block_specifier_impl<T>
+  {};
 }}
 
 #undef SPRITE_DEF_ISOBJ_CHECK

@@ -29,23 +29,26 @@ namespace sprite { namespace backend
    */
   global def(
       GlobalValue::LinkageTypes linkage
-    , type const & type
+    , type const & ty
     , twine const & name = ""
+    , array_ref<twine> const & = {}
     );
 
   function def(
       GlobalValue::LinkageTypes linkage
     , function_type const &
     , twine const & name = ""
+    , array_ref<twine> const & = {}
     );
 
   template<typename T>
   inline globalobj<T> def(
       GlobalValue::LinkageTypes linkage
-    , type const & tp
+    , type const & ty
     , twine const & name = ""
+    , array_ref<twine> const & arg_names = {}
     )
-  { return dyn_cast<T>(def(linkage, tp, name)); }
+  { return dyn_cast<T>(def(linkage, ty, name, arg_names)); }
   //@}
 
   //@{
@@ -54,15 +57,24 @@ namespace sprite { namespace backend
    *
    * @snippet defs.cpp Using extern_
    */
-  inline global extern_(type const & tp, twine const & name = "")
-    { return def(GlobalValue::ExternalLinkage, tp, name); }
+  inline global extern_(
+      type const & ty, twine const & name = ""
+    , array_ref<twine> const & arg_names = {}
+    )
+  { return def(GlobalValue::ExternalLinkage, ty, name, arg_names); }
 
-  inline function extern_(function_type const & tp, twine const & name = "")
-    { return def(GlobalValue::ExternalLinkage, tp, name); }
+  inline function extern_(
+      function_type const & ty, twine const & name = ""
+    , array_ref<twine> const & arg_names = {}
+    )
+  { return def(GlobalValue::ExternalLinkage, ty, name, arg_names); }
 
   template<typename T>
-  inline globalobj<T> extern_(type const & tp, twine const & name = "")
-    { return dyn_cast<T>(extern_(tp, name)); }
+  inline globalobj<T> extern_(
+      type const & ty, twine const & name = ""
+    , array_ref<twine> const & arg_names = {}
+    )
+  { return dyn_cast<T>(extern_(ty, name, arg_names)); }
   //@}
 
   //@{
@@ -71,15 +83,24 @@ namespace sprite { namespace backend
    *
    * @snippet defs.cpp Using static_
    */
-  inline global static_(type const & tp, twine const & name = "")
-    { return def(GlobalValue::InternalLinkage, tp, name); }
+  inline global static_(
+      type const & ty, twine const & name = ""
+    , array_ref<twine> const & arg_names = {}
+    )
+  { return def(GlobalValue::InternalLinkage, ty, name, arg_names); }
 
-  inline function static_(function_type const & tp, twine const & name = "")
-    { return def(GlobalValue::InternalLinkage, tp, name); }
+  inline function static_(
+      function_type const & ty, twine const & name = ""
+    , array_ref<twine> const & arg_names = {}
+    )
+  { return def(GlobalValue::InternalLinkage, ty, name, arg_names); }
 
   template<typename T>
-  inline globalobj<T> static_(type const & tp, twine const & name = "")
-    { return dyn_cast<T>(static_(tp, name)); }
+  inline globalobj<T> static_(
+      type const & ty, twine const & name = ""
+    , array_ref<twine> const & arg_names = {}
+    )
+  { return dyn_cast<T>(static_(ty, name, arg_names)); }
   //@}
 
   //@{
@@ -91,14 +112,20 @@ namespace sprite { namespace backend
    *
    * @snippet defs.cpp Using inline_
    */
-  inline function inline_(function_type const & tp, twine const & name = "")
-    { return def(GlobalValue::LinkOnceAnyLinkage, tp, name); }
+  inline function inline_(
+      function_type const & ty, twine const & name = ""
+    , array_ref<twine> const & arg_names = {}
+    )
+  { return def(GlobalValue::LinkOnceAnyLinkage, ty, name, arg_names); }
 
-  inline function inline_(type const & tp, twine const & name = "")
+  inline function inline_(
+      type const & ty, twine const & name = ""
+    , array_ref<twine> const & arg_names = {}
+    )
   {
     // Only functions may be inline.
-    if(function_type fun_type = dyn_cast<FunctionType>(tp))
-      return inline_(fun_type, name);
+    if(function_type fun_type = dyn_cast<FunctionType>(ty))
+      return inline_(fun_type, name, arg_names);
     throw type_error("Function type required for inline definition.");
   }
 
@@ -106,8 +133,11 @@ namespace sprite { namespace backend
    * @brief Version of inline_ that takes a return type specifier.
    */
   template<typename T>
-  inline globalobj<T> inline_(type const & tp, twine const & name = "")
-    { return dyn_cast<T>(inline_(tp, name)); }
+  inline globalobj<T> inline_(
+      type const & ty, twine const & name = ""
+    , array_ref<twine> const & arg_names = {}
+    )
+  { return dyn_cast<T>(inline_(ty, name, arg_names)); }
   //@}
 }}
 

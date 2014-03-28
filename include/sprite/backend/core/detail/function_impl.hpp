@@ -1,5 +1,7 @@
 #include "sprite/backend/core/get_value.hpp"
 #include "sprite/backend/support/exceptions.hpp"
+#include "sprite/backend/core/scope.hpp"
+#include <algorithm>
 
 namespace sprite { namespace backend
 {
@@ -31,10 +33,10 @@ namespace sprite { namespace backend
       {
         if(m_begin == m_end)
           // Infer the LLVM type from the type of T.
-          return get_value(std::forward<T>(arg));
+          return get_value(std::forward<T>(arg)).ptr();
         else
           // Get the LLVM type from the function signature.
-          return get_value(std::forward<T>(arg), *m_begin++);
+          return get_value(std::forward<T>(arg), *m_begin++).ptr();
       }
     };
   }

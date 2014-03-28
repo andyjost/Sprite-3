@@ -45,5 +45,8 @@ namespace sprite { namespace backend
     { return bitcast(value(obj), ty); }
 
   //@}
+
+  /// Get the best type for a binary operation;
+  type coerce(type const & lhs, type const & rhs);
 }}
 
