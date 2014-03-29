@@ -5,7 +5,7 @@
 
 #pragma once
 #include "sprite/backend/core/constant.hpp"
-#include "sprite/backend/core/get_constant.hpp"
+#include "sprite/backend/core/get_value.hpp"
 #include "sprite/backend/core/global.hpp"
 #include "sprite/backend/core/operator_flags.hpp"
 #include "sprite/backend/support/exceptions.hpp"
@@ -151,6 +151,51 @@ namespace sprite { namespace backend
     inline type
     getrhs(Constant *, type const & rhs)
       { return rhs; }
+  }
+
+  template<typename Rhs>
+  typename std::enable_if<is_raw_initializer<Rhs>::value, constant &>::type
+  constobj<llvm::Constant>::operator+=(Rhs const & rhs)
+  {
+    auto const rhs_ = get_constant(get_type(*this), rhs);
+    (*this) += rhs_;
+    return *this;
+  }
+
+  template<typename Rhs>
+  typename std::enable_if<is_constarg<Rhs>::value, constant &>::type
+  constobj<llvm::Constant>::operator+=(Rhs const & rhs)
+  {
+    (*this) +=aux::operator_flags() (rhs);
+    return *this;
+  }
+
+  template<typename Rhs>
+  typename std::enable_if<is_constarg<Rhs>::value, constant &>::type
+  constobj<llvm::Constant>::operator+=(aux::arg_with_flags<Rhs> const & rhs)
+  {
+    type const ty = coerce(get_type(*this), get_type(rhs));
+    auto const lhs_ = get_value(ty, *this);
+    auto const rhs_ = get_value(ty, rhs);
+    if(ty->isIntegerTy())
+    {
+      SPRITE_ALLOW_FLAGS(rhs, "addition", operator_flags::NUW | operator_flags::NSW)
+      *this = constant(SPRITE_APICALL(
+          ConstantExpr::getAdd(
+              lhs_.ptr(), rhs_.ptr(), rhs.flags().nuw(), rhs.flags().nsw()
+            )
+        ));
+      return *this;
+    }
+    else if(ty->isFloatingPointTy())
+    {
+      SPRITE_ALLOW_FLAGS(rhs, "addition", operator_flags::SIGNED)
+      *this = constant(SPRITE_APICALL(
+          ConstantExpr::getFAdd(lhs_.ptr(), rhs_.ptr())
+        ));
+      return *this;
+    }
+    throw type_error("Expected integer or floating-point for addition.");
   }
 
   /**

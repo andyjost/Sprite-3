@@ -135,6 +135,19 @@ namespace sprite { namespace backend
   {};
 
   /**
+   * @brief Identifies raw initializers.
+   *
+   * A raw initializer is defined as "not a typearg, ellipsis, or valuearg."
+   */
+  template<typename T>
+  struct is_raw_initializer
+    : std::integral_constant<
+          bool
+        , !(is_typearg_or_ellipsis<T>::value || is_valuearg<T>::value)
+        >
+  {};
+
+  /**
    * @brief Identifies legal arguments for initializing constants.
    *
    * A raw initializer is defined as "not a typearg, ellipsis, or valuearg."
@@ -143,8 +156,7 @@ namespace sprite { namespace backend
   struct is_constant_initializer
     : std::integral_constant<
           bool
-        , is_constarg<T>::value
-            || !(is_typearg_or_ellipsis<T>::value || is_valuearg<T>::value)
+        , is_constarg<T>::value || is_raw_initializer<T>::value
         >
   {};
 
