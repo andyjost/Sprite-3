@@ -95,6 +95,7 @@ namespace sprite { namespace backend
   SPRITE_GENERATE_COMPARE_OP(>=, GE)
   #undef SPRITE_GENERATE_COMPARE_OP
 
+  #if 0
   template<typename T, typename U>
   value operator+(T const & lhs, U const & rhs)
   {
@@ -130,4 +131,5 @@ namespace sprite { namespace backend
         );
     throw runtime_error("Expected an integer or FP type.");
   }
+  #endif
 }}
