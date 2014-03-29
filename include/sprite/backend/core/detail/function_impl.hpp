@@ -36,7 +36,7 @@ namespace sprite { namespace backend
           return get_value(std::forward<T>(arg)).ptr();
         else
           // Get the LLVM type from the function signature.
-          return get_value(std::forward<T>(arg), *m_begin++).ptr();
+          return get_value(*m_begin++, std::forward<T>(arg)).ptr();
       }
     };
   }

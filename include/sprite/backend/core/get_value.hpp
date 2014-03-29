@@ -15,15 +15,15 @@ namespace sprite { namespace backend
    */
   // Applies when T can produce an LLVM Value.
   template<typename T>
-  inline value get_value(T && arg
-    , typename std::enable_if<is_valuearg<T>::value, En_>::type = En_()
+  inline typename std::enable_if<is_valuearg<T>::value, value>::type
+  get_value(T && arg
     )
   { return value(ptr(std::forward<T>(arg))); }
 
   // Applies when T is a raw initializer (e.g., an int).  Builds a constant.
   template<typename T>
-  inline value get_value(T && arg
-    , typename std::enable_if<!is_valuearg<T>::value, En_>::type = En_()
+  inline typename std::enable_if<!is_valuearg<T>::value, constant>::type
+  get_value(T && arg
     )
   {
     using BasicT = typename std::remove_reference<T>::type;
@@ -42,15 +42,15 @@ namespace sprite { namespace backend
    */
   // Applies when T can produce an LLVM Value.
   template<typename T>
-  inline value get_value(T && arg, aux::arg_with_flags<type> const & ty
-    , typename std::enable_if<is_valuearg<T>::value, En_>::type = En_()
+  inline typename std::enable_if<is_valuearg<T>::value, value>::type
+  get_value(aux::arg_with_flags<type> const & ty, T && arg
     )
   { return typecast(get_value(arg), ty); }
 
   // Applies when T is a raw initializer (e.g., an int).  Builds a constant.
   template<typename T>
-  inline value get_value(T && arg, aux::arg_with_flags<type> const & ty
-    , typename std::enable_if<!is_valuearg<T>::value, En_>::type = En_()
+  inline typename std::enable_if<!is_valuearg<T>::value, constant>::type
+  get_value(aux::arg_with_flags<type> const & ty, T && arg
     )
   { return ty % std::forward<T>(arg); }
   //@}

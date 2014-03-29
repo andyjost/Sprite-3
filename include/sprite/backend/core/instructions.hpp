@@ -21,7 +21,7 @@ namespace sprite { namespace backend
   {
     llvm::IRBuilder<> & bldr = current_builder();
     type const retty = type(bldr.GetInsertBlock()->getParent()->getReturnType());
-    value const x = get_value(arg, retty);
+    value const x = get_value(retty, arg);
     SPRITE_APICALL(bldr.CreateRet(x.ptr()));
   }
 
@@ -31,7 +31,7 @@ namespace sprite { namespace backend
   void if_(T && cond, label const & true_, label const & false_)
   {
     llvm::IRBuilder<> & bldr = current_builder();
-    value const cond_ = get_value(cond, types::bool_());
+    value const cond_ = get_value(types::bool_(), cond);
     SPRITE_APICALL(bldr.CreateCondBr(cond_.ptr(), true_.ptr(), false_.ptr()));
   }
 
@@ -58,8 +58,8 @@ namespace sprite { namespace backend
     {
       llvm::IRBuilder<> & bldr = current_builder();
       type const ty = coerce(get_type(lhs), get_type(rhs));
-      value lhs_ = get_value(lhs, ty);
-      value rhs_ = get_value(rhs, ty);
+      value lhs_ = get_value(ty, lhs);
+      value rhs_ = get_value(ty, rhs);
       if(ty->isIntegerTy())
         return value(fint(bldr, lhs_.ptr(), rhs_.ptr()));
       else if(ty->isFloatingPointTy())
@@ -101,8 +101,8 @@ namespace sprite { namespace backend
   {
     llvm::IRBuilder<> & bldr = current_builder();
     type const ty = coerce(get_type(lhs), get_type(rhs));
-    value lhs_ = get_value(lhs, ty);
-    value rhs_ = get_value(rhs, ty);
+    value lhs_ = get_value(ty, lhs);
+    value rhs_ = get_value(ty, rhs);
     if(ty->isIntegerTy())
       return value(
           SPRITE_APICALL(bldr.CreateAdd(lhs_.ptr(), rhs_.ptr()))
@@ -119,8 +119,8 @@ namespace sprite { namespace backend
   {
     llvm::IRBuilder<> & bldr = current_builder();
     type const ty = coerce(get_type(lhs), get_type(rhs));
-    value lhs_ = get_value(lhs, ty);
-    value rhs_ = get_value(rhs, ty);
+    value lhs_ = get_value(ty, lhs);
+    value rhs_ = get_value(ty, rhs);
     if(ty->isIntegerTy())
       return value(
           SPRITE_APICALL(bldr.CreateSub(lhs_.ptr(), rhs_.ptr()))
