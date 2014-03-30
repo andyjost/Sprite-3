@@ -20,18 +20,15 @@ namespace sprite { namespace backend
       return constant(SPRITE_APICALL((*this)->getAggregateElement(ii)));
     }
 
-    // Arithmetic operators.
-    template<typename Rhs>
-    typename std::enable_if<is_raw_initializer<Rhs>::value, constant &>::type
-    operator+=(Rhs const &);
-
-    template<typename Rhs>
-    typename std::enable_if<is_constarg<Rhs>::value, constant &>::type
-    operator+=(Rhs const &);
-
-    template<typename Rhs>
-    typename std::enable_if<is_constarg<Rhs>::value, constant &>::type
-    operator+=(aux::arg_with_flags<Rhs> const &);
+    // Define operators.
+    #define SPRITE_INPLACE_OP +=
+    #include "sprite/backend/core/detail/operator.def"
+    #define SPRITE_INPLACE_OP -=
+    #include "sprite/backend/core/detail/operator.def"
+    #define SPRITE_INPLACE_OP *=
+    #include "sprite/backend/core/detail/operator.def"
+    #define SPRITE_INPLACE_OP /=
+    #include "sprite/backend/core/detail/operator.def"
   };
 
   template<typename T>

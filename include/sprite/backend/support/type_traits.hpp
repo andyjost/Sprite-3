@@ -126,6 +126,17 @@ namespace sprite { namespace backend
    */
   template<typename T> using is_valuearg = is_api_arg<T, Value>;
 
+
+  /**
+   * @brief True for arguments that are values, but not constants.
+   */
+  template<typename T>
+  struct is_strict_valuearg
+    : std::integral_constant<bool
+        , is_valuearg<T>::value && !is_constarg<T>::value
+        >
+  {};
+
   /// Identifies legal arguments for forming function signatures.
   template<typename T>
   struct is_typearg_or_ellipsis
@@ -168,6 +179,21 @@ namespace sprite { namespace backend
     : std::integral_constant<
           bool
         , is_valuearg<T>::value || is_constant_initializer<T>::value
+        >
+  {};
+
+  /**
+   * @brief Computes the result type of an operation.
+   *
+   * If both arguments are constants, then the result is a constant.  Otherwise,
+   * it is a value.
+   */
+  template<typename T, typename U=int>
+  struct op_result_type
+    : std::conditional<
+          is_constant_initializer<T>::value
+              && is_constant_initializer<U>::value
+        , constant, value
         >
   {};
 

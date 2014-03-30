@@ -50,6 +50,11 @@ namespace sprite { namespace backend
       }
 
       template<typename T>
+      typename std::enable_if<is_raw_initializer<T>::value, arg_with_flags<T>>::type
+      operator()(T const & arg) const
+        { return std::make_tuple(std::cref(arg), *this); }
+
+      template<typename T>
       arg_with_flags<constobj<T>> operator()(constobj<T> const & arg) const
         { return std::make_tuple(arg, *this); }
 
@@ -58,7 +63,11 @@ namespace sprite { namespace backend
         { return std::make_tuple(arg, *this); }
     };
 
-    template<typename Arg, bool = is_typeobj<Arg>::value> struct decorated_arg;
+    template<typename Arg
+      , bool = is_typeobj<Arg>::value
+      , bool = is_raw_initializer<Arg>::value
+      >
+    struct decorated_arg;
 
     template<typename Arg>
     struct arg_with_flags : decorated_arg<Arg>, operator_flags
@@ -116,12 +125,24 @@ namespace sprite { namespace backend
      * <tt>operator()</tt> used for function type formation do the right thing,
      * which is discard the flags.
      */
-    template<typename Arg> struct decorated_arg<Arg, false> : Arg
+    // Arg is a raw initializer.
+    template<typename Arg> struct decorated_arg<Arg, false, true>
+      : std::reference_wrapper<typename std::add_const<Arg>::type>
+    {
+      using std::reference_wrapper<
+          typename std::add_const<Arg>::type
+         >::reference_wrapper;
+    };
+    // Arg is an LLVM Value.
+    template<typename Arg> struct decorated_arg<Arg, false, false>
+      : Arg
     {
       using Arg::Arg;
     };
-
-    template<typename Arg> struct decorated_arg<Arg, true> : Arg
+    // Arg is an LLVM Type.
+    template<typename Arg, bool IsRawInitializer>
+    struct decorated_arg<Arg, true, IsRawInitializer>
+      : Arg
     {
       using Arg::Arg;
 

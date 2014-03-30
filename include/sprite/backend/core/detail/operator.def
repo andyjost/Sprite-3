@@ -1,0 +1,99 @@
+// No include guards.
+
+#ifdef SPRITE_CLASS_CONTEXT
+#define SPRITE_DECL_ONLY 0
+#else
+#define SPRITE_CLASS_CONTEXT
+#define SPRITE_DECL_ONLY 1
+#endif
+
+
+#ifdef SPRITE_INPLACE_OP
+template<typename Rhs>
+typename std::enable_if<is_raw_initializer<Rhs>::value, constant &>::type
+SPRITE_CLASS_CONTEXT operator SPRITE_INPLACE_OP(Rhs const & rhs)
+#if SPRITE_DECL_ONLY
+;
+#else
+{
+  auto const rhs_ = get_constant(get_type(*this), rhs);
+  (*this) SPRITE_INPLACE_OP rhs_;
+  return *this;
+}
+#endif
+
+template<typename Rhs>
+typename std::enable_if<is_constarg<Rhs>::value, constant &>::type
+SPRITE_CLASS_CONTEXT operator SPRITE_INPLACE_OP(Rhs const & rhs)
+#if SPRITE_DECL_ONLY
+;
+#else
+{
+  (*this) SPRITE_INPLACE_OP aux::operator_flags() (rhs);
+  return *this;
+}
+#endif
+
+#ifndef SPRITE_OP_CUSTOM_BODY
+template<typename Rhs>
+typename std::enable_if<is_constarg<Rhs>::value, constant &>::type
+SPRITE_CLASS_CONTEXT operator SPRITE_INPLACE_OP (aux::arg_with_flags<Rhs> const & rhs)
+#if SPRITE_DECL_ONLY
+;
+#else
+{
+  type const ty = coerce(get_type(*this), get_type(rhs));
+  auto const lhs_ = get_value(ty, *this);
+  auto const rhs_ = get_value(ty, rhs);
+  if(ty->isIntegerTy())
+  {
+    SPRITE_ALLOW_FLAGS(rhs, SPRITE_OP_NAME, operator_flags::NUW | operator_flags::NSW)
+    *this = constant(SPRITE_APICALL(
+        SPRITE_OP_INT_IMPL(
+            lhs_.ptr(), rhs_.ptr(), rhs.flags().nuw(), rhs.flags().nsw()
+          )
+      ));
+    return *this;
+  }
+  else if(ty->isFloatingPointTy())
+  {
+    SPRITE_ALLOW_FLAGS(rhs, SPRITE_OP_NAME, operator_flags::SIGNED)
+    *this = constant(SPRITE_APICALL(
+        SPRITE_OP_FP_IMPL(lhs_.ptr(), rhs_.ptr())
+      ));
+    return *this;
+  }
+  throw type_error("Expected integer or floating-point for " SPRITE_OP_NAME ".");
+}
+#endif
+#endif
+#endif
+
+#ifdef SPRITE_OP
+template<typename Lhs, typename Rhs>
+typename op_result_type<Lhs,Rhs>::type
+operator SPRITE_OP(Lhs const & lhs, aux::arg_with_flags<Rhs> const & rhs)
+{
+  using result_type = typename op_result_type<Lhs,Rhs>::type;
+  result_type lhs_ = get_value(lhs);
+  lhs_ SPRITE_INPLACE_OP rhs;
+  return lhs_;
+}
+
+template<typename Lhs, typename Rhs>
+inline typename std::enable_if<
+    is_valuearg<Lhs>::value || is_valuearg<Rhs>()
+  , typename op_result_type<Lhs,Rhs>::type
+  >::type
+operator SPRITE_OP(Lhs const & lhs, Rhs const & rhs)
+  { return lhs  SPRITE_OP aux::operator_flags() (rhs); }
+#endif
+
+#undef SPRITE_CLASS_CONTEXT
+#undef SPRITE_DECL_ONLY
+#undef SPRITE_INPLACE_OP
+#undef SPRITE_OP
+#undef SPRITE_OP_CUSTOM_BODY
+#undef SPRITE_OP_FP_IMPL
+#undef SPRITE_OP_INT_IMPL
+#undef SPRITE_OP_NAME

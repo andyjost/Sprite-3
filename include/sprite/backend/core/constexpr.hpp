@@ -153,195 +153,64 @@ namespace sprite { namespace backend
       { return rhs; }
   }
 
-  template<typename Rhs>
-  typename std::enable_if<is_raw_initializer<Rhs>::value, constant &>::type
-  constobj<llvm::Constant>::operator+=(Rhs const & rhs)
-  {
-    auto const rhs_ = get_constant(get_type(*this), rhs);
-    (*this) += rhs_;
-    return *this;
-  }
-
-  template<typename Rhs>
-  typename std::enable_if<is_constarg<Rhs>::value, constant &>::type
-  constobj<llvm::Constant>::operator+=(Rhs const & rhs)
-  {
-    (*this) +=aux::operator_flags() (rhs);
-    return *this;
-  }
-
-  template<typename Rhs>
-  typename std::enable_if<is_constarg<Rhs>::value, constant &>::type
-  constobj<llvm::Constant>::operator+=(aux::arg_with_flags<Rhs> const & rhs)
-  {
-    type const ty = coerce(get_type(*this), get_type(rhs));
-    auto const lhs_ = get_value(ty, *this);
-    auto const rhs_ = get_value(ty, rhs);
-    if(ty->isIntegerTy())
-    {
-      SPRITE_ALLOW_FLAGS(rhs, "addition", operator_flags::NUW | operator_flags::NSW)
-      *this = constant(SPRITE_APICALL(
-          ConstantExpr::getAdd(
-              lhs_.ptr(), rhs_.ptr(), rhs.flags().nuw(), rhs.flags().nsw()
-            )
-        ));
-      return *this;
-    }
-    else if(ty->isFloatingPointTy())
-    {
-      SPRITE_ALLOW_FLAGS(rhs, "addition", operator_flags::SIGNED)
-      *this = constant(SPRITE_APICALL(
-          ConstantExpr::getFAdd(lhs_.ptr(), rhs_.ptr())
-        ));
-      return *this;
-    }
-    throw type_error("Expected integer or floating-point for addition.");
-  }
-
   /**
    * @brief Integer or floating-point addition.
    *
    * @snippet constexprs.cpp add
    */
-  template<typename Lhs, typename Arg>
-  inline typename std::enable_if<
-      is_constarg<Lhs>::value, constant
-    >::type
-  operator+(Lhs const & lhs, aux::arg_with_flags<Arg> const & rhs)
-  {
-    if(aux::has_arg_types<ConstantInt>(lhs, rhs))
-    {
-      SPRITE_ALLOW_FLAGS(rhs, "addition", operator_flags::NUW | operator_flags::NSW)
-      return constant(SPRITE_APICALL(
-          ConstantExpr::getAdd(
-              ptr(lhs), ptr(rhs), rhs.flags().nuw(), rhs.flags().nsw()
-            )
-        ));
-    }
-    else if(aux::has_arg_types<ConstantFP>(lhs, rhs))
-    {
-      SPRITE_ALLOW_FLAGS(rhs, "addition", operator_flags::SIGNED)
-      return constant(SPRITE_APICALL(
-          ConstantExpr::getFAdd(ptr(lhs), ptr(rhs))
-        ));
-    }
-    throw type_error("Expected ConstantInt or ConstantFP for addition.");
-  }
-
-  /**
-   * @brief Integer or floating-point addition.
-   *
-   * @snippet constexprs.cpp add
-   */
-  template<typename Lhs, typename Rhs>
-  inline typename std::enable_if<
-      is_constarg<Lhs>::value && is_constarg<Rhs>(), constant
-    >::type
-  operator+(Lhs const & lhs, Rhs const & rhs)
-  {
-    constant lhs_ = aux::getlhs(lhs, rhs);
-    constant rhs_ = aux::getrhs(lhs, rhs);
-    return lhs_ +aux::operator_flags() (rhs_);
-  }
+  #define SPRITE_OP +
+  #define SPRITE_INPLACE_OP +=
+  #define SPRITE_CLASS_CONTEXT constobj<llvm::Constant>::
+  #define SPRITE_OP_NAME "addition"
+  #define SPRITE_OP_INT_IMPL ConstantExpr::getAdd
+  #define SPRITE_OP_FP_IMPL ConstantExpr::getFAdd
+  #include "sprite/backend/core/detail/operator.def"
 
   /**
    * @brief Integer or floating-point subtraction.
    *
    * @snippet constexprs.cpp sub
    */
-  template<typename Lhs, typename Arg>
-  inline typename std::enable_if<is_constarg<Lhs>::value, constant>::type
-  operator-(Lhs const & lhs, aux::arg_with_flags<Arg> const & rhs)
-  {
-    if(aux::has_arg_types<ConstantInt>(lhs, rhs))
-    {
-      SPRITE_ALLOW_FLAGS(rhs, "subtraction", operator_flags::NUW | operator_flags::NSW)
-      return constant(SPRITE_APICALL(
-          ConstantExpr::getSub(
-              ptr(lhs), ptr(rhs), rhs.flags().nuw(), rhs.flags().nsw()
-            )
-        ));
-    }
-    else if(aux::has_arg_types<ConstantFP>(lhs, rhs))
-    {
-      SPRITE_ALLOW_FLAGS(rhs, "subtraction", operator_flags::SIGNED)
-      return constant(SPRITE_APICALL(
-          ConstantExpr::getFSub(ptr(lhs), ptr(rhs))
-        ));
-    }
-    throw type_error("Expected ConstantInt or ConstantFP for subtraction.");
-  }
-
-  /**
-   * @brief Integer or floating-point subtraction.
-   *
-   * @snippet constexprs.cpp sub
-   */
-  template<typename Lhs, typename Rhs>
-  inline typename std::enable_if<
-      is_constarg<Lhs>::value && is_constarg<Rhs>::value, constant
-    >::type
-  operator-(Lhs const & lhs, Rhs const & rhs)
-  {
-    constant lhs_ = aux::getlhs(lhs, rhs);
-    constant rhs_ = aux::getrhs(lhs, rhs);
-    return lhs_ -aux::operator_flags() (rhs_);
-  }
+  #define SPRITE_OP -
+  #define SPRITE_INPLACE_OP -=
+  #define SPRITE_CLASS_CONTEXT constobj<llvm::Constant>::
+  #define SPRITE_OP_NAME "subtraction"
+  #define SPRITE_OP_INT_IMPL ConstantExpr::getSub
+  #define SPRITE_OP_FP_IMPL ConstantExpr::getFSub
+  #include "sprite/backend/core/detail/operator.def"
 
   /**
    * @brief Integer or floating-point multiplication.
    *
    * @snippet constexprs.cpp mul
    */
-  template<typename Lhs, typename Arg>
-  inline typename std::enable_if<is_constarg<Lhs>::value, constant>::type
-  operator*(Lhs const & lhs, aux::arg_with_flags<Arg> const & rhs)
-  {
-    if(aux::has_arg_types<ConstantInt>(lhs, rhs))
-    {
-      SPRITE_ALLOW_FLAGS(rhs, "multiplication", operator_flags::NUW | operator_flags::NSW)
-      return constant(SPRITE_APICALL(
-          ConstantExpr::getMul(
-              ptr(lhs), ptr(rhs), rhs.flags().nuw(), rhs.flags().nsw()
-            )
-        ));
-    }
-    else if(aux::has_arg_types<ConstantFP>(lhs, rhs))
-    {
-      SPRITE_ALLOW_FLAGS(rhs, "multiplication", operator_flags::SIGNED)
-      return constant(SPRITE_APICALL(
-          ConstantExpr::getFMul(ptr(lhs), ptr(rhs))
-        ));
-    }
-    throw type_error("Expected ConstantInt or ConstantFP for multiplication.");
-  }
-
-  /**
-   * @brief Integer or floating-point multiplication.
-   *
-   * @snippet constexprs.cpp mul
-   */
-  template<typename Lhs, typename Rhs>
-  inline typename std::enable_if<
-      is_constarg<Lhs>::value && is_constarg<Rhs>::value, constant
-    >::type
-  operator*(Lhs const & lhs, Rhs const & rhs)
-  {
-    constant lhs_ = aux::getlhs(lhs, rhs);
-    constant rhs_ = aux::getrhs(lhs, rhs);
-    return lhs_ *aux::operator_flags() (rhs_);
-  }
+  #define SPRITE_OP *
+  #define SPRITE_INPLACE_OP *=
+  #define SPRITE_CLASS_CONTEXT constobj<llvm::Constant>::
+  #define SPRITE_OP_NAME "multiplication"
+  #define SPRITE_OP_INT_IMPL ConstantExpr::getMul
+  #define SPRITE_OP_FP_IMPL ConstantExpr::getFMul
+  #include "sprite/backend/core/detail/operator.def"
 
   /**
    * @brief Integer or floating-point division.
    *
    * @snippet constexprs.cpp div
    */
-  template<typename Lhs, typename Arg>
-  typename std::enable_if<is_constarg<Lhs>::value, constant>::type
-  operator/(Lhs const & lhs, aux::arg_with_flags<Arg> const & rhs)
+  #define SPRITE_OP /
+  #define SPRITE_INPLACE_OP /=
+  #define SPRITE_CLASS_CONTEXT constobj<llvm::Constant>::
+  #define SPRITE_OP_CUSTOM_BODY
+  #include "sprite/backend/core/detail/operator.def"
+
+  template<typename Rhs>
+  typename std::enable_if<is_constarg<Rhs>::value, constant &>::type
+  constobj<llvm::Constant>::operator/=(aux::arg_with_flags<Rhs> const & rhs)
   {
-    if(aux::has_arg_types<ConstantInt>(lhs, rhs))
+    type const ty = coerce(get_type(*this), get_type(rhs));
+    auto const lhs_ = get_value(ty, *this);
+    auto const rhs_ = get_value(ty, rhs);
+    if(ty->isIntegerTy())
     {
       SPRITE_ALLOW_FLAGS(rhs, "integer division"
         , operator_flags::SIGNED | operator_flags::UNSIGNED | operator_flags::EXACT
@@ -350,45 +219,32 @@ namespace sprite { namespace backend
 
       if(rhs.flags().signed_())
       {
-        return constant(SPRITE_APICALL(
+        *this = constant(SPRITE_APICALL(
             ConstantExpr::getSDiv(
-                ptr(lhs), ptr(rhs), rhs.flags().exact()
+                lhs_.ptr(), rhs_.ptr(), rhs.flags().exact()
               )
           ));
+        return *this;
       }
       else
       {
-        return constant(SPRITE_APICALL(
+        *this = constant(SPRITE_APICALL(
             ConstantExpr::getUDiv(
-                ptr(lhs), ptr(rhs), rhs.flags().exact()
+                lhs_.ptr(), rhs_.ptr(), rhs.flags().exact()
               )
           ));
+        return *this;
       }
     }
-    else if(aux::has_arg_types<ConstantFP>(lhs, rhs))
+    else if(ty->isFloatingPointTy())
     {
       SPRITE_ALLOW_FLAGS(rhs, "floating-point division", operator_flags::SIGNED)
-      return constant(SPRITE_APICALL(
-          ConstantExpr::getFDiv(ptr(lhs), ptr(rhs))
+      *this = constant(SPRITE_APICALL(
+          ConstantExpr::getFDiv(lhs_.ptr(), rhs_.ptr())
         ));
+      return *this;
     }
-    throw type_error("Expected ConstantInt or ConstantFP for division.");
-  }
-
-  /**
-   * @brief Integer or floating-point division.
-   *
-   * @snippet constexprs.cpp div
-   */
-  template<typename Lhs, typename Rhs>
-  inline typename std::enable_if<
-      is_constarg<Lhs>::value && is_constarg<Rhs>::value, constant
-    >::type
-  operator/(Lhs const & lhs, Rhs const & rhs)
-  {
-    constant lhs_ = aux::getlhs(lhs, rhs);
-    constant rhs_ = aux::getrhs(lhs, rhs);
-    return lhs_ /aux::operator_flags() (rhs_);
+    throw type_error("Expected integer or floating-point for division.");
   }
 
   /**
