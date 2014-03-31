@@ -7,10 +7,30 @@
 #define SPRITE_DECL_ONLY 1
 #endif
 
+#define SPRITE_INVOKE(f, x) f x
+
+#define SPRITE_ALLOW_NSW_NUW_FLAGS(name)           \
+    SPRITE_ALLOW_FLAGS(rhs, name                   \
+      , operator_flags::NUW | operator_flags::NSW  \
+      )                                            \
+  /**/
+
+#define SPRITE_ALLOW_SIGNED_FLAG(name)                    \
+    SPRITE_ALLOW_FLAGS(rhs, name, operator_flags::SIGNED) \
+  /**/
+
+#define SPRITE_ALLOW_DIV_FLAGS(name)                               \
+    SPRITE_ALLOW_FLAGS(rhs, name                                   \
+      , operator_flags::SIGNED | operator_flags::UNSIGNED          \
+          | operator_flags::EXACT                                  \
+      )                                                            \
+   check_for_exactly_one_signed_flag(rhs.flags(), SPRITE_OP_NAME); \
+  /**/
+
 
 #ifdef SPRITE_INPLACE_OP
 template<typename Rhs>
-typename std::enable_if<is_raw_initializer<Rhs>::value, constant &>::type
+typename std::enable_if<is_raw_initializer<Rhs>::value, SPRITE_LHS_TYPE &>::type
 SPRITE_CLASS_CONTEXT operator SPRITE_INPLACE_OP(Rhs const & rhs)
 #if SPRITE_DECL_ONLY
 ;
@@ -23,7 +43,7 @@ SPRITE_CLASS_CONTEXT operator SPRITE_INPLACE_OP(Rhs const & rhs)
 #endif
 
 template<typename Rhs>
-typename std::enable_if<is_constarg<Rhs>::value, constant &>::type
+typename std::enable_if<is_constarg<Rhs>::value, SPRITE_LHS_TYPE &>::type
 SPRITE_CLASS_CONTEXT operator SPRITE_INPLACE_OP(Rhs const & rhs)
 #if SPRITE_DECL_ONLY
 ;
@@ -36,7 +56,7 @@ SPRITE_CLASS_CONTEXT operator SPRITE_INPLACE_OP(Rhs const & rhs)
 
 #ifndef SPRITE_OP_CUSTOM_BODY
 template<typename Rhs>
-typename std::enable_if<is_constarg<Rhs>::value, constant &>::type
+typename std::enable_if<is_constarg<Rhs>::value, SPRITE_LHS_TYPE &>::type
 SPRITE_CLASS_CONTEXT operator SPRITE_INPLACE_OP (aux::arg_with_flags<Rhs> const & rhs)
 #if SPRITE_DECL_ONLY
 ;
@@ -45,25 +65,26 @@ SPRITE_CLASS_CONTEXT operator SPRITE_INPLACE_OP (aux::arg_with_flags<Rhs> const 
   type const ty = coerce(get_type(*this), get_type(rhs));
   auto const lhs_ = get_value(ty, *this);
   auto const rhs_ = get_value(ty, rhs);
+  aux::operator_flags const & flags = rhs.flags();
   if(ty->isIntegerTy())
   {
-    SPRITE_ALLOW_FLAGS(rhs, SPRITE_OP_NAME, operator_flags::NUW | operator_flags::NSW)
-    *this = constant(SPRITE_APICALL(
-        SPRITE_OP_INT_IMPL(
-            lhs_.ptr(), rhs_.ptr(), rhs.flags().nuw(), rhs.flags().nsw()
-          )
+    SPRITE_INVOKE(SPRITE_OP_INT_FLAG_CHECK, ("integer " SPRITE_OP_NAME))
+    *this = SPRITE_LHS_TYPE(SPRITE_APICALL(
+        SPRITE_OP_INT_IMPL(lhs_.ptr(), rhs_.ptr(), flags)
       ));
     return *this;
   }
   else if(ty->isFloatingPointTy())
   {
-    SPRITE_ALLOW_FLAGS(rhs, SPRITE_OP_NAME, operator_flags::SIGNED)
-    *this = constant(SPRITE_APICALL(
-        SPRITE_OP_FP_IMPL(lhs_.ptr(), rhs_.ptr())
+    SPRITE_INVOKE(SPRITE_OP_FP_FLAG_CHECK, ("floating-point " SPRITE_OP_NAME))
+    *this = SPRITE_LHS_TYPE(SPRITE_APICALL(
+        SPRITE_OP_FP_IMPL(lhs_.ptr(), rhs_.ptr(), flags)
       ));
     return *this;
   }
-  throw type_error("Expected integer or floating-point for " SPRITE_OP_NAME ".");
+  throw type_error(
+      "Expected integer or floating-point arguments for " SPRITE_OP_NAME "."
+    );
 }
 #endif
 #endif
@@ -86,14 +107,21 @@ inline typename std::enable_if<
   , typename op_result_type<Lhs,Rhs>::type
   >::type
 operator SPRITE_OP(Lhs const & lhs, Rhs const & rhs)
-  { return lhs  SPRITE_OP aux::operator_flags() (rhs); }
+  { return lhs SPRITE_OP aux::operator_flags() (rhs); }
 #endif
 
+#undef SPRITE_ALLOW_DIV_FLAGS
+#undef SPRITE_ALLOW_NSW_NUW_FLAGS
+#undef SPRITE_ALLOW_SIGNED_FLAG
 #undef SPRITE_CLASS_CONTEXT
 #undef SPRITE_DECL_ONLY
+#undef SPRITE_INVOKE
 #undef SPRITE_INPLACE_OP
+#undef SPRITE_LHS_TYPE
 #undef SPRITE_OP
 #undef SPRITE_OP_CUSTOM_BODY
+#undef SPRITE_OP_FP_FLAG_CHECK
 #undef SPRITE_OP_FP_IMPL
+#undef SPRITE_OP_INT_FLAG_CHECK
 #undef SPRITE_OP_INT_IMPL
 #undef SPRITE_OP_NAME

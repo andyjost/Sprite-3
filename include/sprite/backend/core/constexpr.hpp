@@ -56,10 +56,10 @@ namespace sprite { namespace backend
    *
    * @snippet constexprs.cpp offsetof_
    */
-  inline constant offsetof_(type const & ty, Constant * FieldNo)
+  inline constant offsetof_(type const & ty, constant FieldNo)
   {
     return constant(
-        SPRITE_APICALL(ConstantExpr::getOffsetOf(ty.ptr(), FieldNo))
+        SPRITE_APICALL(ConstantExpr::getOffsetOf(ty.ptr(), FieldNo.ptr()))
       );
   }
 
@@ -153,6 +153,7 @@ namespace sprite { namespace backend
       { return rhs; }
   }
 
+  //@{
   /**
    * @brief Integer or floating-point addition.
    *
@@ -161,9 +162,14 @@ namespace sprite { namespace backend
   #define SPRITE_OP +
   #define SPRITE_INPLACE_OP +=
   #define SPRITE_CLASS_CONTEXT constobj<llvm::Constant>::
+  #define SPRITE_LHS_TYPE constant
   #define SPRITE_OP_NAME "addition"
-  #define SPRITE_OP_INT_IMPL ConstantExpr::getAdd
-  #define SPRITE_OP_FP_IMPL ConstantExpr::getFAdd
+  #define SPRITE_OP_INT_FLAG_CHECK SPRITE_ALLOW_NSW_NUW_FLAGS
+  #define SPRITE_OP_INT_IMPL(lhs,rhs,flags)                    \
+      ConstantExpr::getAdd(lhs, rhs, flags.nuw(), flags.nsw()) \
+    /**/
+  #define SPRITE_OP_FP_FLAG_CHECK SPRITE_ALLOW_SIGNED_FLAG
+  #define SPRITE_OP_FP_IMPL(lhs,rhs,flags) ConstantExpr::getFAdd(lhs,rhs)
   #include "sprite/backend/core/detail/operator.def"
 
   /**
@@ -174,9 +180,14 @@ namespace sprite { namespace backend
   #define SPRITE_OP -
   #define SPRITE_INPLACE_OP -=
   #define SPRITE_CLASS_CONTEXT constobj<llvm::Constant>::
+  #define SPRITE_LHS_TYPE constant
   #define SPRITE_OP_NAME "subtraction"
-  #define SPRITE_OP_INT_IMPL ConstantExpr::getSub
-  #define SPRITE_OP_FP_IMPL ConstantExpr::getFSub
+  #define SPRITE_OP_INT_FLAG_CHECK SPRITE_ALLOW_NSW_NUW_FLAGS
+  #define SPRITE_OP_INT_IMPL(lhs,rhs,flags)                    \
+      ConstantExpr::getSub(lhs, rhs, flags.nuw(), flags.nsw()) \
+    /**/
+  #define SPRITE_OP_FP_FLAG_CHECK SPRITE_ALLOW_SIGNED_FLAG
+  #define SPRITE_OP_FP_IMPL(lhs,rhs,flags) ConstantExpr::getFSub(lhs,rhs)
   #include "sprite/backend/core/detail/operator.def"
 
   /**
@@ -187,9 +198,14 @@ namespace sprite { namespace backend
   #define SPRITE_OP *
   #define SPRITE_INPLACE_OP *=
   #define SPRITE_CLASS_CONTEXT constobj<llvm::Constant>::
+  #define SPRITE_LHS_TYPE constant
   #define SPRITE_OP_NAME "multiplication"
-  #define SPRITE_OP_INT_IMPL ConstantExpr::getMul
-  #define SPRITE_OP_FP_IMPL ConstantExpr::getFMul
+  #define SPRITE_OP_INT_FLAG_CHECK SPRITE_ALLOW_NSW_NUW_FLAGS
+  #define SPRITE_OP_INT_IMPL(lhs,rhs,flags)                    \
+      ConstantExpr::getMul(lhs, rhs, flags.nuw(), flags.nsw()) \
+    /**/
+  #define SPRITE_OP_FP_FLAG_CHECK SPRITE_ALLOW_SIGNED_FLAG
+  #define SPRITE_OP_FP_IMPL(lhs,rhs,flags) ConstantExpr::getFMul(lhs,rhs)
   #include "sprite/backend/core/detail/operator.def"
 
   /**
@@ -200,52 +216,17 @@ namespace sprite { namespace backend
   #define SPRITE_OP /
   #define SPRITE_INPLACE_OP /=
   #define SPRITE_CLASS_CONTEXT constobj<llvm::Constant>::
-  #define SPRITE_OP_CUSTOM_BODY
+  #define SPRITE_LHS_TYPE constant
+  #define SPRITE_OP_NAME "division"
+  #define SPRITE_OP_INT_FLAG_CHECK SPRITE_ALLOW_DIV_FLAGS
+  #define SPRITE_OP_INT_IMPL(lhs,rhs,flags)              \
+      flags.signed_()                                    \
+        ? ConstantExpr::getSDiv(lhs, rhs, flags.exact()) \
+        : ConstantExpr::getUDiv(lhs, rhs, flags.exact()) \
+    /**/
+  #define SPRITE_OP_FP_FLAG_CHECK SPRITE_ALLOW_SIGNED_FLAG
+  #define SPRITE_OP_FP_IMPL(lhs,rhs,flags) ConstantExpr::getFDiv(lhs,rhs)
   #include "sprite/backend/core/detail/operator.def"
-
-  template<typename Rhs>
-  typename std::enable_if<is_constarg<Rhs>::value, constant &>::type
-  constobj<llvm::Constant>::operator/=(aux::arg_with_flags<Rhs> const & rhs)
-  {
-    type const ty = coerce(get_type(*this), get_type(rhs));
-    auto const lhs_ = get_value(ty, *this);
-    auto const rhs_ = get_value(ty, rhs);
-    if(ty->isIntegerTy())
-    {
-      SPRITE_ALLOW_FLAGS(rhs, "integer division"
-        , operator_flags::SIGNED | operator_flags::UNSIGNED | operator_flags::EXACT
-        )
-      check_for_exactly_one_signed_flag(rhs.flags(), "integer division");
-
-      if(rhs.flags().signed_())
-      {
-        *this = constant(SPRITE_APICALL(
-            ConstantExpr::getSDiv(
-                lhs_.ptr(), rhs_.ptr(), rhs.flags().exact()
-              )
-          ));
-        return *this;
-      }
-      else
-      {
-        *this = constant(SPRITE_APICALL(
-            ConstantExpr::getUDiv(
-                lhs_.ptr(), rhs_.ptr(), rhs.flags().exact()
-              )
-          ));
-        return *this;
-      }
-    }
-    else if(ty->isFloatingPointTy())
-    {
-      SPRITE_ALLOW_FLAGS(rhs, "floating-point division", operator_flags::SIGNED)
-      *this = constant(SPRITE_APICALL(
-          ConstantExpr::getFDiv(lhs_.ptr(), rhs_.ptr())
-        ));
-      return *this;
-    }
-    throw type_error("Expected integer or floating-point for division.");
-  }
 
   /**
    * @brief Integer or floating-point remainder.

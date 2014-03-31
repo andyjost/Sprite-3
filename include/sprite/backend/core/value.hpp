@@ -5,6 +5,27 @@
 
 namespace sprite { namespace backend
 {
+  template<>
+  struct valueobj<llvm::Value> : object<llvm::Value>
+  {
+    using basic_type = Value;
+    using object<llvm::Value>::object;
+
+    // Define operators.
+    #define SPRITE_INPLACE_OP +=
+    #define SPRITE_LHS_TYPE value
+    #include "sprite/backend/core/detail/operator.def"
+    #define SPRITE_INPLACE_OP -=
+    #define SPRITE_LHS_TYPE value
+    #include "sprite/backend/core/detail/operator.def"
+    #define SPRITE_INPLACE_OP *=
+    #define SPRITE_LHS_TYPE value
+    #include "sprite/backend/core/detail/operator.def"
+    #define SPRITE_INPLACE_OP /=
+    #define SPRITE_LHS_TYPE value
+    #include "sprite/backend/core/detail/operator.def"
+  };
+
   template<typename T>
   struct valueobj : object<T>
   {
