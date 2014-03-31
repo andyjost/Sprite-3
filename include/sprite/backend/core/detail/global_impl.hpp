@@ -10,14 +10,14 @@ namespace sprite { namespace backend
     // Global variables are always pointer types.  Get the underlying
     // element type.
     type const ty((*this)->getType()->getPointerElementType());
-    (*this)->setInitializer((ty % value).ptr());
+    (*this)->setInitializer(get_constant_impl(ty, value).ptr());
     return *this;
   }
 
   inline globalvar & globalobj<GlobalVariable>::set_initializer(any_array_ref const & value)
   {
     type const ty((*this)->getType()->getPointerElementType());
-    (*this)->setInitializer((ty % value).ptr());
+    (*this)->setInitializer(get_constant_impl(ty, value).ptr());
     return *this;
   }
 
@@ -97,7 +97,7 @@ namespace sprite { namespace backend
     address_calculation<T>::operator[](size_t i)
     {
       auto const i64 = types::int_(64);
-      this->indices.push_back((i64 % i).ptr());
+      this->indices.push_back(get_constant_impl(i64, i).ptr());
       return *this;
     }
   }
@@ -106,7 +106,9 @@ namespace sprite { namespace backend
   {
     auto const i64 = types::int_(64);
     return constant(SPRITE_APICALL(
-        ConstantExpr::getInBoundsGetElementPtr(this->ptr(), (i64 % 0).ptr())
+        ConstantExpr::getInBoundsGetElementPtr(
+            this->ptr(), get_constant_impl(i64, 0).ptr()
+          )
       ));
   }
 
@@ -119,7 +121,7 @@ namespace sprite { namespace backend
   {
     auto const i64 = types::int_(64);
     aux::address_calculation<GlobalVariable> tmp(*this);
-    tmp.indices.push_back((i64 % 0).ptr());
+    tmp.indices.push_back(get_constant_impl(i64, 0).ptr());
     tmp.indices.push_back(i.ptr());
     return std::move(tmp);
   }
@@ -129,8 +131,8 @@ namespace sprite { namespace backend
   {
     auto const i64 = types::int_(64);
     aux::address_calculation<GlobalVariable> tmp(*this);
-    tmp.indices.push_back((i64 % 0).ptr());
-    tmp.indices.push_back((i64 % i).ptr());
+    tmp.indices.push_back(get_constant_impl(i64, 0).ptr());
+    tmp.indices.push_back(get_constant_impl(i64, i).ptr());
     return std::move(tmp);
   }
 }}

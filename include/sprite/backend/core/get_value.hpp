@@ -66,6 +66,6 @@ namespace sprite { namespace backend
   inline typename std::enable_if<is_raw_initializer<T>::value, constant>::type
   get_value(aux::arg_with_flags<type> const & ty, T && arg
     )
-  { return ty % std::forward<T>(arg); }
+  { return get_constant_impl(ty, std::forward<T>(arg)); }
   //@}
 }}

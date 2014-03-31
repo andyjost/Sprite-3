@@ -19,14 +19,20 @@
     SPRITE_ALLOW_FLAGS(rhs, name, operator_flags::SIGNED) \
   /**/
 
-#define SPRITE_ALLOW_DIV_FLAGS(name)                               \
-    SPRITE_ALLOW_FLAGS(rhs, name                                   \
-      , operator_flags::SIGNED | operator_flags::UNSIGNED          \
-          | operator_flags::EXACT                                  \
-      )                                                            \
-   check_for_exactly_one_signed_flag(rhs.flags(), SPRITE_OP_NAME); \
+#define SPRITE_ALLOW_DIV_FLAGS(name)                      \
+    SPRITE_ALLOW_FLAGS(rhs, name                          \
+      , operator_flags::SIGNED | operator_flags::UNSIGNED \
+          | operator_flags::EXACT                         \
+      )                                                   \
+   check_for_exactly_one_signed_flag(rhs.flags(), name);  \
   /**/
 
+#define SPRITE_REQUIRE_SIGNED_UNSIGNED_FLAG(name)         \
+    SPRITE_ALLOW_FLAGS(rhs, name                          \
+      , operator_flags::SIGNED | operator_flags::UNSIGNED \
+      )                                                   \
+   check_for_exactly_one_signed_flag(rhs.flags(), name);  \
+  /**/
 
 #ifdef SPRITE_INPLACE_OP
 template<typename Rhs>

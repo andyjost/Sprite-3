@@ -32,7 +32,7 @@ namespace sprite { namespace backend
   inline constant alignof_(type const & ty)
     { return constant(SPRITE_APICALL(ConstantExpr::getAlignOf(ty.ptr()))); }
 
-  // No wrapper for constant expression getSizeOf.  Use i64 % sizeof_(ty)
+  // No wrapper for constant expression getSizeOf.  Use i64(sizeof_(ty))
   // instead.
 
   /**
@@ -233,6 +233,23 @@ namespace sprite { namespace backend
    *
    * @snippet constexprs.cpp rem
    */
+  #if 0
+  #define SPRITE_OP %
+  #define SPRITE_INPLACE_OP %=
+  #define SPRITE_CLASS_CONTEXT constobj<llvm::Constant>::
+  #define SPRITE_LHS_TYPE constant
+  #define SPRITE_OP_NAME "remainder"
+  #define SPRITE_OP_INT_FLAG_CHECK SPRITE_REQUIRE_SIGNED_UNSIGNED_FLAG
+  #define SPRITE_OP_INT_IMPL(lhs,rhs,flags) \
+      flags.signed_()                       \
+        ? ConstantExpr::getSRem(lhs, rhs)   \
+        : ConstantExpr::getURem(lhs, rhs)   \
+    /**/
+  #define SPRITE_OP_FP_FLAG_CHECK SPRITE_ALLOW_SIGNED_FLAG
+  #define SPRITE_OP_FP_IMPL(lhs,rhs,flags) ConstantExpr::getFRem(lhs,rhs)
+  #include "sprite/backend/core/detail/operator.def"
+  #endif
+
   template<typename Lhs, typename Arg>
   typename std::enable_if<is_constarg<Lhs>::value, constant>::type
   operator%(Lhs const & lhs, aux::arg_with_flags<Arg> const & rhs)

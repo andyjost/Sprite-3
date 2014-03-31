@@ -33,6 +33,9 @@ namespace sprite { namespace backend
     #define SPRITE_INPLACE_OP /=
     #define SPRITE_LHS_TYPE constant
     #include "sprite/backend/core/detail/operator.def"
+    #define SPRITE_INPLACE_OP %=
+    #define SPRITE_LHS_TYPE constant
+    #include "sprite/backend/core/detail/operator.def"
   };
 
   template<typename T>

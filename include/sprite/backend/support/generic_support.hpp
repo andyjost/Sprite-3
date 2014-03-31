@@ -40,24 +40,25 @@ namespace sprite { namespace backend { namespace generics
         { throw runtime_error("Illegal conversion of weak_return"); }
     };
 
-    /// Implements the generic modulo (%) operator.
-    template<typename EH, typename...Us> struct modulo_impl;
+    /// Implements the generic get_constant_impl function.
+    template<typename EH, typename...Us> struct get_constant_action_impl;
     
     /// Iterating specialization.
     template<typename EH, typename U, typename...Us>
-    struct modulo_impl<EH, U, Us...> : modulo_impl<EH, Us...>
+    struct get_constant_action_impl<EH, U, Us...>
+      : get_constant_action_impl<EH, Us...>
     {
-      using modulo_impl<EH, Us...>::operator();
+      using get_constant_action_impl<EH, Us...>::operator();
     
       template<typename Lhs>
       auto operator()(
           Lhs const & lhs, U const & arg
-        ) const -> decltype(lhs % arg)
-      { return lhs % arg; }
+        ) const -> decltype(get_constant_impl(lhs, arg))
+      { return get_constant_impl(lhs, arg); }
     };
     
     /// Terminal specialization.
-    template<typename EH> struct modulo_impl<EH>
+    template<typename EH> struct get_constant_action_impl<EH>
     {
       // Called when no other case (above) matches.
       template<typename Lhs, typename V>
@@ -74,10 +75,10 @@ namespace sprite { namespace backend { namespace generics
       { enum { value = !std::is_convertible<T, Arg>::value && converts_to_none<T,Args...>::value }; };
 
     /**
-     * @brief Prepares a nice error message when generic modulo fails to make a
-     * match.
+     * @brief Prepares a nice error message when generic get_constant_action
+     * fails to make a match.
      */
-    template<typename...Us> struct modulo_eh
+    template<typename...Us> struct get_constant_action_eh
     {
       // The predicate to use when enabling the error catcher.
       template<typename T> using MatchErrors = converts_to_none<T, Us...>;
@@ -86,7 +87,7 @@ namespace sprite { namespace backend { namespace generics
       static type_error error(object<Lhs> const &, T const & arg)
       {
         std::stringstream ss;
-        ss << "While dispatching generic operator % for LHS match of type "
+        ss << "While dispatching get_constant for LHS match of type "
            << typename_impl<Lhs>::name() << ", expecting RHS of type ";
         append_typenames<Us...>(ss);
         ss << ", but got " + typename_(arg);
@@ -124,12 +125,12 @@ namespace sprite { namespace backend { namespace generics
   }
   
   /**
-   * @brief Dispatches to the modulo (@p %) operator.  Used in conjunction with
-   * @p generic_handler.
+   * @brief Dispatches to the @p get_constant_impl function.  Used in
+   * conjunction with @p generic_handler.
    */
   template<typename...Us>
-  struct modulo
-    : aux::modulo_impl<aux::modulo_eh<Us...>, Us...>
+  struct get_constant_action
+    : aux::get_constant_action_impl<aux::get_constant_action_eh<Us...>, Us...>
   {
   };
 
@@ -220,7 +221,7 @@ namespace sprite { namespace backend { namespace generics
    * Used to dispatch operators based on generic types, when the implementation
    * is provided by more specific versions.
    *
-   * For example, consider type instantiation using the modulo (@p %) operator.
+   * For example, consider type instantiation using get_constant_impl.
    * Each LHS type has a set of allowed RHS types.  @p IntegerType may be
    * instantiated with an @p int, @p FPType may be instantiated with a @p
    * double, and @p ArrayType may be instantiated with an @p ArrayRef, just to

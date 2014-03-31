@@ -35,8 +35,8 @@ int main()
   {
     /// [Using _a and _t]
     auto const i32 = types::int_(32);
-    auto myarray = i32[2] % _a{1, 2};
-    auto myarray2 = i32[3] % _t(1, 'a', 1.0f);
+    auto myarray = i32[2](_a{1, 2});
+    auto myarray2 = i32[3](_t(1, 'a', 1.0f));
     /// [Using _a and _t]
     (void) myarray;
     (void) myarray2;

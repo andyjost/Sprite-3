@@ -105,12 +105,12 @@ namespace sprite { namespace backend
        */
       string_ref string() const { return this->store()->string(); }
 
-      /// Visit from the modulo operation.
-      constant _accept_modulo(array_type_with_flags const & ty) const
-        { return this->store()->accept_modulo(ty); }
+      /// Visit from the get_constant_impl operation.
+      constant _accept_get_constant_impl(array_type_with_flags const & ty) const
+        { return this->store()->accept_get_constant_impl(ty); }
 
-      constant _accept_modulo(struct_type const & ty) const
-        { return this->store()->accept_modulo(ty); }
+      constant _accept_get_constant_impl(struct_type const & ty) const
+        { return this->store()->accept_get_constant_impl(ty); }
 
     protected:
 
@@ -122,11 +122,11 @@ namespace sprite { namespace backend
         concept & operator=(concept const &) = delete;
         virtual ~concept() {}
 
-        // Applies operator% (type instantiation) to the sequence.
-        virtual constant accept_modulo(
+        // Applies get_constant_impl to the sequence.
+        virtual constant accept_get_constant_impl(
             array_type_with_flags const &
           ) const = 0;
-        virtual constant accept_modulo(struct_type const &) const = 0;
+        virtual constant accept_get_constant_impl(struct_type const &) const = 0;
 
         virtual string_ref string() const = 0;
         virtual size_t size() const = 0;
@@ -146,13 +146,13 @@ namespace sprite { namespace backend
 
         virtual ~model() {}
 
-        virtual constant accept_modulo(
+        virtual constant accept_get_constant_impl(
             array_type_with_flags const & ty
           ) const override
-          { return ty % this->ref(); }
+          { return get_constant_impl(ty, this->ref()); }
 
-        virtual constant accept_modulo(struct_type const & ty) const override
-          { return ty % this->ref(); }
+        virtual constant accept_get_constant_impl(struct_type const & ty) const override
+          { return get_constant_impl(ty, this->ref()); }
 
         virtual string_ref string() const override
           { return Policy::string(this->ref()); }

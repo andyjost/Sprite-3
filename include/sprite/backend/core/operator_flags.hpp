@@ -70,9 +70,16 @@ namespace sprite { namespace backend
     struct decorated_arg;
 
     template<typename Arg>
-    struct arg_with_flags : decorated_arg<Arg>, operator_flags
+    struct arg_with_flags : decorated_arg<Arg>
     {
       using base = decorated_arg<Arg>;
+      bool nuw() const { return m_flags.nuw(); }
+      bool nsw() const { return m_flags.nsw(); }
+      bool exact() const { return m_flags.exact(); }
+      bool signed_() const { return m_flags.signed_(); }
+      bool unsigned_() const { return m_flags.unsigned_(); }
+      bool arithmetic() const { return m_flags.arithmetic(); }
+      bool logical() const { return m_flags.logical(); }
 
       template<typename U
         , typename = typename std::enable_if<
@@ -80,21 +87,25 @@ namespace sprite { namespace backend
             >::type
         >
       arg_with_flags(U const & arg, operator_flags const & f = operator_flags())
-        : base(arg), operator_flags(f)
+        : base(arg), m_flags(f)
       {}
 
       template<typename U>
       arg_with_flags(arg_with_flags<U> const & arg)
-        : base(arg.arg()), operator_flags(arg.flags())
+        : base(arg.arg()), m_flags(arg.flags())
       {}
 
       template<typename U>
       arg_with_flags(std::tuple<U, operator_flags> const & x)
-        : base(std::get<0>(x)), operator_flags(std::get<1>(x))
+        : base(std::get<0>(x)), m_flags(std::get<1>(x))
       {}
 
       Arg const & arg() const { return *this; }
-      operator_flags const & flags() const { return *this; }
+      operator_flags const & flags() const { return m_flags; }
+
+    private:
+
+      operator_flags m_flags;
     };
 
     //@{
@@ -109,7 +120,7 @@ namespace sprite { namespace backend
      *
      *     auto i8 = types::int_(8);   // using i8 = int8_t;
      *     auto i32 = types::int_(32); // using i32 = int32_t;
-     *     signed_(i32) % (i8 % -1);   // i8 a = -1; i32 b = a;
+     *     get_constant(signed_(i32), (i8 % -1)); // i8 a = -1; i32 b = a;
      *
      * The sign flag is needed to know how to perform the integer extension
      * from 8 bits to 32.
@@ -124,6 +135,11 @@ namespace sprite { namespace backend
      * inherited versions of <tt>operator*</tt> and the overload of
      * <tt>operator()</tt> used for function type formation do the right thing,
      * which is discard the flags.
+     *
+     * When using <tt>operator()</tt> to initialize constants, the flags must
+     * be kept.  This is because constant creation sometimes triggers an
+     * implicit typecast.  The flags may provide information, such as how to
+     * extend an integer value. 
      */
     // Arg is a raw initializer.
     template<typename Arg> struct decorated_arg<Arg, false, true>
@@ -157,10 +173,18 @@ namespace sprite { namespace backend
       {
         using Derived = arg_with_flags<Arg>;
         Derived const * this_ = static_cast<Derived const *>(this);
-        return std::make_tuple(
-            this->Arg::operator[](size), this_->flags()
-          );
+        return std::make_tuple(this->Arg::operator[](size), this_->flags());
       }
+
+      //@{
+      /**
+       * @brief Overrides @p operator() to keep the flags.
+       *
+       * The flags are needed if an implicit typecast is triggered.
+       */
+      template<typename T> constant operator()(T && arg) const;
+      constant operator()(any_array_ref const & arg) const;
+      //@}
     };
     //@}
 

@@ -128,18 +128,18 @@ int main()
         assert(a.flags().value == aux::operator_flags::SIGNED);
 
         // Implicitly convert the array initializers to the signed type.
-        auto b = get_constant(signed_(i32)[0], {i64 % -1, char_ % -1, i16 % -1, float_ % 1.0f});
+        auto b = get_constant(signed_(i32)[0], {i64(-1), char_(-1), i16(-1), float_(1.0f)});
         assert(valueof<int32_t>(b[0]) == -1);
         assert(valueof<int32_t>(b[1]) == -1);
         assert(valueof<int32_t>(b[2]) == -1);
 
         // Same as the last one if signed_ is applied after forming the array.
-        auto b_ = get_constant(signed_(i32[0]), {i64 % -1, char_ % -1, i16 % -1, float_ % 1.0f});
+        auto b_ = get_constant(signed_(i32[0]), {i64(-1), char_(-1), i16(-1), float_(1.0f)});
         assert(valueof<int32_t>(b_[0]) == -1);
         assert(valueof<int32_t>(b_[1]) == -1);
         assert(valueof<int32_t>(b_[2]) == -1);
 
-        auto c = get_constant(unsigned_(i32)[4], {i64 % -1, char_ % -1, i16 % -1, float_ % 1.0f});
+        auto c = get_constant(unsigned_(i32)[4], {i64(-1), char_(-1), i16(-1), float_(1.0f)});
         assert(valueof<int32_t>(c[0]) == -1);
         assert(valueof<int32_t>(c[1]) == 255);
         assert(valueof<int32_t>(c[2]) == 65535);
@@ -170,8 +170,9 @@ int main()
       }
 
       {
-        auto const x = get_type<int[1][1]>()
-          % std::vector<std::vector<int>>{{42}};
+        auto const x = get_type<int[1][1]>()(
+            std::vector<std::vector<int>>{{42}}
+          );
         CHECK_ARRAY(x[0], 1, int64_t, 42);
       }
 
@@ -201,7 +202,7 @@ int main()
       }
 
       {
-        auto const x = get_constant<int16_t[2]>({i64 % 1, i64 % 1});
+        auto const x = get_constant<int16_t[2]>({i64(1), i64(1)});
         assert(dyn_cast<llvm::ConstantDataArray>(x.ptr()) && "expected ConstantDataArray");
       }
 
@@ -212,7 +213,7 @@ int main()
       (void) get_type<int, int, int>(); // three-element struct
       (void) get_type<std::tuple<int, int, int>>(); // three-element struct
       (void) get_type<int, std::tuple<int, int>, float>(); // nested
-      get_type<int, int>() % any_array_ref{0,1};
+      get_type<int, int>()(any_array_ref{0,1});
 
       #define CHECK_VALUE(x, ty, val)      \
           {                                \
@@ -253,19 +254,15 @@ int main()
 
     // Check multi-step creations involving implicit conversion.
     {
-      auto a = signed_(i64) % (char_ % 'a');
+      auto a = signed_(i64)(char_('a'));
       assert(valueof<int64_t>(a) == 'a');
-
-      // TODO
-      // auto a_ = (signed_(i64))(char_ % 'a');
-      // assert(valueof<int64_t>(a_) == 'a');
     }
     {
-      auto a = signed_(i64) % (char_ % -1);
+      auto a = signed_(i64)(char_(-1));
       assert(valueof<int64_t>(a) == -1);
     }
     {
-      auto a = unsigned_(i64) % (char_ % -1);
+      auto a = unsigned_(i64)(char_(-1));
       assert(valueof<uint64_t>(a) == 255);
     }
 

@@ -40,18 +40,18 @@
   /**/
 
 #define SPRITE_GETCONST_PREAMBLE4(RetTy, Rhs, ArgTy) \
-    template<typename Rhs>                       \
-    inline typename std::enable_if<                            \
-        std::is_convertible<Rhs, ArgTy>::value          \
-      , RetTy                                                  \
-      >::type                                                  \
+    template<typename Rhs>                           \
+    inline typename std::enable_if<                  \
+        std::is_convertible<Rhs, ArgTy>::value       \
+      , RetTy                                        \
+      >::type                                        \
   /**/
 
 namespace sprite { namespace backend
 {
   // TODO add comment: generic one needs to be predeclared.
   template<typename T>
-  inline constant operator%(type_with_flags const & ty, T const & arg);
+  inline constant get_constant_impl(type_with_flags const & ty, T const & arg);
 
   // ====== Instantiation functions for IntegerType ======
 
@@ -61,11 +61,11 @@ namespace sprite { namespace backend
    * @snippet constants.cpp Instantiating a NULL integer
    */
   SPRITE_GETCONST_PREAMBLE(constant_int, T, IntegerType, U, null_arg)
-  operator%(typeobj<T> const & ty, U const &)
-    { return ty % 0; }
+  get_constant_impl(typeobj<T> const & ty, U const &)
+    { return get_constant_impl(ty, 0); }
 
   SPRITE_GETCONST_PREAMBLE(constant, T, IntegerType, U, constant)
-  operator%(typeobj_with_flags<T> const & ty, U const & value)
+  get_constant_impl(typeobj_with_flags<T> const & ty, U const & value)
     { return typecast(value, ty); }
 
   /**
@@ -79,7 +79,7 @@ namespace sprite { namespace backend
    * @snippet constants.cpp Instantiating simple types
    */
   SPRITE_GETCONST_PREAMBLE(constant_int, T, IntegerType, U, uint64_t)
-  operator%(typeobj<T> const & ty, U const & value)
+  get_constant_impl(typeobj<T> const & ty, U const & value)
   {
     // Handle Booleans.
     if(ty->isIntegerTy(1))
@@ -111,7 +111,7 @@ namespace sprite { namespace backend
    * @snippet constants.cpp Instantiating integer types from strings
    */
   SPRITE_GETCONST_PREAMBLE(constant_int, T, IntegerType, U, string_ref)
-  operator%(typeobj<T> const & ty, U const & value_)
+  get_constant_impl(typeobj<T> const & ty, U const & value_)
   {
     string_ref value(value_);
     int radix = 10;
@@ -149,7 +149,7 @@ namespace sprite { namespace backend
    * @snippet constants.cpp Instantiating simple types
    */
   SPRITE_GETCONST_PREAMBLE(constant_int, T, IntegerType, U, APInt)
-  operator%(typeobj<T> const & ty, U const & value)
+  get_constant_impl(typeobj<T> const & ty, U const & value)
   {
     return constant_int(SPRITE_APICALL(
         ConstantInt::get(
@@ -163,11 +163,11 @@ namespace sprite { namespace backend
 
   /// Instantiates a floating-point type with a null value.
   SPRITE_GETCONST_PREAMBLE(constant_fp, T, FPType, U, null_arg)
-  operator%(typeobj<T> const & ty, U const &)
-    { return ty % 0.0; }
+  get_constant_impl(typeobj<T> const & ty, U const &)
+    { return get_constant_impl(ty, 0.0); }
 
   SPRITE_GETCONST_PREAMBLE(constant, T, FPType, U, constant)
-  operator%(typeobj_with_flags<T> const & ty, U const & value)
+  get_constant_impl(typeobj_with_flags<T> const & ty, U const & value)
     { return typecast(value, ty); }
 
   /**
@@ -176,7 +176,7 @@ namespace sprite { namespace backend
    * @snippet constants.cpp Instantiating simple types
    */
   SPRITE_GETCONST_PREAMBLE(constant_fp, T, FPType, U, double)
-  operator%(typeobj<T> const & ty, U const & value)
+  get_constant_impl(typeobj<T> const & ty, U const & value)
   {
     return constant_fp(
         dyn_cast<ConstantFP>(SPRITE_APICALL(
@@ -191,7 +191,7 @@ namespace sprite { namespace backend
    * @snippet constants.cpp Instantiating simple types
    */
   SPRITE_GETCONST_PREAMBLE(constant_fp, T, FPType, U, string_ref)
-  operator%(typeobj<T> const & ty, U const & value)
+  get_constant_impl(typeobj<T> const & ty, U const & value)
   {
     return constant_fp(
         dyn_cast<ConstantFP>(SPRITE_APICALL(
@@ -206,7 +206,7 @@ namespace sprite { namespace backend
    * @snippet constants.cpp Instantiating simple types
    */
   SPRITE_GETCONST_PREAMBLE(constant_fp, T, FPType, U, APFloat)
-  operator%(typeobj<T> const & ty, U const & value)
+  get_constant_impl(typeobj<T> const & ty, U const & value)
   {
     return constant_fp(
         dyn_cast<ConstantFP>(SPRITE_APICALL(
@@ -223,20 +223,20 @@ namespace sprite { namespace backend
    * @snippet constants.cpp Instantiating non-finite floating-point types
    */
   SPRITE_GETCONST_PREAMBLE(constant_fp, T, FPType, U, non_finite_value)
-  operator%(typeobj<T> const & ty, U const & nfv_)
+  get_constant_impl(typeobj<T> const & ty, U const & nfv_)
   {
     non_finite_value const nfv = nfv_;
     auto const & sem = ty->getFltSemantics();
     switch(nfv.kind())
     {
       case non_finite_value::Inf:
-        return ty % SPRITE_APICALL(APFloat::getInf(sem, nfv.negative()));
+        return get_constant_impl(ty, SPRITE_APICALL(APFloat::getInf(sem, nfv.negative())));
       case non_finite_value::Nan:
-        return ty % SPRITE_APICALL(APFloat::getNaN(sem, nfv.negative()));
+        return get_constant_impl(ty, SPRITE_APICALL(APFloat::getNaN(sem, nfv.negative())));
       case non_finite_value::Qnan:
-        return ty % SPRITE_APICALL(APFloat::getQNaN(sem, nfv.negative()));
+        return get_constant_impl(ty, SPRITE_APICALL(APFloat::getQNaN(sem, nfv.negative())));
       case non_finite_value::Snan:
-        return ty % SPRITE_APICALL(APFloat::getSNaN(sem, nfv.negative()));
+        return get_constant_impl(ty, SPRITE_APICALL(APFloat::getSNaN(sem, nfv.negative())));
     }
     throw runtime_error("Bad non-finite value specifier");
   }
@@ -251,7 +251,7 @@ namespace sprite { namespace backend
    * @snippet constants.cpp Instantiating a NULL struct
    */
   SPRITE_GETCONST_PREAMBLE(constobj<ConstantAggregateZero>, T, StructType, U, null_arg)
-  operator%(typeobj<T> const & ty, U const &)
+  get_constant_impl(typeobj<T> const & ty, U const &)
   {
     return constobj<ConstantAggregateZero>(SPRITE_APICALL(
         ConstantAggregateZero::get(ty.ptr())
@@ -264,10 +264,10 @@ namespace sprite { namespace backend
    * @snippet constants.cpp Instantiating types
    */
   SPRITE_GETCONST_PREAMBLE(constant, T, StructType, U, any_array_ref)
-  operator%(typeobj<T> const & ty, U const & values_)
+  get_constant_impl(typeobj<T> const & ty, U const & values_)
   {
     any_array_ref values(values_);
-    return values._accept_modulo(ty);
+    return values._accept_get_constant_impl(ty);
   }
 
   /**
@@ -276,18 +276,18 @@ namespace sprite { namespace backend
    * @snippet constants.cpp Instantiating types
    */
   SPRITE_GETCONST_PREAMBLE(constant, T, StructType, U, any_tuple_ref)
-  operator%(typeobj<T> const & ty, U const & values_)
+  get_constant_impl(typeobj<T> const & ty, U const & values_)
   {
     any_tuple_ref values(values_);
-    return values._accept_modulo(ty);
+    return values._accept_get_constant_impl(ty);
   }
 
   template<typename T>
-  constant operator%(struct_type const & ty, array_ref<T> const & values)
+  constant get_constant_impl(struct_type const & ty, array_ref<T> const & values)
     { return aux::generic_build_struct(ty, values, values.size()); }
 
   template<typename...T>
-  constant operator%(struct_type const & ty, std::tuple<T...> const & values)
+  constant get_constant_impl(struct_type const & ty, std::tuple<T...> const & values)
     { return aux::generic_build_struct(ty, values, sizeof...(T)); }
 
   // ====== Instantiation functions for ArrayType ======
@@ -300,7 +300,7 @@ namespace sprite { namespace backend
    * @snippet constants.cpp Instantiating a NULL array
    */
   SPRITE_GETCONST_PREAMBLE(constobj<ConstantAggregateZero>, T, ArrayType, U, null_arg)
-  operator%(typeobj<T> const & ty, U const &)
+  get_constant_impl(typeobj<T> const & ty, U const &)
   {
     return constobj<ConstantAggregateZero>(SPRITE_APICALL(
         ConstantAggregateZero::get(ty.ptr())
@@ -319,10 +319,10 @@ namespace sprite { namespace backend
    * @snippet constants.cpp Instantiating an array from a sequence
    */
   SPRITE_GETCONST_PREAMBLE(constant, T, ArrayType, U, any_array_ref)
-  operator%(typeobj_with_flags<T> const & ty, U const & values)
+  get_constant_impl(typeobj_with_flags<T> const & ty, U const & values)
   {
     any_array_ref values_(values);
-    return values_._accept_modulo(ty);
+    return values_._accept_get_constant_impl(ty);
   }
 
   /**
@@ -331,10 +331,10 @@ namespace sprite { namespace backend
    * @snippet constants.cpp Instantiating arrays from tuples
    */
   SPRITE_GETCONST_PREAMBLE(constant, T, ArrayType, U, any_tuple_ref)
-  operator%(typeobj_with_flags<T> const & ty, U const & values_)
+  get_constant_impl(typeobj_with_flags<T> const & ty, U const & values_)
   {
     any_tuple_ref values(values_);
-    return values._accept_modulo(ty);
+    return values._accept_get_constant_impl(ty);
   }
 
   namespace aux
@@ -411,11 +411,11 @@ namespace sprite { namespace backend
   }
 
   /**
-   * @brief Implements operator @p % between an array type and a sequence of
-   * initializer values.
+   * @brief Implements @p get_constant_impl between an array type and a
+   * sequence of initializer values.
    */
   template<typename T>
-  inline constant operator%(
+  inline constant get_constant_impl(
       array_type_with_flags const & ty, array_ref<T> const & values
     )
   {
@@ -440,20 +440,20 @@ namespace sprite { namespace backend
   }
 
   template<typename T>
-  inline constant operator%(array_type const & ty, array_ref<T> const & values)
-    { return array_type_with_flags(ty) % values; }
+  inline constant get_constant_impl(array_type const & ty, array_ref<T> const & values)
+    { return get_constant_impl(array_type_with_flags(ty), values); }
 
   template<typename...T>
-  inline constant operator%(
+  inline constant get_constant_impl(
       array_type_with_flags const & ty, std::tuple<T...> const & values
     )
   { return aux::generic_build_array(ty, values, sizeof...(T)); }
 
   template<typename...T>
-  constant operator%(
+  constant get_constant_impl(
       array_type const & ty, std::tuple<T...> const & values
     )
-  { return array_type_with_flags(ty) % values; }
+  { return get_constant_impl(array_type_with_flags(ty), values); }
 
 
   // ====== Instantiation functions for PointerType ======
@@ -464,18 +464,18 @@ namespace sprite { namespace backend
    * @snippet constants.cpp Instantiating a NULL pointer
    */
   SPRITE_GETCONST_PREAMBLE(nullptr_, T, PointerType, U, null_arg)
-  operator%(typeobj<T> const & ty, U const &)
+  get_constant_impl(typeobj<T> const & ty, U const &)
     { return nullptr_(SPRITE_APICALL(ConstantPointerNull::get(ty.ptr()))); }
 
   /// Instantiates a pointer with a null value using @p std::nullptr_t.
   template<typename T>
   inline SPRITE_GETCONST_PREAMBLE2(nullptr_, T, PointerType)
-  operator%(typeobj<T> const & ty, std::nullptr_t const &)
+  get_constant_impl(typeobj<T> const & ty, std::nullptr_t const &)
     { return nullptr_(SPRITE_APICALL(ConstantPointerNull::get(ty.ptr()))); }
 
   /// Instantiates a pointer from a constant, such as an integer.
   SPRITE_GETCONST_PREAMBLE(constant, T, PointerType, U, constant)
-  operator%(typeobj_with_flags<T> const & ty, U const & value)
+  get_constant_impl(typeobj_with_flags<T> const & ty, U const & value)
     { return typecast(value, ty); }
 
   namespace aux
@@ -492,7 +492,7 @@ namespace sprite { namespace backend
         , /* Type        */ array_ty.ptr()
         , /* isConstant  */ true
         , /* Linkage     */ GlobalValue::PrivateLinkage
-        , /* Initializer */ (array_ty % values).ptr()
+        , /* Initializer */ get_constant_impl(array_ty, values).ptr()
         , /* Name        */ ".str"
         ));
 
@@ -508,7 +508,7 @@ namespace sprite { namespace backend
         case 8:  SPRITE_APICALL(global->setAlignment(8)); break;
         case 16: SPRITE_APICALL(global->setAlignment(16)); break;
       }
-      auto const zero = (types::int_(32) % 0).ptr();
+      auto const zero = get_constant_impl(types::int_(32), 0).ptr();
       auto const ptr = SPRITE_APICALL(ConstantExpr::getGetElementPtr(
           global, array_ref<Constant *>{zero, zero}
         ));
@@ -522,7 +522,7 @@ namespace sprite { namespace backend
    * @snippet constants.cpp Instantiating char pointers
    */
   SPRITE_GETCONST_PREAMBLE(constant, T, PointerType, U, string_ref)
-  operator%(typeobj<T> const & ty, U const & value)
+  get_constant_impl(typeobj<T> const & ty, U const & value)
   {
     string_ref const str(value);
     assert(str.begin()[str.size()] == 0
@@ -538,12 +538,12 @@ namespace sprite { namespace backend
    * A constant global array is created, and a pointer to that is returned.  If
    * a char array is created, no null terminator will be appended.
    *
-   * Note: this function is not available through the generic operator%.
+   * Note: this function is not available through the generic get_constant_impl.
    *
    * @snippet constants.cpp Instantiating pointers as global arrays
    */
   SPRITE_GETCONST_PREAMBLE3(constant, T, PointerType, U, any_array_ref, string_ref)
-  operator%(typeobj<T> const & ty, U const & values_)
+  get_constant_impl(typeobj<T> const & ty, U const & values_)
   {
     any_array_ref const values(values_);
     return aux::create_global_pointer_from_constants(ty, values);
@@ -558,14 +558,14 @@ namespace sprite { namespace backend
    * @snippet constants.cpp Instantiating pointers as global arrays
    */
   SPRITE_GETCONST_PREAMBLE(constant, T, PointerType, U, any_tuple_ref)
-  operator%(typeobj<T> const & ty, U const & values_)
+  get_constant_impl(typeobj<T> const & ty, U const & values_)
   {
     any_tuple_ref const values(values_);
     return aux::create_global_pointer_from_constants(ty, values);
   }
 
   /**
-   * @brief Generic version of operator% for @p typeobj.
+   * @brief Generic version of get_constant_impl for @p typeobj.
    *
    * Instantiates a pointer, array, struct, integer, or floating-point type
    * with any allowed value.
@@ -575,12 +575,12 @@ namespace sprite { namespace backend
    * failure.
    */
   template<typename T>
-  inline constant operator%(type_with_flags const & ty, T const & arg)
+  inline constant get_constant_impl(type_with_flags const & ty, T const & arg)
   {
     using namespace generics;
     generic_handler<
         /* Return type */     constant
-      , /* Action on match */ modulo
+      , /* Action on match */ get_constant_action
 
         /*    LHS Match     Allowed RHSs */
         /*    ------------  ------------ */
@@ -607,8 +607,8 @@ namespace sprite { namespace backend
     , typename = DISABLE_IF_ARRAY_LIKE(U)
     >
   inline auto get_constant(Ty const & ty, U const & value)
-    -> decltype(ty % value)
-    { return ty % value; }
+    -> decltype(get_constant_impl(ty, value))
+    { return get_constant_impl(ty, value); }
 
   // Explicit mention of any_array_ref makes this accept nested initializer_lists.
   template<
@@ -616,19 +616,19 @@ namespace sprite { namespace backend
     , typename Enable = typename std::enable_if<is_typearg<Ty>::value>::type
     >
   inline auto get_constant(Ty const & ty, any_array_ref const & value)
-    -> decltype(ty % value)
+    -> decltype(get_constant_impl(ty, value))
   {
     if(ty->isArrayTy())
     {
       size_t const n = len(ty);
       size_t const n_init = value.size();
       if(n == 0)
-        return element_type(ty)[n_init] % value;
+        return get_constant_impl(element_type(ty)[n_init], value);
       else
       {
         if(n != n_init)
           throw value_error("Wrong number of initializers for array type.");
-        return ty % value;
+        return get_constant_impl(ty, value);
       }
     }
     // If ty is not an array type, then it must be an integer, floating-point,
@@ -639,18 +639,20 @@ namespace sprite { namespace backend
       // a char*, this will correctly keep the null terminator.
       string_ref const str = value.string();
       if(str.data())
-        return ty % str;
+        return get_constant_impl(ty, str);
 
       // Otherwise, initialize the pointer with the values.  That is used when
       // an non-char pointer is initialized with an array type.
       else if (ty->isPointerTy())
-        return ty % value;
+        return get_constant_impl(ty, value);
       else
         throw value_error(
             "Expected a character array when initializing an integer or "
             "floating-point type with an array-like initializer."
           );
     }
+    else if(ty->isStructTy())
+      return get_constant_impl(ty, value);
     throw type_error(
         "Expected array, integer, floating-point, or pointer type."
       );
@@ -683,7 +685,8 @@ namespace sprite { namespace backend
       typename T, typename U=null_arg
     , typename = typename std::enable_if<!std::is_constructible<any_array_ref, U>::value>::type
     >
-  inline auto get_constant(U && value = null) -> decltype(get_type<T>() % value)
+  inline auto get_constant(U && value = null)
+    -> decltype(get_constant_impl(get_type<T>(), value))
     { return get_constant(get_type<T>(), std::forward<U>(value)); }
 
  
@@ -730,5 +733,31 @@ namespace sprite { namespace backend
   template<typename T>
   constant typeobj<T>::operator()(any_array_ref const & array) const
     { return get_constant(*this, array); }
+
+  namespace aux
+  {
+    // See declaration in operator_flags.hpp.
+    template<typename Arg, bool IsRawInitializer>
+    template<typename T>
+    constant
+    decorated_arg<Arg,true,IsRawInitializer>::operator()(T && arg) const
+    {
+      using Derived = arg_with_flags<Arg>;
+      Derived const * this_ = static_cast<Derived const *>(this);
+      return get_constant(*this_, std::forward<T>(arg));
+    }
+
+    // See declaration in operator_flags.hpp.
+    template<typename Arg, bool IsRawInitializer>
+    constant
+    decorated_arg<Arg,true,IsRawInitializer>::operator()(
+        any_array_ref const & arg
+      ) const
+    {
+      using Derived = arg_with_flags<Arg>;
+      Derived const * this_ = static_cast<Derived const *>(this);
+      return get_constant(*this_, arg);
+    }
+  }
 }}
 

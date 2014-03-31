@@ -11,8 +11,8 @@ int main()
 {
   using namespace sprite::backend;
 
-  // Note that the generic type Type in each wrapper makes operator% go through
-  // the generic dispatch.
+  // Note that the generic type Type in each wrapper makes constant
+  // instantiation the generic dispatch.
   module const m("generics");
   scope _ = m;
   type bool_ = types::int_(1);
@@ -36,48 +36,48 @@ int main()
       }                                        \
     /**/
 
-  MYCHECK(bool_ % null, false);
-  MYCHECK(bool_ % true, true);
-  MYCHECK(bool_ % false, false);
-  MYCHECK(bool_ % 0, false);
-  MYCHECK(bool_ % 1, true);
+  MYCHECK(bool_(null), false);
+  MYCHECK(bool_(true), true);
+  MYCHECK(bool_(false), false);
+  MYCHECK(bool_(0), false);
+  MYCHECK(bool_(1), true);
 
-  MYCHECK(char_ % 'a', 'a');
-  MYCHECK(char_ % 100, 100);
+  MYCHECK(char_('a'), 'a');
+  MYCHECK(char_(100), 100);
 
-  MYCHECK(i32 % null, 0);
-  MYCHECK(i32 % -1, -1);
-  MYCHECK(i32 % 42, 42);
-  MYCHECK(i32 % 0xdeadbeef, 0xdeadbeef);
-  MYCHECK(i32 % 0777, 0777);
-  MYCHECK(i32 % "42", 42);
-  MYCHECK(i32 % "0xdeadbeef", 0xdeadbeef);
-  MYCHECK(i32 % "0777", 0777);
-  MYCHECK(i32 % "b101", 5);
-  MYCHECK(i32 % APInt(8, 37), 37);
-  MYCHECK(i32 % APInt(8, -2, true), -2);
+  MYCHECK(i32(null), 0);
+  MYCHECK(i32(-1), -1);
+  MYCHECK(i32(42), 42);
+  MYCHECK(i32(0xdeadbeef), 0xdeadbeef);
+  MYCHECK(i32(0777), 0777);
+  MYCHECK(i32("42"), 42);
+  MYCHECK(i32("0xdeadbeef"), 0xdeadbeef);
+  MYCHECK(i32("0777"), 0777);
+  MYCHECK(i32("b101"), 5);
+  MYCHECK(i32(APInt(8, 37)), 37);
+  MYCHECK(i32(APInt(8, -2, true)), -2);
 
-  MYCHECK(float_ % null, 0.0f);
-  MYCHECK(float_ % 1, 1.0f);
-  MYCHECK(float_ % 1.0, 1.0f);
-  MYCHECK(float_ % 1.0f, 1.0f);
-  MYCHECK(float_ % "1.0", 1.0f);
-  MYCHECK(float_ % inf_, std::numeric_limits<float>::infinity());
-  MYCHECK(float_ % -inf_, -std::numeric_limits<float>::infinity());
-  MYCHECKNAN(float_ % nan_, float);
-  MYCHECKNAN(float_ % qnan_, float);
-  MYCHECKNAN(float_ % snan_, float);
+  MYCHECK(float_(null), 0.0f);
+  MYCHECK(float_(1), 1.0f);
+  MYCHECK(float_(1.0), 1.0f);
+  MYCHECK(float_(1.0f), 1.0f);
+  MYCHECK(float_("1.0"), 1.0f);
+  MYCHECK(float_(inf_), std::numeric_limits<float>::infinity());
+  MYCHECK(float_(-inf_), -std::numeric_limits<float>::infinity());
+  MYCHECKNAN(float_(nan_), float);
+  MYCHECKNAN(float_(qnan_), float);
+  MYCHECKNAN(float_(snan_), float);
 
-  MYCHECK(double_ % null, 0.0);
-  MYCHECK(double_ % 1, 1.0);
-  MYCHECK(double_ % 1.0, 1.0);
-  MYCHECK(double_ % 1.0f, 1.0);
-  MYCHECK(double_ % "1.0", 1.0);
-  MYCHECK(double_ % inf_, std::numeric_limits<double>::infinity());
-  MYCHECK(double_ % -inf_, -std::numeric_limits<double>::infinity());
-  MYCHECKNAN(double_ % nan_, double);
-  MYCHECKNAN(double_ % qnan_, double);
-  MYCHECKNAN(double_ % snan_, double);
+  MYCHECK(double_(null), 0.0);
+  MYCHECK(double_(1), 1.0);
+  MYCHECK(double_(1.0), 1.0);
+  MYCHECK(double_(1.0f), 1.0);
+  MYCHECK(double_("1.0"), 1.0);
+  MYCHECK(double_(inf_), std::numeric_limits<double>::infinity());
+  MYCHECK(double_(-inf_), -std::numeric_limits<double>::infinity());
+  MYCHECKNAN(double_(nan_), double);
+  MYCHECKNAN(double_(qnan_), double);
+  MYCHECKNAN(double_(snan_), double);
 
   return 0;
 }

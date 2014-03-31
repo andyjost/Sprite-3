@@ -35,7 +35,7 @@ namespace sprite { namespace backend { namespace aux
           >::value
       , "Expected raw initializer value or constant, not llvm::Constant *"
       );
-    c.push_back((e % std::get<I>(t)).ptr());
+    c.push_back(get_constant_impl(e, std::get<I>(t)).ptr());
     build_uniform_constants<I+1, C, E, T...>(c, e, t);
   }
 
@@ -49,7 +49,8 @@ namespace sprite { namespace backend { namespace aux
         !std::is_same<T, Constant*>::value
       , "Expected raw initializer value or constant, not llvm::Constant *"
       );
-    for(auto const & value: values) { c.push_back((e % value).ptr()); }
+    for(auto const & value: values)
+      c.push_back(get_constant_impl(e, value).ptr());
   }
 
   /// Terminating case for building constant elements from a tuple.
@@ -82,7 +83,7 @@ namespace sprite { namespace backend { namespace aux
       );
     size_t const i = I;
     assert(ty->indexValid(i));
-    c.push_back((element_type(ty, i) % std::get<I>(t)).ptr());
+    c.push_back(get_constant_impl(element_type(ty, i), std::get<I>(t)).ptr());
     return build_nonuniform_constants<I+1, C, Ty, T...>(c, ty, t);
   }
 
@@ -100,14 +101,14 @@ namespace sprite { namespace backend { namespace aux
     for(auto const & value: values)
     {
       auto const elem_ty = element_type(ty, i++);
-      c.push_back((elem_ty % value).ptr());
+      c.push_back(get_constant_impl(elem_ty, value).ptr());
     }
   }
 
   /**
    * @brief Generic constant array builder.
    *
-   * Even if @p T is a @p constant, the @p % operator is applied in case a
+   * Even if @p T is a @p constant, @p get_constant_impl is applied in case a
    * conversion is needed.
    *
    * This function is distinct from the specialized versions that create @p
@@ -129,7 +130,7 @@ namespace sprite { namespace backend { namespace aux
   /**
    * @brief Generic constant struct builder.
    *
-   * Even if @p T is a @p constant, the @p % operator is applied in case a
+   * Even if @p T is a @p constant, @p get_constant_impl is applied in case a
    * conversion is needed.
    */
   template<typename C>

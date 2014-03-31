@@ -15,9 +15,9 @@ namespace sprite { namespace backend
    * pointers), the @p [] operator (to create arrays), or the @p () operator
    * (to create functions).
    *
-   * Constant values can be created using the @p % operator, as in <tt>i32 %
-   * 42</tt> to create a 32-bit integer constant with value @p 42 (assuming
-   * @p i32 is a type wrapper for the 32-bit integer type).
+   * Constant values can be created using the call operator, as in
+   * <tt>i32(42)</tt> to create a 32-bit integer constant with value @p 42
+   * (assuming @p i32 is a type wrapper for the 32-bit integer type).
    */
   template<typename T> struct typeobj : object<T>
   {
