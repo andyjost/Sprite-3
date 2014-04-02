@@ -233,7 +233,6 @@ namespace sprite { namespace backend
    *
    * @snippet constexprs.cpp rem
    */
-  #if 0
   #define SPRITE_OP %
   #define SPRITE_INPLACE_OP %=
   #define SPRITE_CLASS_CONTEXT constobj<llvm::Constant>::
@@ -248,199 +247,80 @@ namespace sprite { namespace backend
   #define SPRITE_OP_FP_FLAG_CHECK SPRITE_ALLOW_SIGNED_FLAG
   #define SPRITE_OP_FP_IMPL(lhs,rhs,flags) ConstantExpr::getFRem(lhs,rhs)
   #include "sprite/backend/core/detail/operator.def"
-  #endif
-
-  template<typename Lhs, typename Arg>
-  typename std::enable_if<is_constarg<Lhs>::value, constant>::type
-  operator%(Lhs const & lhs, aux::arg_with_flags<Arg> const & rhs)
-  {
-    if(aux::has_arg_types<ConstantInt>(lhs, rhs))
-    {
-      SPRITE_ALLOW_FLAGS(rhs, "integer remainder"
-        , operator_flags::SIGNED | operator_flags::UNSIGNED
-        )
-      check_for_exactly_one_signed_flag(rhs.flags(), "integer remainder");
-
-      if(rhs.flags().signed_())
-      {
-        return constant(SPRITE_APICALL(
-            ConstantExpr::getSRem(ptr(lhs), ptr(rhs))
-          ));
-      }
-      else
-      {
-        return constant(SPRITE_APICALL(
-            ConstantExpr::getURem(ptr(lhs), ptr(rhs))
-          ));
-      }
-    }
-    else if(aux::has_arg_types<ConstantFP>(lhs, rhs))
-    {
-      SPRITE_ALLOW_FLAGS(rhs, "floating-point remainder", operator_flags::SIGNED)
-      return constant(SPRITE_APICALL(
-          ConstantExpr::getFRem(ptr(lhs), ptr(rhs))
-        ));
-    }
-    throw type_error("Expected ConstantInt or ConstantFP for remainder.");
-  }
-
-  /**
-   * @brief Integer or floating-point remainder.
-   *
-   * @snippet constexprs.cpp rem
-   */
-  template<typename Lhs, typename Rhs>
-  inline typename std::enable_if<
-      is_constarg<Lhs>::value && is_constarg<Rhs>::value, constant
-    >::type
-  operator%(Lhs const & lhs, Rhs const & rhs)
-  {
-    constant lhs_ = aux::getlhs(lhs, rhs);
-    constant rhs_ = aux::getrhs(lhs, rhs);
-    return lhs_ %aux::operator_flags() (rhs_);
-  }
 
   /**
    * @brief Bitwise AND.
    *
    * @snippet constexprs.cpp and
    */
-  template<typename Lhs, typename Rhs>
-  inline typename std::enable_if<
-      is_constarg<Lhs>::value && is_constarg<Rhs>::value, constant
-    >::type
-  operator&(Lhs const & lhs, Rhs const & rhs)
-  {
-    constant lhs_ = aux::getlhs(lhs, rhs);
-    constant rhs_ = aux::getrhs(lhs, rhs);
-
-    if(aux::has_arg_types<ConstantInt>(lhs_, rhs_))
-    {
-      return constant(SPRITE_APICALL(
-          ConstantExpr::getAnd(ptr(lhs_), ptr(rhs_))
-        ));
-    }
-    throw type_error("Expected ConstantInt for bitwise AND.");
-  }
+  #define SPRITE_OP &
+  #define SPRITE_INPLACE_OP &=
+  #define SPRITE_CLASS_CONTEXT constobj<llvm::Constant>::
+  #define SPRITE_LHS_TYPE constant
+  #define SPRITE_OP_NAME "bitwise AND"
+  #define SPRITE_OP_INT_IMPL(lhs,rhs,flags) ConstantExpr::getAnd(lhs, rhs)
+  #include "sprite/backend/core/detail/operator.def"
 
   /**
    * @brief Bitwise OR.
    *
    * @snippet constexprs.cpp or
    */
-  template<typename Lhs, typename Rhs>
-  inline typename std::enable_if<
-      is_constarg<Lhs>::value && is_constarg<Rhs>::value, constant
-    >::type
-  operator|(Lhs const & lhs, Rhs const & rhs)
-  {
-    constant lhs_ = aux::getlhs(lhs, rhs);
-    constant rhs_ = aux::getrhs(lhs, rhs);
-
-    if(aux::has_arg_types<ConstantInt>(lhs_, rhs_))
-    {
-      return constant(SPRITE_APICALL(
-          ConstantExpr::getOr(ptr(lhs_), ptr(rhs_))
-        ));
-    }
-    throw type_error("Expected ConstantInt for bitwise OR.");
-  }
+  #define SPRITE_OP |
+  #define SPRITE_INPLACE_OP |=
+  #define SPRITE_CLASS_CONTEXT constobj<llvm::Constant>::
+  #define SPRITE_LHS_TYPE constant
+  #define SPRITE_OP_NAME "bitwise OR"
+  #define SPRITE_OP_INT_IMPL(lhs,rhs,flags) ConstantExpr::getOr(lhs, rhs)
+  #include "sprite/backend/core/detail/operator.def"
 
   /**
    * @brief Bitwise XOR.
    *
    * @snippet constexprs.cpp or
    */
-  template<typename Lhs, typename Rhs>
-  inline typename std::enable_if<
-      is_constarg<Lhs>::value && is_constarg<Rhs>::value, constant
-    >::type
-  operator^(Lhs const & lhs, Rhs const & rhs)
-  {
-    constant lhs_ = aux::getlhs(lhs, rhs);
-    constant rhs_ = aux::getrhs(lhs, rhs);
-
-    if(aux::has_arg_types<ConstantInt>(lhs_, rhs_))
-    {
-      return constant(SPRITE_APICALL(
-          ConstantExpr::getXor(ptr(lhs_), ptr(rhs_))
-        ));
-    }
-    throw type_error("Expected ConstantInt for bitwise XOR.");
-  }
+  #define SPRITE_OP ^
+  #define SPRITE_INPLACE_OP ^=
+  #define SPRITE_CLASS_CONTEXT constobj<llvm::Constant>::
+  #define SPRITE_LHS_TYPE constant
+  #define SPRITE_OP_NAME "bitwise XOR"
+  #define SPRITE_OP_INT_IMPL(lhs,rhs,flags) ConstantExpr::getXor(lhs, rhs)
+  #include "sprite/backend/core/detail/operator.def"
 
   /**
    * @brief Left shift.
    *
    * @snippet constexprs.cpp shl
    */
-  template<typename Lhs, typename Arg>
-  inline typename std::enable_if<is_constarg<Lhs>::value, constant>::type
-  operator<<(Lhs const & lhs, aux::arg_with_flags<Arg> const & rhs)
-  {
-    if(aux::has_arg_types<ConstantInt>(lhs, rhs))
-    {
-      SPRITE_ALLOW_FLAGS(rhs, "left shift", operator_flags::NUW | operator_flags::NSW)
-      return constant(SPRITE_APICALL(
-          ConstantExpr::getShl(
-              ptr(lhs), ptr(rhs), rhs.flags().nuw(), rhs.flags().nsw()
-            )
-        ));
-    }
-    throw type_error("Expected ConstantInt for left shift.");
-  }
-
-  /**
-   * @brief Left shift.
-   *
-   * @snippet constexprs.cpp shl
-   */
-  template<typename Lhs, typename Rhs>
-  inline typename std::enable_if<
-      is_constarg<Lhs>::value && is_constarg<Rhs>::value, constant
-    >::type
-  operator<<(Lhs const & lhs, Rhs const & rhs)
-  {
-    constant lhs_ = aux::getlhs(lhs, rhs);
-    constant rhs_ = aux::getrhs(lhs, rhs);
-    return lhs_ <<aux::operator_flags() (rhs_);
-  }
+  #define SPRITE_OP <<
+  #define SPRITE_INPLACE_OP <<=
+  #define SPRITE_CLASS_CONTEXT constobj<llvm::Constant>::
+  #define SPRITE_LHS_TYPE constant
+  #define SPRITE_OP_NAME "left shift"
+  #define SPRITE_OP_INT_FLAG_CHECK SPRITE_ALLOW_NSW_NUW_FLAGS
+  #define SPRITE_OP_INT_IMPL(lhs,rhs,flags)                    \
+      ConstantExpr::getShl(lhs, rhs, flags.nuw(), flags.nsw()) \
+    /**/
+  #include "sprite/backend/core/detail/operator.def"
 
   /**
    * @brief Right shift.
    *
    * @snippet constexprs.cpp shr
    */
-  template<typename Lhs, typename Arg>
-  inline typename std::enable_if<is_constarg<Lhs>::value, constant>::type
-  operator>>(Lhs const & lhs, aux::arg_with_flags<Arg> const & rhs)
-  {
-    if(aux::has_arg_types<ConstantInt>(lhs, rhs))
-    {
-      SPRITE_ALLOW_FLAGS(rhs, "right shift"
-        , operator_flags::EXACT | operator_flags::ARITHMETIC | operator_flags::LOGICAL
-        );
-      check_for_exactly_one_arithmetic_flag(rhs.flags(), "right shift");
-
-      if(rhs.flags().arithmetic())
-      {
-        return constant(SPRITE_APICALL(
-            ConstantExpr::getAShr(
-                ptr(lhs), ptr(rhs), rhs.flags().exact()
-              )
-          ));
-      }
-      else
-      {
-        return constant(SPRITE_APICALL(
-            ConstantExpr::getLShr(
-                ptr(lhs), ptr(rhs), rhs.flags().exact()
-              )
-          ));
-      }
-    }
-    throw type_error("Expected ConstantInt for right shift.");
-  }
+  #define SPRITE_OP >>
+  #define SPRITE_INPLACE_OP >>=
+  #define SPRITE_CLASS_CONTEXT constobj<llvm::Constant>::
+  #define SPRITE_LHS_TYPE constant
+  #define SPRITE_OP_NAME "right shift"
+  #define SPRITE_OP_INT_FLAG_CHECK SPRITE_ALLOW_SHR_FLAGS
+  #define SPRITE_OP_INT_IMPL(lhs,rhs,flags)              \
+      flags.arithmetic()                                 \
+        ? ConstantExpr::getAShr(lhs, rhs, flags.exact()) \
+        : ConstantExpr::getLShr(lhs, rhs, flags.exact()) \
+    /**/
+    /**/
+  #include "sprite/backend/core/detail/operator.def"
 
   /**
    * @brief Performs a select operation.

@@ -7,7 +7,17 @@
 #define SPRITE_DECL_ONLY 1
 #endif
 
+#ifndef SPRITE_OP_INT_FLAG_CHECK
+#define SPRITE_OP_INT_FLAG_CHECK SPRITE_NO_FLAG_CHECK
+#endif
+
+#ifndef SPRITE_OP_FP_FLAG_CHECK
+#define SPRITE_OP_FP_FLAG_CHECK SPRITE_NO_FLAG_CHECK
+#endif
+
 #define SPRITE_INVOKE(f, x) f x
+
+#define SPRITE_NO_FLAG_CHECK(name)
 
 #define SPRITE_ALLOW_NSW_NUW_FLAGS(name)           \
     SPRITE_ALLOW_FLAGS(rhs, name                   \
@@ -25,6 +35,14 @@
           | operator_flags::EXACT                         \
       )                                                   \
    check_for_exactly_one_signed_flag(rhs.flags(), name);  \
+  /**/
+
+#define SPRITE_ALLOW_SHR_FLAGS(name)                         \
+    SPRITE_ALLOW_FLAGS(rhs, name                             \
+      , operator_flags::ARITHMETIC | operator_flags::LOGICAL \
+          | operator_flags::EXACT                            \
+      )                                                      \
+   check_for_exactly_one_arithmetic_flag(rhs.flags(), name); \
   /**/
 
 #define SPRITE_REQUIRE_SIGNED_UNSIGNED_FLAG(name)         \
@@ -72,6 +90,7 @@ SPRITE_CLASS_CONTEXT operator SPRITE_INPLACE_OP (aux::arg_with_flags<Rhs> const 
   auto const lhs_ = get_value(ty, *this);
   auto const rhs_ = get_value(ty, rhs);
   aux::operator_flags const & flags = rhs.flags();
+  (void) flags; // may be unused
   if(ty->isIntegerTy())
   {
     SPRITE_INVOKE(SPRITE_OP_INT_FLAG_CHECK, ("integer " SPRITE_OP_NAME))
@@ -80,7 +99,8 @@ SPRITE_CLASS_CONTEXT operator SPRITE_INPLACE_OP (aux::arg_with_flags<Rhs> const 
       ));
     return *this;
   }
-  else if(ty->isFloatingPointTy())
+#ifdef SPRITE_OP_FP_IMPL
+  if(ty->isFloatingPointTy())
   {
     SPRITE_INVOKE(SPRITE_OP_FP_FLAG_CHECK, ("floating-point " SPRITE_OP_NAME))
     *this = SPRITE_LHS_TYPE(SPRITE_APICALL(
@@ -88,8 +108,13 @@ SPRITE_CLASS_CONTEXT operator SPRITE_INPLACE_OP (aux::arg_with_flags<Rhs> const 
       ));
     return *this;
   }
+#endif
   throw type_error(
-      "Expected integer or floating-point arguments for " SPRITE_OP_NAME "."
+      "Expected integer "
+#ifdef SPRITE_OP_FP_IMPL
+      "or floating-point "
+#endif
+      "arguments for " SPRITE_OP_NAME "."
     );
 }
 #endif
