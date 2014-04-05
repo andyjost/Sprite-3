@@ -1,6 +1,7 @@
 #pragma once
 #include "sprite/backend/config.hpp"
 #include "sprite/backend/core/object.hpp"
+#include "sprite/backend/core/operator_flags.hpp"
 #include "sprite/backend/support/array_ref.hpp"
 #include "sprite/backend/support/special_values.hpp"
 #include "sprite/backend/support/type_traits.hpp"
@@ -264,31 +265,32 @@ namespace sprite { namespace backend
    */
   // Applies when T can produce an LLVM Type.
   template<typename T>
-  inline type get_type(T && arg
+  inline type get_type(T const & arg
     , typename std::enable_if<is_typearg<T>::value, En_>::type = En_()
     )
-  { return type(ptr(std::forward<T>(arg))); }
+  { return type(ptr(arg)); }
 
   // Applies when T can produce an LLVM Value.
   template<typename T>
-  inline type get_type(T && arg
+  inline type get_type(T const & arg
     , typename std::enable_if<is_valuearg<T>::value, En_>::type = En_()
     )
-  { return type(ptr(std::forward<T>(arg))->getType()); }
+  { return type(ptr(arg)->getType()); }
 
   // Applies when T is a raw initializer (e.g., an int).  Returns the
   // best-matching LLVM type.
   template<typename T>
-  inline type get_type(T && arg
+  inline type get_type(T const & arg
     , typename std::enable_if<
           !is_typearg<T>::value && !is_valuearg<T>::value, En_
         >::type = En_()
     )
-  {
-    using BasicT = typename std::remove_reference<T>::type;
-    using T_ = typename std::decay<BasicT>::type;
-    return get_type<T_>();
-  }
+  { return get_type<typename std::decay<T>::type>(); }
+
+  // Allows @p get_type to accept @p arg_with_flags.
+  template<typename T>
+  inline type get_type(aux::arg_with_flags<T> const & arg)
+    { return get_type(arg.arg()); }
   //@}
 }}
 

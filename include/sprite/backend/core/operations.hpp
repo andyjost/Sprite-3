@@ -87,12 +87,14 @@ namespace sprite { namespace backend
   #define SPRITE_OP_CONST_INT_IMPL(arg,flags)             \
       ConstantExpr::getNeg(arg, flags.nuw(), flags.nsw()) \
     /**/
-  #define SPRITE_OP_VALUE_INT_IMPL(arg,flags)                    \
-      current_builder().CreateNeg(arg, flags.nuw(), flags.nsw()) \
+  #define SPRITE_OP_VALUE_INT_IMPL(arg,flags)                        \
+      current_builder().CreateNeg(arg, "", flags.nuw(), flags.nsw()) \
     /**/
   #define SPRITE_OP_FP_FLAG_CHECK SPRITE_ALLOW_SIGNED_FLAG
   #define SPRITE_OP_CONST_FP_IMPL(arg,flags) ConstantExpr::getFNeg(arg)
-  #define SPRITE_OP_VALUE_FP_IMPL(arg,flags) current_builder().CreateFNeg(arg)
+  #define SPRITE_OP_VALUE_FP_IMPL(arg,flags) \
+      current_builder().CreateFNeg(arg, "")  \
+    /**/
   #include "sprite/backend/core/detail/unary_operator.def"
 
   /**
@@ -104,7 +106,9 @@ namespace sprite { namespace backend
   #define SPRITE_OP_NAME "bitwise inversion"
   #define SPRITE_OP_INT_FLAG_CHECK SPRITE_ALLOW_NO_FLAGS
   #define SPRITE_OP_CONST_INT_IMPL(arg,flags) ConstantExpr::getNot(arg)
-  #define SPRITE_OP_VALUE_INT_IMPL(arg,flags) current_builder().CreateNot(arg)
+  #define SPRITE_OP_VALUE_INT_IMPL(arg,flags) \
+      current_builder().CreateNot(arg, "")    \
+    /**/
   #include "sprite/backend/core/detail/unary_operator.def"
 
   /**
@@ -133,12 +137,14 @@ namespace sprite { namespace backend
   #define SPRITE_OP_CONST_INT_IMPL(lhs,rhs,flags)              \
       ConstantExpr::getAdd(lhs, rhs, flags.nuw(), flags.nsw()) \
     /**/
-  #define SPRITE_OP_VALUE_INT_IMPL(lhs,rhs,flags)                     \
-      current_builder().CreateAdd(lhs, rhs, flags.nuw(), flags.nsw()) \
+  #define SPRITE_OP_VALUE_INT_IMPL(lhs,rhs,flags)                         \
+      current_builder().CreateAdd(lhs, rhs, "", flags.nuw(), flags.nsw()) \
     /**/
   #define SPRITE_OP_FP_FLAG_CHECK SPRITE_ALLOW_SIGNED_FLAG
   #define SPRITE_OP_CONST_FP_IMPL(lhs,rhs,flags) ConstantExpr::getFAdd(lhs,rhs)
-  #define SPRITE_OP_VALUE_FP_IMPL(lhs,rhs,flags) current_builder().CreateFAdd(lhs,rhs)
+  #define SPRITE_OP_VALUE_FP_IMPL(lhs,rhs,flags) \
+      current_builder().CreateFAdd(lhs,rhs,"")   \
+    /**/
   #include "sprite/backend/core/detail/operator.def"
   //
   #define SPRITE_BINOP +
@@ -155,12 +161,14 @@ namespace sprite { namespace backend
   #define SPRITE_OP_CONST_INT_IMPL(lhs,rhs,flags)              \
       ConstantExpr::getSub(lhs, rhs, flags.nuw(), flags.nsw()) \
     /**/
-  #define SPRITE_OP_VALUE_INT_IMPL(lhs,rhs,flags)                     \
-      current_builder().CreateSub(lhs, rhs, flags.nuw(), flags.nsw()) \
+  #define SPRITE_OP_VALUE_INT_IMPL(lhs,rhs,flags)                         \
+      current_builder().CreateSub(lhs, rhs, "", flags.nuw(), flags.nsw()) \
     /**/
   #define SPRITE_OP_FP_FLAG_CHECK SPRITE_ALLOW_SIGNED_FLAG
   #define SPRITE_OP_CONST_FP_IMPL(lhs,rhs,flags) ConstantExpr::getFSub(lhs,rhs)
-  #define SPRITE_OP_VALUE_FP_IMPL(lhs,rhs,flags) current_builder().CreateFSub(lhs,rhs)
+  #define SPRITE_OP_VALUE_FP_IMPL(lhs,rhs,flags) \
+      current_builder().CreateFSub(lhs,rhs,"")   \
+    /**/
   #include "sprite/backend/core/detail/operator.def"
   //
   #define SPRITE_BINOP -
@@ -177,12 +185,14 @@ namespace sprite { namespace backend
   #define SPRITE_OP_CONST_INT_IMPL(lhs,rhs,flags)              \
       ConstantExpr::getMul(lhs, rhs, flags.nuw(), flags.nsw()) \
     /**/
-  #define SPRITE_OP_VALUE_INT_IMPL(lhs,rhs,flags)              \
-      current_builder().CreateMul(lhs, rhs, flags.nuw(), flags.nsw()) \
+  #define SPRITE_OP_VALUE_INT_IMPL(lhs,rhs,flags)                         \
+      current_builder().CreateMul(lhs, rhs, "", flags.nuw(), flags.nsw()) \
     /**/
   #define SPRITE_OP_FP_FLAG_CHECK SPRITE_ALLOW_SIGNED_FLAG
   #define SPRITE_OP_CONST_FP_IMPL(lhs,rhs,flags) ConstantExpr::getFMul(lhs,rhs)
-  #define SPRITE_OP_VALUE_FP_IMPL(lhs,rhs,flags) current_builder().CreateFMul(lhs,rhs)
+  #define SPRITE_OP_VALUE_FP_IMPL(lhs,rhs,flags) \
+      current_builder().CreateFMul(lhs,rhs,"")   \
+    /**/
   #include "sprite/backend/core/detail/operator.def"
   //
   #define SPRITE_BINOP *
@@ -201,14 +211,16 @@ namespace sprite { namespace backend
         ? ConstantExpr::getSDiv(lhs, rhs, flags.exact()) \
         : ConstantExpr::getUDiv(lhs, rhs, flags.exact()) \
     /**/
-  #define SPRITE_OP_VALUE_INT_IMPL(lhs,rhs,flags)               \
-      flags.signed_()                                           \
-        ? current_builder().CreateSDiv(lhs, rhs, flags.exact()) \
-        : current_builder().CreateUDiv(lhs, rhs, flags.exact()) \
+  #define SPRITE_OP_VALUE_INT_IMPL(lhs,rhs,flags)                   \
+      flags.signed_()                                               \
+        ? current_builder().CreateSDiv(lhs, rhs, "", flags.exact()) \
+        : current_builder().CreateUDiv(lhs, rhs, "", flags.exact()) \
     /**/
   #define SPRITE_OP_FP_FLAG_CHECK SPRITE_ALLOW_SIGNED_FLAG
   #define SPRITE_OP_CONST_FP_IMPL(lhs,rhs,flags) ConstantExpr::getFDiv(lhs,rhs)
-  #define SPRITE_OP_VALUE_FP_IMPL(lhs,rhs,flags) current_builder().CreateFDiv(lhs,rhs)
+  #define SPRITE_OP_VALUE_FP_IMPL(lhs,rhs,flags) \
+      current_builder().CreateFDiv(lhs,rhs,"")   \
+    /**/
   #include "sprite/backend/core/detail/operator.def"
   //
   #define SPRITE_BINOP /
@@ -227,14 +239,16 @@ namespace sprite { namespace backend
         ? ConstantExpr::getSRem(lhs, rhs)         \
         : ConstantExpr::getURem(lhs, rhs)         \
     /**/
-  #define SPRITE_OP_VALUE_INT_IMPL(lhs,rhs,flags) \
-      flags.signed_()                             \
-        ? current_builder().CreateSRem(lhs, rhs)  \
-        : current_builder().CreateURem(lhs, rhs)  \
+  #define SPRITE_OP_VALUE_INT_IMPL(lhs,rhs,flags)  \
+      flags.signed_()                              \
+        ? current_builder().CreateSRem(lhs,rhs,"") \
+        : current_builder().CreateURem(lhs,rhs,"") \
     /**/
   #define SPRITE_OP_FP_FLAG_CHECK SPRITE_ALLOW_SIGNED_FLAG
   #define SPRITE_OP_CONST_FP_IMPL(lhs,rhs,flags) ConstantExpr::getFRem(lhs,rhs)
-  #define SPRITE_OP_VALUE_FP_IMPL(lhs,rhs,flags) current_builder().CreateFRem(lhs,rhs)
+  #define SPRITE_OP_VALUE_FP_IMPL(lhs,rhs,flags) \
+      current_builder().CreateFRem(lhs,rhs,"")   \
+    /**/
   #include "sprite/backend/core/detail/operator.def"
   //
   #define SPRITE_BINOP %
@@ -249,7 +263,9 @@ namespace sprite { namespace backend
   #define SPRITE_OP_NAME "bitwise AND"
   #define SPRITE_OP_INT_FLAG_CHECK SPRITE_ALLOW_NO_FLAGS
   #define SPRITE_OP_CONST_INT_IMPL(lhs,rhs,flags) ConstantExpr::getAnd(lhs, rhs)
-  #define SPRITE_OP_VALUE_INT_IMPL(lhs,rhs,flags) current_builder().CreateAnd(lhs, rhs)
+  #define SPRITE_OP_VALUE_INT_IMPL(lhs,rhs,flags) \
+      current_builder().CreateAnd(lhs,rhs,"")     \
+    /**/
   #include "sprite/backend/core/detail/operator.def"
   //
   #define SPRITE_BINOP &
@@ -264,7 +280,9 @@ namespace sprite { namespace backend
   #define SPRITE_OP_NAME "bitwise OR"
   #define SPRITE_OP_INT_FLAG_CHECK SPRITE_ALLOW_NO_FLAGS
   #define SPRITE_OP_CONST_INT_IMPL(lhs,rhs,flags) ConstantExpr::getOr(lhs, rhs)
-  #define SPRITE_OP_VALUE_INT_IMPL(lhs,rhs,flags) current_builder().CreateOr(lhs, rhs)
+  #define SPRITE_OP_VALUE_INT_IMPL(lhs,rhs,flags) \
+      current_builder().CreateOr(lhs,rhs,"")      \
+    /**/
   #include "sprite/backend/core/detail/operator.def"
   //
   #define SPRITE_BINOP |
@@ -279,7 +297,9 @@ namespace sprite { namespace backend
   #define SPRITE_OP_NAME "bitwise XOR"
   #define SPRITE_OP_INT_FLAG_CHECK SPRITE_ALLOW_NO_FLAGS
   #define SPRITE_OP_CONST_INT_IMPL(lhs,rhs,flags) ConstantExpr::getXor(lhs, rhs)
-  #define SPRITE_OP_VALUE_INT_IMPL(lhs,rhs,flags) current_builder().CreateXor(lhs, rhs)
+  #define SPRITE_OP_VALUE_INT_IMPL(lhs,rhs,flags) \
+      current_builder().CreateXor(lhs,rhs,"")     \
+    /**/
   #include "sprite/backend/core/detail/operator.def"
   //
   #define SPRITE_BINOP ^
@@ -296,8 +316,8 @@ namespace sprite { namespace backend
   #define SPRITE_OP_CONST_INT_IMPL(lhs,rhs,flags)              \
       ConstantExpr::getShl(lhs, rhs, flags.nuw(), flags.nsw()) \
     /**/
-  #define SPRITE_OP_VALUE_INT_IMPL(lhs,rhs,flags)                     \
-      current_builder().CreateShl(lhs, rhs, flags.nuw(), flags.nsw()) \
+  #define SPRITE_OP_VALUE_INT_IMPL(lhs,rhs,flags)                         \
+      current_builder().CreateShl(lhs, rhs, "", flags.nuw(), flags.nsw()) \
     /**/
   #include "sprite/backend/core/detail/operator.def"
   //
@@ -317,10 +337,10 @@ namespace sprite { namespace backend
         ? ConstantExpr::getAShr(lhs, rhs, flags.exact()) \
         : ConstantExpr::getLShr(lhs, rhs, flags.exact()) \
     /**/
-  #define SPRITE_OP_VALUE_INT_IMPL(lhs,rhs,flags)               \
-      flags.arithmetic()                                        \
-        ? current_builder().CreateAShr(lhs, rhs, flags.exact()) \
-        : current_builder().CreateLShr(lhs, rhs, flags.exact()) \
+  #define SPRITE_OP_VALUE_INT_IMPL(lhs,rhs,flags)                   \
+      flags.arithmetic()                                            \
+        ? current_builder().CreateAShr(lhs, rhs, "", flags.exact()) \
+        : current_builder().CreateLShr(lhs, rhs, "", flags.exact()) \
     /**/
   #include "sprite/backend/core/detail/operator.def"
   //

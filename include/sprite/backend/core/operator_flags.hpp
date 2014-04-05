@@ -46,6 +46,10 @@ namespace sprite { namespace backend
         { return std::make_tuple(arg, *this); }
 
       template<typename T>
+      arg_with_flags<valueobj<T>> operator()(valueobj<T> const & arg) const
+        { return std::make_tuple(arg, *this); }
+
+      template<typename T>
       arg_with_flags<typeobj<T>> operator()(typeobj<T> const & arg) const
         { return std::make_tuple(arg, *this); }
     };

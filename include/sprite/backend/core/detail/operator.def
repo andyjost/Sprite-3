@@ -6,6 +6,7 @@
 #include "sprite/backend/core/detail/value_operator.def"
 
 #undef SPRITE_DECL_ONLY
+#undef SPRITE_INPLACE_OP
 #undef SPRITE_OP_CONST_FP_IMPL
 #undef SPRITE_OP_CONST_INT_IMPL
 #undef SPRITE_OP_FP_FLAG_CHECK

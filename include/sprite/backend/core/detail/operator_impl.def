@@ -77,4 +77,3 @@ SPRITE_CLASS_CONTEXT operator SPRITE_INPLACE_OP (aux::arg_with_flags<Rhs> const 
 #endif
 #endif
 
-#undef SPRITE_INPLACE_OP

@@ -11,7 +11,7 @@ typename std::enable_if<
   >::type
 operator SPRITE_CMPOP(Lhs const & lhs, aux::arg_with_flags<Rhs> const & rhs)
 {
-  type const ty = coerce(get_type(lhs), get_type(rhs.arg()));
+  type const ty = coerce(get_type(lhs), get_type(rhs));
   auto lhs_ = get_value(ty, lhs);
   auto rhs_ = get_value(ty, rhs);
   aux::operator_flags const & flags = rhs.flags();

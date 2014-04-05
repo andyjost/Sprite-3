@@ -8,24 +8,43 @@
 
 #define SPRITE_INPLACE_OP +=
 #include "sprite/backend/core/detail/operator_impl.def"
+#undef SPRITE_INPLACE_OP
+
 #define SPRITE_INPLACE_OP -=
 #include "sprite/backend/core/detail/operator_impl.def"
+#undef SPRITE_INPLACE_OP
+
 #define SPRITE_INPLACE_OP *=
 #include "sprite/backend/core/detail/operator_impl.def"
+#undef SPRITE_INPLACE_OP
+
 #define SPRITE_INPLACE_OP /=
 #include "sprite/backend/core/detail/operator_impl.def"
+#undef SPRITE_INPLACE_OP
+
 #define SPRITE_INPLACE_OP %=
 #include "sprite/backend/core/detail/operator_impl.def"
+#undef SPRITE_INPLACE_OP
+
 #define SPRITE_INPLACE_OP &=
 #include "sprite/backend/core/detail/operator_impl.def"
+#undef SPRITE_INPLACE_OP
+
 #define SPRITE_INPLACE_OP |=
 #include "sprite/backend/core/detail/operator_impl.def"
+#undef SPRITE_INPLACE_OP
+
 #define SPRITE_INPLACE_OP ^=
 #include "sprite/backend/core/detail/operator_impl.def"
+#undef SPRITE_INPLACE_OP
+
 #define SPRITE_INPLACE_OP <<=
 #include "sprite/backend/core/detail/operator_impl.def"
+#undef SPRITE_INPLACE_OP
+
 #define SPRITE_INPLACE_OP >>=
 #include "sprite/backend/core/detail/operator_impl.def"
+#undef SPRITE_INPLACE_OP
 
 #undef SPRITE_DECL_ONLY
 #undef SPRITE_LHS_TYPE

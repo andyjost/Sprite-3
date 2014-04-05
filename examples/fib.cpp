@@ -30,6 +30,7 @@ int main()
   auto const fib = extern_(i64(i64), "fib", {"n"});
   {
     scope _ = fib;
+    auto buf = static_(char_[10], "buf");
     value n = arg("n");
     if_(n <(signed_) (2), []{return_(1);});
     return_(fib(n-2) + fib(n-1));
