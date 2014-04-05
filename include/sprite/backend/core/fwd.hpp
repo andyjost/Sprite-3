@@ -9,7 +9,6 @@ namespace sprite { namespace backend
   template<typename T=Value> class valueobj;
   template<typename T=Constant> class constobj;
   template<typename T=GlobalValue> class globalobj;
-  template<typename T=Instruction> class instrobj;
 
   // Types.
   using type = typeobj<>;
@@ -37,9 +36,6 @@ namespace sprite { namespace backend
   using global = globalobj<GlobalValue>;
   using function = globalobj<Function>;
   using globalvar = globalobj<GlobalVariable>;
-
-  // Instructions.
-  using instruction = instrobj<>;
 
   // ========================================================================== 
   // Constructs related to flags.

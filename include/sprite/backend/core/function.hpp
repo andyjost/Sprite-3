@@ -1,6 +1,6 @@
 #pragma once
 #include "sprite/backend/core/global.hpp"
-#include "sprite/backend/core/instruction.hpp"
+#include "sprite/backend/core/value.hpp"
 #include "sprite/backend/core/label.hpp"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
@@ -23,7 +23,7 @@ namespace sprite { namespace backend
         typename... Args
       , SPRITE_ENABLE_FOR_VALUE_INITIALIZERS(Args...)
       >
-    instrobj<llvm::CallInst> operator()(Args &&... args) const;
+    value operator()(Args &&... args) const;
 
     /// Returns the function entry point.
     label entry() const;

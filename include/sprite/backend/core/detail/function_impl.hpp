@@ -8,7 +8,7 @@ namespace sprite { namespace backend
   namespace aux
   {
     // Performs the call into the LLVM API.
-    instrobj<llvm::CallInst> invoke(Function *, array_ref<Value*> const &);
+    value invoke(Function *, array_ref<Value*> const &);
 
     /**
      * @brief Constructs function call parameters from arbitrary inputs.
@@ -42,8 +42,7 @@ namespace sprite { namespace backend
   }
 
   template<typename... Args, typename>
-  instrobj<llvm::CallInst>
-  globalobj<Function>::operator()(Args &&... args) const
+  value globalobj<Function>::operator()(Args &&... args) const
   {
     // The is an array initialized with the result of calling @p get_value
     // for each argument.

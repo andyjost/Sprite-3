@@ -9,7 +9,6 @@
 #include "sprite/backend/core/detail/current_builder.hpp"
 #include "sprite/backend/core/get_value.hpp"
 #include "sprite/backend/core/global.hpp"
-#include "sprite/backend/core/instruction.hpp"
 #include "sprite/backend/core/label.hpp"
 #include "sprite/backend/core/operator_flags.hpp"
 #include "sprite/backend/core/type.hpp"

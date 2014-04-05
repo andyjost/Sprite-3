@@ -47,7 +47,6 @@ namespace sprite { namespace backend
   SPRITE_DEF_ISOBJ_CHECK(valueobj)  // is_valueobj
   SPRITE_DEF_ISOBJ_CHECK(constobj)  // is_constobj
   SPRITE_DEF_ISOBJ_CHECK(globalobj) // is_globalobj
-  SPRITE_DEF_ISOBJ_CHECK(instrobj)  // is_instrobj
 
   /**
    * @brief Creates a dummy instance of T for the compiler.  Cannot be called,

@@ -24,7 +24,6 @@ namespace sprite
 #include <sprite/backend/core/fwd.hpp>
 #include <sprite/backend/core/get_constant.hpp>
 #include <sprite/backend/core/global.hpp>
-#include <sprite/backend/core/instruction.hpp>
 #include <sprite/backend/core/label.hpp>
 #include <sprite/backend/core/module.hpp>
 #include <sprite/backend/core/object.hpp>
