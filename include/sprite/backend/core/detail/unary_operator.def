@@ -1,0 +1,104 @@
+// No include guards desired.
+#include "sprite/backend/core/detail/flag_checks.hpp"
+
+#ifndef SPRITE_OP_INT_FLAG_CHECK
+#define SPRITE_OP_INT_FLAG_CHECK SPRITE_NO_FLAG_CHECK
+#endif
+
+#ifndef SPRITE_OP_FP_FLAG_CHECK
+#define SPRITE_OP_FP_FLAG_CHECK SPRITE_NO_FLAG_CHECK
+#endif
+
+#ifdef SPRITE_UNOP
+// Argument is a constant.
+template<typename Arg>
+typename std::enable_if<
+    is_valuearg<Arg>::value && is_constarg<Arg>::value
+  , typename op_result_type<Arg>::type
+  >::type
+operator SPRITE_UNOP(aux::arg_with_flags<Arg> const & arg)
+{
+  using result_type = typename op_result_type<Arg>::type;
+  type const ty = get_type(arg);
+  auto const arg_ = get_value(ty, arg);
+  aux::operator_flags const & flags = arg.flags();
+  (void) flags; // may be unused
+  if(ty->isIntegerTy())
+  {
+    SPRITE_OP_INT_FLAG_CHECK ("integer " SPRITE_OP_NAME)
+    return result_type(SPRITE_APICALL(
+        SPRITE_OP_CONST_INT_IMPL(arg_.ptr(), flags))
+      );
+  }
+#ifdef SPRITE_OP_CONST_FP_IMPL
+  if(ty->isFloatingPointTy())
+  {
+    SPRITE_OP_FP_FLAG_CHECK ("floating-point " SPRITE_OP_NAME)
+    return result_type(SPRITE_APICALL(
+        SPRITE_OP_CONST_FP_IMPL(arg_.ptr(), flags))
+      );
+  }
+#endif
+  throw type_error(
+      "Expected integer "
+#ifdef SPRITE_OP_FP_IMPL
+      "or floating-point "
+#endif
+      "arguments for " SPRITE_OP_NAME "."
+    );
+}
+
+// Argument is a value.
+template<typename Arg>
+typename std::enable_if<
+    is_valuearg<Arg>::value && !is_constarg<Arg>::value
+  , typename op_result_type<Arg>::type
+  >::type
+operator SPRITE_UNOP(aux::arg_with_flags<Arg> const & arg)
+{
+  using result_type = typename op_result_type<Arg>::type;
+  type const ty = get_type(arg);
+  auto const arg_ = get_value(ty, arg);
+  aux::operator_flags const & flags = arg.flags();
+  (void) flags; // may be unused
+  if(ty->isIntegerTy())
+  {
+    SPRITE_OP_INT_FLAG_CHECK ("integer " SPRITE_OP_NAME)
+    return result_type(SPRITE_APICALL(
+        SPRITE_OP_VALUE_INT_IMPL(arg_.ptr(), flags))
+      );
+  }
+#ifdef SPRITE_OP_VALUE_FP_IMPL
+  if(ty->isFloatingPointTy())
+  {
+    SPRITE_OP_FP_FLAG_CHECK ("floating-point " SPRITE_OP_NAME)
+    return result_type(SPRITE_APICALL(
+        SPRITE_OP_VALUE_FP_IMPL(arg_.ptr(), flags))
+      );
+  }
+#endif
+  throw type_error(
+      "Expected integer "
+#ifdef SPRITE_OP_FP_IMPL
+      "or floating-point "
+#endif
+      "arguments for " SPRITE_OP_NAME "."
+    );
+}
+
+template<typename Arg>
+inline typename std::enable_if<
+    is_valuearg<Arg>::value, typename op_result_type<Arg>::type
+  >::type
+operator SPRITE_UNOP(Arg const & arg)
+  { return SPRITE_UNOP aux::operator_flags()(arg); }
+#endif
+
+#undef SPRITE_OP_CONST_FP_IMPL
+#undef SPRITE_OP_CONST_INT_IMPL
+#undef SPRITE_OP_FP_FLAG_CHECK
+#undef SPRITE_OP_INT_FLAG_CHECK
+#undef SPRITE_OP_NAME
+#undef SPRITE_OP_VALUE_FP_IMPL
+#undef SPRITE_OP_VALUE_INT_IMPL
+#undef SPRITE_UNOP

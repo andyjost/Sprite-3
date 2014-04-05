@@ -1,0 +1,15 @@
+// No include guards desired.
+#define SPRITE_CLASS_CONTEXT valueobj<llvm::Value>::
+#define SPRITE_LHS_TYPE value
+#define SPRITE_OP_INT_IMPL SPRITE_OP_VALUE_INT_IMPL
+
+#ifdef SPRITE_OP_VALUE_FP_IMPL
+#define SPRITE_OP_FP_IMPL SPRITE_OP_VALUE_FP_IMPL
+#endif
+
+#include "sprite/backend/core/detail/operator_impl.def"
+
+#undef SPRITE_CLASS_CONTEXT
+#undef SPRITE_LHS_TYPE
+#undef SPRITE_OP_FP_IMPL
+#undef SPRITE_OP_INT_IMPL

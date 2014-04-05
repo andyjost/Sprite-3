@@ -1,0 +1,32 @@
+// No include guards desired.
+#ifndef SPRITE_LHS_TYPE
+#error "SPRITE_LHS_TYPE must be defined."
+#endif
+
+#define SPRITE_CLASS_CONTEXT
+#define SPRITE_DECL_ONLY 1
+
+#define SPRITE_INPLACE_OP +=
+#include "sprite/backend/core/detail/operator_impl.def"
+#define SPRITE_INPLACE_OP -=
+#include "sprite/backend/core/detail/operator_impl.def"
+#define SPRITE_INPLACE_OP *=
+#include "sprite/backend/core/detail/operator_impl.def"
+#define SPRITE_INPLACE_OP /=
+#include "sprite/backend/core/detail/operator_impl.def"
+#define SPRITE_INPLACE_OP %=
+#include "sprite/backend/core/detail/operator_impl.def"
+#define SPRITE_INPLACE_OP &=
+#include "sprite/backend/core/detail/operator_impl.def"
+#define SPRITE_INPLACE_OP |=
+#include "sprite/backend/core/detail/operator_impl.def"
+#define SPRITE_INPLACE_OP ^=
+#include "sprite/backend/core/detail/operator_impl.def"
+#define SPRITE_INPLACE_OP <<=
+#include "sprite/backend/core/detail/operator_impl.def"
+#define SPRITE_INPLACE_OP >>=
+#include "sprite/backend/core/detail/operator_impl.def"
+
+#undef SPRITE_DECL_ONLY
+#undef SPRITE_LHS_TYPE
+#undef SPRITE_CLASS_CONTEXT

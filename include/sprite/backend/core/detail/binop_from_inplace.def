@@ -1,0 +1,24 @@
+// No include guards desired.
+#include <boost/preprocessor.hpp>
+
+#ifdef SPRITE_BINOP
+template<typename Lhs, typename Rhs>
+inline typename op_result_type<Lhs,Rhs>::type
+operator SPRITE_BINOP(Lhs const & lhs, aux::arg_with_flags<Rhs> const & arg)
+{
+  using result_type = typename op_result_type<Lhs,Rhs>::type;
+  result_type lhs_ = get_value(lhs);
+  lhs_ BOOST_PP_CAT(SPRITE_BINOP,=) arg;
+  return lhs_;
+}
+
+template<typename Lhs, typename Rhs>
+inline typename std::enable_if<
+    is_valuearg<Lhs>::value || is_valuearg<Rhs>()
+  , typename op_result_type<Lhs,Rhs>::type
+  >::type
+operator SPRITE_BINOP(Lhs const & lhs, Rhs const & arg)
+  { return lhs SPRITE_BINOP aux::operator_flags() (arg); }
+#endif
+
+#undef SPRITE_BINOP

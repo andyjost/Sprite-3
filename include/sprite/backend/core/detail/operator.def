@@ -1,11 +1,6 @@
-// No include guards.
-
-#ifdef SPRITE_CLASS_CONTEXT
+// No include guards desired.
+#include "sprite/backend/core/detail/flag_checks.hpp"
 #define SPRITE_DECL_ONLY 0
-#else
-#define SPRITE_CLASS_CONTEXT
-#define SPRITE_DECL_ONLY 1
-#endif
 
 #ifndef SPRITE_OP_INT_FLAG_CHECK
 #define SPRITE_OP_INT_FLAG_CHECK SPRITE_NO_FLAG_CHECK
@@ -15,191 +10,14 @@
 #define SPRITE_OP_FP_FLAG_CHECK SPRITE_NO_FLAG_CHECK
 #endif
 
-#define SPRITE_INVOKE(f, x) f x
+#include "sprite/backend/core/detail/constant_operator.def"
+#include "sprite/backend/core/detail/value_operator.def"
 
-#define SPRITE_NO_FLAG_CHECK(name)
-
-#define SPRITE_ALLOW_NSW_NUW_FLAGS(name)           \
-    SPRITE_ALLOW_FLAGS(arg, name                   \
-      , operator_flags::NUW | operator_flags::NSW  \
-      )                                            \
-  /**/
-
-#define SPRITE_ALLOW_SIGNED_FLAG(name)                    \
-    SPRITE_ALLOW_FLAGS(arg, name, operator_flags::SIGNED) \
-  /**/
-
-#define SPRITE_ALLOW_DIV_FLAGS(name)                      \
-    SPRITE_ALLOW_FLAGS(arg, name                          \
-      , operator_flags::SIGNED | operator_flags::UNSIGNED \
-          | operator_flags::EXACT                         \
-      )                                                   \
-   check_for_exactly_one_signed_flag(arg.flags(), name);  \
-  /**/
-
-#define SPRITE_ALLOW_SHR_FLAGS(name)                         \
-    SPRITE_ALLOW_FLAGS(arg, name                             \
-      , operator_flags::ARITHMETIC | operator_flags::LOGICAL \
-          | operator_flags::EXACT                            \
-      )                                                      \
-   check_for_exactly_one_arithmetic_flag(arg.flags(), name); \
-  /**/
-
-#define SPRITE_REQUIRE_SIGNED_UNSIGNED_FLAG(name)         \
-    SPRITE_ALLOW_FLAGS(arg, name                          \
-      , operator_flags::SIGNED | operator_flags::UNSIGNED \
-      )                                                   \
-   check_for_exactly_one_signed_flag(arg.flags(), name);  \
-  /**/
-
-#ifdef SPRITE_UNOP
-template<typename Arg>
-typename std::enable_if<
-    is_valuearg<Arg>::value, typename op_result_type<Arg>::type
-  >::type
-operator SPRITE_UNOP(aux::arg_with_flags<Arg> const & arg)
-{
-  using result_type = typename op_result_type<Arg>::type;
-  type const ty = get_type(arg);
-  auto const arg_ = get_value(ty, arg);
-  aux::operator_flags const & flags = arg.flags();
-  (void) flags; // may be unused
-  if(ty->isIntegerTy())
-  {
-    SPRITE_INVOKE(SPRITE_OP_INT_FLAG_CHECK, ("integer " SPRITE_OP_NAME))
-    return result_type(SPRITE_APICALL(SPRITE_OP_INT_IMPL(arg_.ptr(), flags)));
-  }
-#ifdef SPRITE_OP_FP_IMPL
-  if(ty->isFloatingPointTy())
-  {
-    SPRITE_INVOKE(SPRITE_OP_FP_FLAG_CHECK, ("floating-point " SPRITE_OP_NAME))
-    return result_type(SPRITE_APICALL(SPRITE_OP_FP_IMPL(arg_.ptr(), flags)));
-  }
-#endif
-  throw type_error(
-      "Expected integer "
-#ifdef SPRITE_OP_FP_IMPL
-      "or floating-point "
-#endif
-      "arguments for " SPRITE_OP_NAME "."
-    );
-}
-
-template<typename Arg>
-inline typename std::enable_if<
-    is_valuearg<Arg>::value, typename op_result_type<Arg>::type
-  >::type
-operator SPRITE_UNOP(Arg const & arg)
-  { return SPRITE_UNOP aux::operator_flags()(arg); }
-#endif
-
-#ifdef SPRITE_INPLACE_OP
-template<typename Rhs>
-inline
-typename std::enable_if<is_raw_initializer<Rhs>::value, SPRITE_LHS_TYPE &>::type
-SPRITE_CLASS_CONTEXT operator SPRITE_INPLACE_OP(Rhs const & arg)
-#if SPRITE_DECL_ONLY
-;
-#else
-{
-  auto const arg_ = get_constant(get_type(*this), arg);
-  (*this) SPRITE_INPLACE_OP arg_;
-  return *this;
-}
-#endif
-
-template<typename Rhs>
-inline
-typename std::enable_if<is_constarg<Rhs>::value, SPRITE_LHS_TYPE &>::type
-SPRITE_CLASS_CONTEXT operator SPRITE_INPLACE_OP(Rhs const & arg)
-#if SPRITE_DECL_ONLY
-;
-#else
-{
-  (*this) SPRITE_INPLACE_OP aux::operator_flags() (arg);
-  return *this;
-}
-#endif
-
-#ifndef SPRITE_OP_CUSTOM_BODY
-template<typename Rhs>
-typename std::enable_if<is_constarg<Rhs>::value, SPRITE_LHS_TYPE &>::type
-SPRITE_CLASS_CONTEXT operator SPRITE_INPLACE_OP (aux::arg_with_flags<Rhs> const & arg)
-#if SPRITE_DECL_ONLY
-;
-#else
-{
-  type const ty = coerce(get_type(*this), get_type(arg));
-  auto const lhs_ = get_value(ty, *this);
-  auto const arg_ = get_value(ty, arg);
-  aux::operator_flags const & flags = arg.flags();
-  (void) flags; // may be unused
-  if(ty->isIntegerTy())
-  {
-    SPRITE_INVOKE(SPRITE_OP_INT_FLAG_CHECK, ("integer " SPRITE_OP_NAME))
-    *this = SPRITE_LHS_TYPE(SPRITE_APICALL(
-        SPRITE_OP_INT_IMPL(lhs_.ptr(), arg_.ptr(), flags)
-      ));
-    return *this;
-  }
-#ifdef SPRITE_OP_FP_IMPL
-  if(ty->isFloatingPointTy())
-  {
-    SPRITE_INVOKE(SPRITE_OP_FP_FLAG_CHECK, ("floating-point " SPRITE_OP_NAME))
-    *this = SPRITE_LHS_TYPE(SPRITE_APICALL(
-        SPRITE_OP_FP_IMPL(lhs_.ptr(), arg_.ptr(), flags)
-      ));
-    return *this;
-  }
-#endif
-  throw type_error(
-      "Expected integer "
-#ifdef SPRITE_OP_FP_IMPL
-      "or floating-point "
-#endif
-      "arguments for " SPRITE_OP_NAME "."
-    );
-}
-#endif
-#endif
-#endif
-
-#ifdef SPRITE_BINOP
-template<typename Lhs, typename Rhs>
-inline typename op_result_type<Lhs,Rhs>::type
-operator SPRITE_BINOP(Lhs const & lhs, aux::arg_with_flags<Rhs> const & arg)
-{
-  using result_type = typename op_result_type<Lhs,Rhs>::type;
-  result_type lhs_ = get_value(lhs);
-  lhs_ SPRITE_INPLACE_OP arg;
-  return lhs_;
-}
-
-template<typename Lhs, typename Rhs>
-inline typename std::enable_if<
-    is_valuearg<Lhs>::value || is_valuearg<Rhs>()
-  , typename op_result_type<Lhs,Rhs>::type
-  >::type
-operator SPRITE_BINOP(Lhs const & lhs, Rhs const & arg)
-  { return lhs SPRITE_BINOP aux::operator_flags() (arg); }
-#endif
-
-#undef SPRITE_CLASS_CONTEXT
 #undef SPRITE_DECL_ONLY
-#undef SPRITE_INPLACE_OP
-#undef SPRITE_LHS_TYPE
-#undef SPRITE_BINOP
-#undef SPRITE_UNOP
-#undef SPRITE_OP_CUSTOM_BODY
+#undef SPRITE_OP_CONST_FP_IMPL
+#undef SPRITE_OP_CONST_INT_IMPL
 #undef SPRITE_OP_FP_FLAG_CHECK
-#undef SPRITE_OP_FP_IMPL
 #undef SPRITE_OP_INT_FLAG_CHECK
-#undef SPRITE_OP_INT_IMPL
 #undef SPRITE_OP_NAME
-#undef SPRITE_ALLOW_DIV_FLAGS
-#undef SPRITE_ALLOW_NSW_NUW_FLAGS
-#undef SPRITE_ALLOW_SIGNED_FLAG
-#undef SPRITE_INVOKE
-#undef SPRITE_NO_FLAG_CHECK
-#undef SPRITE_ALLOW_SHR_FLAGS
-#undef SPRITE_REQUIRE_SIGNED_UNSIGNED_FLAG
+#undef SPRITE_OP_VALUE_FP_IMPL
+#undef SPRITE_OP_VALUE_INT_IMPL

@@ -11,19 +11,9 @@ namespace sprite { namespace backend
     using basic_type = Value;
     using object<llvm::Value>::object;
 
-    // Define operators.
-    #define SPRITE_INPLACE_OP +=
+    // Define in-place operators.
     #define SPRITE_LHS_TYPE value
-    #include "sprite/backend/core/detail/operator.def"
-    #define SPRITE_INPLACE_OP -=
-    #define SPRITE_LHS_TYPE value
-    #include "sprite/backend/core/detail/operator.def"
-    #define SPRITE_INPLACE_OP *=
-    #define SPRITE_LHS_TYPE value
-    #include "sprite/backend/core/detail/operator.def"
-    #define SPRITE_INPLACE_OP /=
-    #define SPRITE_LHS_TYPE value
-    #include "sprite/backend/core/detail/operator.def"
+    #include "sprite/backend/core/detail/declare_class_operators.def"
   };
 
   template<typename T>

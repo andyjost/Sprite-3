@@ -1,0 +1,80 @@
+// No include guards desired.
+
+#ifdef SPRITE_INPLACE_OP
+template<typename Rhs>
+inline
+typename std::enable_if<
+    is_raw_initializer<Rhs>::value, SPRITE_LHS_TYPE &
+  >::type
+SPRITE_CLASS_CONTEXT operator SPRITE_INPLACE_OP(Rhs const & arg)
+#if SPRITE_DECL_ONLY
+;
+#else
+{
+  auto const arg_ = get_constant(get_type(*this), arg);
+  (*this) SPRITE_INPLACE_OP arg_;
+  return *this;
+}
+#endif
+
+template<typename Rhs>
+inline
+typename std::enable_if<
+    std::is_convertible<Rhs, SPRITE_LHS_TYPE>::value
+  , SPRITE_LHS_TYPE &
+  >::type
+SPRITE_CLASS_CONTEXT operator SPRITE_INPLACE_OP(Rhs const & arg)
+#if SPRITE_DECL_ONLY
+;
+#else
+{
+  (*this) SPRITE_INPLACE_OP aux::operator_flags() (arg);
+  return *this;
+}
+#endif
+
+template<typename Rhs>
+typename std::enable_if<
+    std::is_convertible<Rhs, SPRITE_LHS_TYPE>::value
+  , SPRITE_LHS_TYPE &
+  >::type
+SPRITE_CLASS_CONTEXT operator SPRITE_INPLACE_OP (aux::arg_with_flags<Rhs> const & arg)
+#if SPRITE_DECL_ONLY
+;
+#else
+{
+  type const ty = coerce(get_type(*this), get_type(arg));
+  auto const lhs_ = get_value(ty, *this);
+  auto const arg_ = get_value(ty, arg);
+  aux::operator_flags const & flags = arg.flags();
+  (void) flags; // may be unused
+  if(ty->isIntegerTy())
+  {
+    SPRITE_OP_INT_FLAG_CHECK ("integer " SPRITE_OP_NAME)
+    *this = SPRITE_LHS_TYPE(SPRITE_APICALL(
+        SPRITE_OP_INT_IMPL(lhs_.ptr(), arg_.ptr(), flags)
+      ));
+    return *this;
+  }
+#ifdef SPRITE_OP_CONST_FP_IMPL
+  if(ty->isFloatingPointTy())
+  {
+    SPRITE_OP_FP_FLAG_CHECK ("floating-point " SPRITE_OP_NAME)
+    *this = SPRITE_LHS_TYPE(SPRITE_APICALL(
+        SPRITE_OP_FP_IMPL(lhs_.ptr(), arg_.ptr(), flags)
+      ));
+    return *this;
+  }
+#endif
+  throw type_error(
+      "Expected integer "
+#ifdef SPRITE_OP_CONST_FP_IMPL
+      "or floating-point "
+#endif
+      "arguments for " SPRITE_OP_NAME "."
+    );
+}
+#endif
+#endif
+
+#undef SPRITE_INPLACE_OP

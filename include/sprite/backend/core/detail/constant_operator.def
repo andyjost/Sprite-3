@@ -1,0 +1,16 @@
+// No include guards desired.
+#define SPRITE_CLASS_CONTEXT constobj<llvm::Constant>::
+#define SPRITE_LHS_TYPE constant
+#define SPRITE_OP_INT_IMPL SPRITE_OP_CONST_INT_IMPL
+
+#ifdef SPRITE_OP_CONST_FP_IMPL
+#define SPRITE_OP_FP_IMPL SPRITE_OP_CONST_FP_IMPL
+#endif
+
+
+#include "sprite/backend/core/detail/operator_impl.def"
+
+#undef SPRITE_LHS_TYPE
+#undef SPRITE_CLASS_CONTEXT
+#undef SPRITE_OP_FP_IMPL
+#undef SPRITE_OP_INT_IMPL
