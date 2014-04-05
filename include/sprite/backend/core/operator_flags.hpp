@@ -6,19 +6,6 @@
 #include <tuple>
 
 
-/**
- * @brief Checks thet only the expected flags are set.
- *
- * The first argument is an instance of @p arg_with_flags.
- */
-#define SPRITE_ALLOW_FLAGS(arg, what, allowed)                  \
-    {                                                           \
-      using namespace aux;                                      \
-      if(arg.flags().value & ~(allowed))                        \
-        { throw parameter_error("Unexpected flags for " what); } \
-    }                                                           \
-  /**/
-
 namespace sprite { namespace backend
 {
   namespace aux

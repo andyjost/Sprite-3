@@ -50,12 +50,6 @@ namespace sprite { namespace backend
 
     // Default copy and assignment are OK.
 
-    friend bool operator==(object const & lhs, object const & rhs)
-      { return lhs.px == rhs.px; }
-
-    friend bool operator!=(object const & lhs, object const & rhs)
-      { return !(lhs == rhs); }
-
     /// Explicit conversion to @p bool.  True if the wrapped pointer is valid.
     explicit operator bool() const { return px; }
 

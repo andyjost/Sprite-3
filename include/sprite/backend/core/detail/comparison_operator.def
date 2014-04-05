@@ -1,0 +1,118 @@
+// No include guards desired.
+#include "sprite/backend/core/detail/flag_checks.hpp"
+#include <boost/preprocessor.hpp>
+
+// Constant comparison.
+template<typename Lhs, typename Rhs>
+typename std::enable_if<
+    is_value_initializer<Lhs>::value && is_value_initializer<Rhs>::value
+      && std::is_same<typename op_result_type<Lhs, Rhs>::type, constant>::value
+  , constant
+  >::type
+operator SPRITE_CMPOP(Lhs const & lhs, aux::arg_with_flags<Rhs> const & rhs)
+{
+  type const ty = coerce(get_type(lhs), get_type(rhs.arg()));
+  auto lhs_ = get_value(ty, lhs);
+  auto rhs_ = get_value(ty, rhs);
+  aux::operator_flags const & flags = rhs.flags();
+  if(ty->isIntegerTy())
+  {
+#if SPRITE_CMPOP_IS_ORDERING
+    SPRITE_REQUIRE_SIGNED_UNSIGNED_FLAG
+        (flags, "integer " SPRITE_OP_NAME " comparison")
+#else
+    SPRITE_REQUIRE_SIGNED_UNSIGNED_FLAG
+        (flags, "integer " SPRITE_OP_NAME " comparison")
+#endif
+    return constant(SPRITE_APICALL(
+        llvm::ConstantExpr::getICmp(
+#if SPRITE_CMPOP_IS_ORDERING
+            flags.signed_()
+                ? BOOST_PP_CAT(llvm::CmpInst::ICMP_S, SPRITE_CMPOP_CODE)
+                : BOOST_PP_CAT(llvm::CmpInst::ICMP_U, SPRITE_CMPOP_CODE)
+#else
+            BOOST_PP_CAT(llvm::CmpInst::ICMP_, SPRITE_CMPOP_CODE)
+#endif
+          , lhs_.ptr(), rhs_.ptr())
+          )
+      );
+  }
+  else if(ty->isFloatingPointTy())
+  {
+    SPRITE_ALLOW_SIGNED_FLAG
+        (flags, "floating-point " SPRITE_OP_NAME " comparison")
+    return constant(SPRITE_APICALL(
+        llvm::ConstantExpr::getFCmp(
+            BOOST_PP_CAT(llvm::CmpInst::FCMP_O, SPRITE_CMPOP_CODE)
+          , lhs_.ptr(), rhs_.ptr())
+          )
+      );
+  }
+  throw runtime_error("Expected an integer or floating-point type.");
+}
+
+// Value comparison.
+template<typename Lhs, typename Rhs>
+typename std::enable_if<
+    is_value_initializer<Lhs>::value && is_value_initializer<Rhs>::value
+      && std::is_same<typename op_result_type<Lhs, Rhs>::type, value>::value
+  , value
+  >::type
+operator SPRITE_CMPOP(Lhs const & lhs, aux::arg_with_flags<Rhs> const & rhs)
+{
+  type const ty = coerce(get_type(lhs), get_type(rhs));
+  auto lhs_ = get_value(ty, lhs);
+  auto rhs_ = get_value(ty, rhs);
+  aux::operator_flags const & flags = rhs.flags();
+  if(ty->isIntegerTy())
+  {
+#if SPRITE_CMPOP_IS_ORDERING
+    SPRITE_REQUIRE_SIGNED_UNSIGNED_FLAG
+        (flags, "integer " SPRITE_OP_NAME " comparison")
+#else
+    SPRITE_REQUIRE_SIGNED_UNSIGNED_FLAG
+        (flags, "integer " SPRITE_OP_NAME " comparison")
+#endif
+    return value(SPRITE_APICALL(
+        current_builder().CreateICmp(
+#if SPRITE_CMPOP_IS_ORDERING
+            flags.signed_()
+                ? BOOST_PP_CAT(llvm::CmpInst::ICMP_S, SPRITE_CMPOP_CODE)
+                : BOOST_PP_CAT(llvm::CmpInst::ICMP_U, SPRITE_CMPOP_CODE)
+#else
+            BOOST_PP_CAT(llvm::CmpInst::ICMP_, SPRITE_CMPOP_CODE)
+#endif
+          , lhs_.ptr(), rhs_.ptr())
+          )
+      );
+  }
+  else if(ty->isFloatingPointTy())
+  {
+    SPRITE_ALLOW_SIGNED_FLAG
+        (flags, "floating-point " SPRITE_OP_NAME " comparison")
+    return value(SPRITE_APICALL(
+        current_builder().CreateFCmp(
+            BOOST_PP_CAT(llvm::CmpInst::FCMP_O, SPRITE_CMPOP_CODE)
+          , lhs_.ptr(), rhs_.ptr())
+          )
+      );
+  }
+  throw runtime_error("Expected an integer or floating-point type.");
+}
+
+// Constant or value comparison.
+template<typename Lhs, typename Rhs>
+inline
+typename std::enable_if<
+    is_valuearg<Lhs>::value || is_valuearg<Rhs>::value
+  , typename op_result_type<Lhs, Rhs>::type
+  >::type
+operator SPRITE_CMPOP(Lhs const & lhs, Rhs const & rhs)
+{
+  return (lhs SPRITE_CMPOP (aux::operator_flags() (rhs)));
+}
+
+#undef SPRITE_CMPOP
+#undef SPRITE_CMPOP_CODE
+#undef SPRITE_CMPOP_IS_ORDERING
+#undef SPRITE_OP_NAME

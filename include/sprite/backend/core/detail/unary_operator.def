@@ -1,14 +1,6 @@
 // No include guards desired.
 #include "sprite/backend/core/detail/flag_checks.hpp"
 
-#ifndef SPRITE_OP_INT_FLAG_CHECK
-#define SPRITE_OP_INT_FLAG_CHECK SPRITE_NO_FLAG_CHECK
-#endif
-
-#ifndef SPRITE_OP_FP_FLAG_CHECK
-#define SPRITE_OP_FP_FLAG_CHECK SPRITE_NO_FLAG_CHECK
-#endif
-
 #ifdef SPRITE_UNOP
 // Argument is a constant.
 template<typename Arg>
@@ -25,7 +17,7 @@ operator SPRITE_UNOP(aux::arg_with_flags<Arg> const & arg)
   (void) flags; // may be unused
   if(ty->isIntegerTy())
   {
-    SPRITE_OP_INT_FLAG_CHECK ("integer " SPRITE_OP_NAME)
+    SPRITE_OP_INT_FLAG_CHECK (flags, "integer " SPRITE_OP_NAME)
     return result_type(SPRITE_APICALL(
         SPRITE_OP_CONST_INT_IMPL(arg_.ptr(), flags))
       );
@@ -33,7 +25,7 @@ operator SPRITE_UNOP(aux::arg_with_flags<Arg> const & arg)
 #ifdef SPRITE_OP_CONST_FP_IMPL
   if(ty->isFloatingPointTy())
   {
-    SPRITE_OP_FP_FLAG_CHECK ("floating-point " SPRITE_OP_NAME)
+    SPRITE_OP_FP_FLAG_CHECK (flags, "floating-point " SPRITE_OP_NAME)
     return result_type(SPRITE_APICALL(
         SPRITE_OP_CONST_FP_IMPL(arg_.ptr(), flags))
       );
@@ -63,7 +55,7 @@ operator SPRITE_UNOP(aux::arg_with_flags<Arg> const & arg)
   (void) flags; // may be unused
   if(ty->isIntegerTy())
   {
-    SPRITE_OP_INT_FLAG_CHECK ("integer " SPRITE_OP_NAME)
+    SPRITE_OP_INT_FLAG_CHECK (flags, "integer " SPRITE_OP_NAME)
     return result_type(SPRITE_APICALL(
         SPRITE_OP_VALUE_INT_IMPL(arg_.ptr(), flags))
       );
@@ -71,7 +63,7 @@ operator SPRITE_UNOP(aux::arg_with_flags<Arg> const & arg)
 #ifdef SPRITE_OP_VALUE_FP_IMPL
   if(ty->isFloatingPointTy())
   {
-    SPRITE_OP_FP_FLAG_CHECK ("floating-point " SPRITE_OP_NAME)
+    SPRITE_OP_FP_FLAG_CHECK (flags, "floating-point " SPRITE_OP_NAME)
     return result_type(SPRITE_APICALL(
         SPRITE_OP_VALUE_FP_IMPL(arg_.ptr(), flags))
       );

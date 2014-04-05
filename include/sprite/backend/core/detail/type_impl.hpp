@@ -1,3 +1,4 @@
+#include "sprite/backend/core/detail/flag_checks.hpp"
 #include "sprite/backend/core/operator_flags.hpp"
 #include "sprite/backend/support/casting.hpp"
 #include "sprite/backend/support/exceptions.hpp"
@@ -106,7 +107,7 @@ namespace sprite { namespace backend
       { return element_type(a); }
 
     // The pointer type is not allowed to have flags.
-    SPRITE_ALLOW_FLAGS(arg, "element_type", 0);
+    SPRITE_ALLOW_FLAGS(arg.flags(), "element_type", 0);
 
     if(auto const c = dyn_cast<pointer_type>(arg))
       { return element_type(c); }

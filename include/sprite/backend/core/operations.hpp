@@ -4,14 +4,19 @@
  */
 
 #pragma once
+#include "sprite/backend/core/castexpr.hpp"
 #include "sprite/backend/core/constant.hpp"
 #include "sprite/backend/core/detail/current_builder.hpp"
 #include "sprite/backend/core/get_value.hpp"
 #include "sprite/backend/core/global.hpp"
+#include "sprite/backend/core/instruction.hpp"
+#include "sprite/backend/core/label.hpp"
 #include "sprite/backend/core/operator_flags.hpp"
+#include "sprite/backend/core/type.hpp"
 #include "sprite/backend/core/value.hpp"
 #include "sprite/backend/support/exceptions.hpp"
 #include "sprite/backend/support/type_traits.hpp"
+#include "llvm/IR/Instructions.h"
 
 namespace sprite { namespace backend
 {
@@ -98,6 +103,7 @@ namespace sprite { namespace backend
    */
   #define SPRITE_UNOP ~
   #define SPRITE_OP_NAME "bitwise inversion"
+  #define SPRITE_OP_INT_FLAG_CHECK SPRITE_ALLOW_NO_FLAGS
   #define SPRITE_OP_CONST_INT_IMPL(arg,flags) ConstantExpr::getNot(arg)
   #define SPRITE_OP_VALUE_INT_IMPL(arg,flags) current_builder().CreateNot(arg)
   #include "sprite/backend/core/detail/unary_operator.def"
@@ -109,8 +115,10 @@ namespace sprite { namespace backend
    */
   #define SPRITE_UNOP +
   #define SPRITE_OP_NAME "unary plus"
+  #define SPRITE_OP_INT_FLAG_CHECK SPRITE_NO_FLAG_CHECK
   #define SPRITE_OP_CONST_INT_IMPL(arg,flags) arg
   #define SPRITE_OP_VALUE_INT_IMPL(arg,flags) arg
+  #define SPRITE_OP_FP_FLAG_CHECK SPRITE_NO_FLAG_CHECK
   #define SPRITE_OP_CONST_FP_IMPL(arg,flags) arg
   #define SPRITE_OP_VALUE_FP_IMPL(arg,flags) arg
   #include "sprite/backend/core/detail/unary_operator.def"
@@ -197,7 +205,7 @@ namespace sprite { namespace backend
   #define SPRITE_OP_VALUE_INT_IMPL(lhs,rhs,flags)               \
       flags.signed_()                                           \
         ? current_builder().CreateSDiv(lhs, rhs, flags.exact()) \
-        : ConstantExpr::getUDiv(lhs, rhs, flags.exact())        \
+        : current_builder().CreateUDiv(lhs, rhs, flags.exact()) \
     /**/
   #define SPRITE_OP_FP_FLAG_CHECK SPRITE_ALLOW_SIGNED_FLAG
   #define SPRITE_OP_CONST_FP_IMPL(lhs,rhs,flags) ConstantExpr::getFDiv(lhs,rhs)
@@ -240,6 +248,7 @@ namespace sprite { namespace backend
    */
   #define SPRITE_INPLACE_OP &=
   #define SPRITE_OP_NAME "bitwise AND"
+  #define SPRITE_OP_INT_FLAG_CHECK SPRITE_ALLOW_NO_FLAGS
   #define SPRITE_OP_CONST_INT_IMPL(lhs,rhs,flags) ConstantExpr::getAnd(lhs, rhs)
   #define SPRITE_OP_VALUE_INT_IMPL(lhs,rhs,flags) current_builder().CreateAnd(lhs, rhs)
   #include "sprite/backend/core/detail/operator.def"
@@ -254,6 +263,7 @@ namespace sprite { namespace backend
    */
   #define SPRITE_INPLACE_OP |=
   #define SPRITE_OP_NAME "bitwise OR"
+  #define SPRITE_OP_INT_FLAG_CHECK SPRITE_ALLOW_NO_FLAGS
   #define SPRITE_OP_CONST_INT_IMPL(lhs,rhs,flags) ConstantExpr::getOr(lhs, rhs)
   #define SPRITE_OP_VALUE_INT_IMPL(lhs,rhs,flags) current_builder().CreateOr(lhs, rhs)
   #include "sprite/backend/core/detail/operator.def"
@@ -268,6 +278,7 @@ namespace sprite { namespace backend
    */
   #define SPRITE_INPLACE_OP ^=
   #define SPRITE_OP_NAME "bitwise XOR"
+  #define SPRITE_OP_INT_FLAG_CHECK SPRITE_ALLOW_NO_FLAGS
   #define SPRITE_OP_CONST_INT_IMPL(lhs,rhs,flags) ConstantExpr::getXor(lhs, rhs)
   #define SPRITE_OP_VALUE_INT_IMPL(lhs,rhs,flags) current_builder().CreateXor(lhs, rhs)
   #include "sprite/backend/core/detail/operator.def"
@@ -316,5 +327,95 @@ namespace sprite { namespace backend
   //
   #define SPRITE_BINOP >>
   #include "sprite/backend/core/detail/binop_from_inplace.def"
+
+  /**
+   * @brief Less than.
+   */
+  #define SPRITE_CMPOP <
+  #define SPRITE_OP_NAME "less-than"
+  #define SPRITE_CMPOP_CODE LT
+  #define SPRITE_CMPOP_IS_ORDERING 1
+  #include "sprite/backend/core/detail/comparison_operator.def"
+
+  /**
+   * @brief Less than or equal to.
+   */
+  #define SPRITE_CMPOP <=
+  #define SPRITE_OP_NAME "less-than-or-equal-to"
+  #define SPRITE_CMPOP_CODE LE
+  #define SPRITE_CMPOP_IS_ORDERING 1
+  #include "sprite/backend/core/detail/comparison_operator.def"
+
+  /**
+   * @brief Greater than.
+   */
+  #define SPRITE_CMPOP >
+  #define SPRITE_OP_NAME "greater-than"
+  #define SPRITE_CMPOP_CODE GT
+  #define SPRITE_CMPOP_IS_ORDERING 1
+  #include "sprite/backend/core/detail/comparison_operator.def"
+
+  /**
+   * @brief Greater than or equal to.
+   */
+  #define SPRITE_CMPOP >=
+  #define SPRITE_OP_NAME "greater-than-or-equal-to"
+  #define SPRITE_CMPOP_CODE GE
+  #define SPRITE_CMPOP_IS_ORDERING 1
+  #include "sprite/backend/core/detail/comparison_operator.def"
+
+  /**
+   * @brief Equal to.
+   */
+  #define SPRITE_CMPOP ==
+  #define SPRITE_OP_NAME "equal-to"
+  #define SPRITE_CMPOP_CODE EQ
+  #define SPRITE_CMPOP_IS_ORDERING 0
+  #include "sprite/backend/core/detail/comparison_operator.def"
+
+  /**
+   * @brief Not equal to.
+   */
+  #define SPRITE_CMPOP !=
+  #define SPRITE_OP_NAME "not-equal-to"
+  #define SPRITE_CMPOP_CODE NE
+  #define SPRITE_CMPOP_IS_ORDERING 0
+  #include "sprite/backend/core/detail/comparison_operator.def"
+
+  /// Appends a return instruction to the active label scope.
+  template<typename T>
+  void return_(T && arg)
+  {
+    llvm::IRBuilder<> & bldr = current_builder();
+    type const retty = type(bldr.GetInsertBlock()->getParent()->getReturnType());
+    value const x = get_value(retty, arg);
+    SPRITE_APICALL(bldr.CreateRet(x.ptr()));
+  }
+
+  //@{
+  /// Appends a conditional branch instruction to the active label scope.
+  template<typename T>
+  void if_(T && cond, label const & true_, label const & false_)
+  {
+    llvm::IRBuilder<> & bldr = current_builder();
+    value const cond_ = get_value(types::bool_(), cond);
+    SPRITE_APICALL(bldr.CreateCondBr(cond_.ptr(), true_.ptr(), false_.ptr()));
+  }
+
+  template<typename T>
+  void if_(T && cond, label const & true_)
+  {
+    label c;
+    if_(cond, true_, c);
+    scope::set_continuation(c);
+  }
+  //@}
+
+  /// Appends an unconditional branch instruction to the active label scope.
+  inline void goto_(label const & target)
+  {
+    llvm::IRBuilder<> & bldr = current_builder();
+    SPRITE_APICALL(bldr.CreateBr(target.ptr()));
+  }
 }}
 

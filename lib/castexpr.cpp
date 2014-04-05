@@ -1,6 +1,7 @@
 #include "sprite/backend/core/castexpr.hpp"
 #include "sprite/backend/core/constant.hpp"
 #include "sprite/backend/core/detail/current_builder.hpp"
+#include "sprite/backend/core/detail/flag_checks.hpp"
 #include "sprite/backend/core/get_constant.hpp"
 #include "sprite/backend/core/type.hpp"
 #include "sprite/backend/support/exceptions.hpp"
@@ -61,7 +62,7 @@ namespace
         if(src_sz < tgt_sz)
         {
           SPRITE_ALLOW_FLAGS(
-              tgt, "integer extension"
+              tgt.flags(), "integer extension"
             , operator_flags::SIGNED | operator_flags::UNSIGNED
             )
           check_for_exactly_one_signed_flag(tgt.flags(), "integer extension");
@@ -74,7 +75,7 @@ namespace
         else if(tgt_sz < src_sz)
         {
           // These flags are ignored, but may be set.
-          SPRITE_ALLOW_FLAGS(tgt, "integer truncation"
+          SPRITE_ALLOW_FLAGS(tgt.flags(), "integer truncation"
             , operator_flags::SIGNED | operator_flags::UNSIGNED
             );
           return apply_cast<llvm::Instruction::Trunc>(val, tgt_type);
@@ -84,7 +85,7 @@ namespace
       else if(tgt_type->isFloatingPointTy())
       {
         SPRITE_ALLOW_FLAGS(
-            tgt, "integer-to-floating-point conversion"
+            tgt.flags(), "integer-to-floating-point conversion"
           , operator_flags::SIGNED | operator_flags::UNSIGNED
           )
         check_for_exactly_one_signed_flag(
@@ -98,7 +99,7 @@ namespace
       }
       else if(tgt_type->isPointerTy())
       {
-        SPRITE_ALLOW_FLAGS(tgt, "integer-to-pointer conversion", 0)
+        SPRITE_ALLOW_FLAGS(tgt.flags(), "integer-to-pointer conversion", 0)
         return apply_cast<llvm::Instruction::IntToPtr>(val, tgt_type);
       }
       throw type_error(
@@ -111,7 +112,7 @@ namespace
       if(tgt_type->isIntegerTy())
       {
         SPRITE_ALLOW_FLAGS(
-            tgt, "floating-point-to-integer conversion"
+            tgt.flags(), "floating-point-to-integer conversion"
           , operator_flags::SIGNED | operator_flags::UNSIGNED
           )
         check_for_exactly_one_signed_flag(
@@ -129,12 +130,12 @@ namespace
         unsigned const tgt_sz = getFPBitWidth(tgt_type);
         if(src_sz < tgt_sz)
         {
-          SPRITE_ALLOW_FLAGS(tgt, "floating-point extension", operator_flags::SIGNED)
+          SPRITE_ALLOW_FLAGS(tgt.flags(), "floating-point extension", operator_flags::SIGNED)
           return apply_cast<llvm::Instruction::FPExt>(val, tgt_type);
         }
         else if(tgt_sz < src_sz)
         {
-          SPRITE_ALLOW_FLAGS(tgt, "floating-point truncation", operator_flags::SIGNED)
+          SPRITE_ALLOW_FLAGS(tgt.flags(), "floating-point truncation", operator_flags::SIGNED)
           return apply_cast<llvm::Instruction::FPTrunc>(val, tgt_type);
         }
         return src; // no-op
@@ -148,7 +149,7 @@ namespace
     {
       if(tgt_type->isIntegerTy())
       {
-        SPRITE_ALLOW_FLAGS(tgt, "pointer-to-integer conversion", 0)
+        SPRITE_ALLOW_FLAGS(tgt.flags(), "pointer-to-integer conversion", 0)
         return apply_cast<llvm::Instruction::PtrToInt>(val, tgt_type);
       }
       throw type_error(

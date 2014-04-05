@@ -50,7 +50,7 @@ SPRITE_CLASS_CONTEXT operator SPRITE_INPLACE_OP (aux::arg_with_flags<Rhs> const 
   (void) flags; // may be unused
   if(ty->isIntegerTy())
   {
-    SPRITE_OP_INT_FLAG_CHECK ("integer " SPRITE_OP_NAME)
+    SPRITE_OP_INT_FLAG_CHECK (flags, "integer " SPRITE_OP_NAME)
     *this = SPRITE_LHS_TYPE(SPRITE_APICALL(
         SPRITE_OP_INT_IMPL(lhs_.ptr(), arg_.ptr(), flags)
       ));
@@ -59,7 +59,7 @@ SPRITE_CLASS_CONTEXT operator SPRITE_INPLACE_OP (aux::arg_with_flags<Rhs> const 
 #ifdef SPRITE_OP_CONST_FP_IMPL
   if(ty->isFloatingPointTy())
   {
-    SPRITE_OP_FP_FLAG_CHECK ("floating-point " SPRITE_OP_NAME)
+    SPRITE_OP_FP_FLAG_CHECK (flags, "floating-point " SPRITE_OP_NAME)
     *this = SPRITE_LHS_TYPE(SPRITE_APICALL(
         SPRITE_OP_FP_IMPL(lhs_.ptr(), arg_.ptr(), flags)
       ));

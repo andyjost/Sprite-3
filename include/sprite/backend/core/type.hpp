@@ -84,6 +84,12 @@ namespace sprite { namespace backend
       );
   };
 
+  inline bool operator==(type const & lhs, type const & rhs)
+    { return lhs.ptr() == rhs.ptr(); }
+
+  inline bool operator!=(type const & lhs, type const & rhs)
+    { return !(lhs == rhs); }
+
   /// Returns the size in bytes.
   uint64_t sizeof_(type const &);
 
