@@ -42,12 +42,13 @@ namespace sprite { namespace backend
     );
 
   template<typename T>
-  inline globalobj<T> def(
+  inline auto def(
       GlobalValue::LinkageTypes linkage
     , type const & ty
     , twine const & name = ""
     , array_ref<twine> const & arg_names = {}
     )
+    -> decltype(dyn_cast<T>(def(linkage, ty, name, arg_names)))
   { return dyn_cast<T>(def(linkage, ty, name, arg_names)); }
   //@}
 
@@ -70,10 +71,11 @@ namespace sprite { namespace backend
   { return def(GlobalValue::ExternalLinkage, ty, name, arg_names); }
 
   template<typename T>
-  inline globalobj<T> extern_(
+  inline auto extern_(
       type const & ty, twine const & name = ""
     , array_ref<twine> const & arg_names = {}
     )
+    -> decltype(dyn_cast<T>(extern_(ty, name, arg_names)))
   { return dyn_cast<T>(extern_(ty, name, arg_names)); }
   //@}
 
@@ -96,10 +98,11 @@ namespace sprite { namespace backend
   { return def(GlobalValue::InternalLinkage, ty, name, arg_names); }
 
   template<typename T>
-  inline globalobj<T> static_(
+  inline auto static_(
       type const & ty, twine const & name = ""
     , array_ref<twine> const & arg_names = {}
     )
+    -> decltype(dyn_cast<T>(static_(ty, name, arg_names)))
   { return dyn_cast<T>(static_(ty, name, arg_names)); }
   //@}
 
@@ -133,10 +136,11 @@ namespace sprite { namespace backend
    * @brief Version of inline_ that takes a return type specifier.
    */
   template<typename T>
-  inline globalobj<T> inline_(
+  inline auto inline_(
       type const & ty, twine const & name = ""
     , array_ref<twine> const & arg_names = {}
     )
+    -> decltype(dyn_cast<T>(inline_(ty, name, arg_names)))
   { return dyn_cast<T>(inline_(ty, name, arg_names)); }
   //@}
 }}

@@ -53,6 +53,10 @@ namespace sprite { namespace backend
   template<typename T>
   inline constant get_constant_impl(type_with_flags const & ty, T const & arg);
 
+  // Another version of the generic one.  This avoids ambiguity for integer,
+  // since constant and string_ref can both be constructed from a nullptr.
+  inline constant get_constant_impl(type_with_flags const & ty, std::nullptr_t const &);
+
   // ====== Instantiation functions for IntegerType ======
 
   /**
@@ -595,6 +599,13 @@ namespace sprite { namespace backend
     return handler(ty, arg);
   }
 
+  inline constant get_constant_impl(type_with_flags const & ty, std::nullptr_t const &)
+  {
+    return get_constant_impl(ty, null);
+    // type ptrty = dyn_cast<pointer_type>(ty.arg());
+    // return get_constant_impl(ptrty, nullptr); }
+  }
+
   //@{
   /**
    * @brief Produces constant values known at runtime.
@@ -680,16 +691,21 @@ namespace sprite { namespace backend
    */
   /// Initializes (or default-initializes) a constant of type @p T with the given value.
 
-  // Simple version.
+  // Simple version with argument.
   template<
-      typename T, typename U=null_arg
+      typename T, typename U
     , typename = typename std::enable_if<!std::is_constructible<any_array_ref, U>::value>::type
     >
-  inline auto get_constant(U && value = null)
+  inline auto get_constant(U && value)
     -> decltype(get_constant_impl(get_type<T>(), value))
     { return get_constant(get_type<T>(), std::forward<U>(value)); }
 
- 
+  // // Simple version with no argument.
+  // template<typename T>
+  // // inline decltype(get_constant(get_type<T>(), null)) get_constant(null_arg const & = null)
+  // inline constant get_constant(null_arg const & x)
+  //   { return get_constant(get_type<T>(), x); }
+
   // Array version.
   template<typename T>
   inline typename std::enable_if<std::is_array<T>::value, constant>::type

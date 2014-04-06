@@ -35,8 +35,11 @@ namespace sprite { namespace backend
           // Infer the LLVM type from the type of T.
           return get_value(std::forward<T>(arg)).ptr();
         else
+        {
           // Get the LLVM type from the function signature.
-          return get_value(*m_begin++, std::forward<T>(arg)).ptr();
+          type const ty(*m_begin++);
+          return get_value(ty, std::forward<T>(arg)).ptr();
+        }
       }
     };
   }

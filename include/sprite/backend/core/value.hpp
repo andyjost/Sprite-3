@@ -34,5 +34,4 @@ namespace sprite { namespace backend
   template<typename T>
   inline type get_type(valueobj<T> const & arg)
     { return type(arg->getType()); }
-
 }}

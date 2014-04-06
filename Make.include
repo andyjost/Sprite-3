@@ -1,7 +1,7 @@
 # Requires make >=3.81 for lastword.
 TOPDIR := $(dir $(lastword $(MAKEFILE_LIST)))
-LLVM_CFLAGS = $(shell llvm-config --cppflags --libs core)
-LLVM_LDFLAGS = $(shell llvm-config --ldflags --libs core)
+LLVM_CFLAGS = $(shell llvm-config --cppflags --libs core jit native)
+LLVM_LDFLAGS = $(shell llvm-config --ldflags --libs core jit native)
 CFLAGS = -O0 -ggdb -std=c++11 -Wall $(LLVM_CFLAGS) -I$(TOPDIR)include -Werror
 LDFLAGS = -Wall $(LLVM_LDFLAGS)
 CC=g++

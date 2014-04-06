@@ -436,5 +436,23 @@ namespace sprite { namespace backend
     llvm::IRBuilder<> & bldr = current_builder();
     SPRITE_APICALL(bldr.CreateBr(target.ptr()));
   }
+
+  //@{
+  /// Allocates a local variable.  Returns a pointer.
+  template<typename T>
+  inline typename std::enable_if<is_value_initializer<T>::value, value>::type
+  local(
+      type const & ty, T const & size, unsigned alignment=0
+    )
+  {
+    llvm::IRBuilder<> & bldr = current_builder();
+    llvm::AllocaInst * px =
+        SPRITE_APICALL(bldr.CreateAlloca(ty.ptr(), get_value(size).ptr()));
+    if(alignment) SPRITE_APICALL(px->setAlignment(alignment));
+    return value(px);
+  }
+
+  inline value local(type const & ty) { return local(ty, value(nullptr)); }
+  //@}
 }}
 

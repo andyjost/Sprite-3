@@ -206,6 +206,16 @@ namespace sprite { namespace backend
    * corresponding type in the target language.
    */
   template<typename T>
+  inline typename std::enable_if<std::is_same<T, std::nullptr_t>::value, pointer_type>::type
+  get_type()
+    { return *types::char_(); }
+
+  template<typename T>
+  inline typename std::enable_if<std::is_same<T, void *>::value, pointer_type>::type
+  get_type()
+    { return *types::char_(); }
+
+  template<typename T>
   inline typename std::enable_if<
       std::is_integral<T>::value && !std::is_same<T, bool>::value, integer_type
     >::type

@@ -22,6 +22,7 @@ namespace sprite { namespace backend
   // Values.
   using value = valueobj<>;
   using label = valueobj<BasicBlock>;
+  struct ref;
 
   // Constants.
   using constant = constobj<>;

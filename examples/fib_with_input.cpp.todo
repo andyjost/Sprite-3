@@ -24,10 +24,15 @@ int main()
 
   // Declare external functions.
   auto const printf = extern_(i32(*char_, dots), "printf");
+  // auto const gets = extern_((*char_)(*char_), "gets");
+  // auto const atoi = extern_<Function>(i32(*char_), "atoi");
 
   auto const fib = extern_(i64(i64), "fib", {"n"});
   {
     scope _ = fib;
+    // globalvar buf = static_<globalvar>(char_[255], "buf");
+    // gets(&buf[0]);
+    // printf("%s", buf);
     value n = arg("n");
     if_(n <(signed_) (2), []{return_(1);});
     return_(fib(n-2) + fib(n-1));

@@ -147,6 +147,8 @@ namespace
     }
     else if(src_type->isPointerTy())
     {
+      src_type->dump();
+      tgt_type->dump();
       if(tgt_type->isIntegerTy())
       {
         SPRITE_ALLOW_FLAGS(tgt.flags(), "pointer-to-integer conversion", 0)

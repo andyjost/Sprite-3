@@ -28,6 +28,7 @@ namespace sprite
 #include <sprite/backend/core/module.hpp>
 #include <sprite/backend/core/object.hpp>
 #include <sprite/backend/core/operations.hpp>
+#include <sprite/backend/core/ref.hpp>
 #include <sprite/backend/core/scope.hpp>
 #include <sprite/backend/core/type.hpp>
 #include <sprite/backend/core/value.hpp>
