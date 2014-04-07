@@ -53,10 +53,6 @@ namespace sprite { namespace backend
   template<typename T>
   inline constant get_constant_impl(type_with_flags const & ty, T const & arg);
 
-  // Another version of the generic one.  This avoids ambiguity for integer,
-  // since constant and string_ref can both be constructed from a nullptr.
-  inline constant get_constant_impl(type_with_flags const & ty, std::nullptr_t const &);
-
   // ====== Instantiation functions for IntegerType ======
 
   /**
@@ -599,11 +595,15 @@ namespace sprite { namespace backend
     return handler(ty, arg);
   }
 
+  // This overload avoids an ambiguity for integer types, since constant and
+  // string_ref can both be constructed from a nullptr.
   inline constant get_constant_impl(type_with_flags const & ty, std::nullptr_t const &)
   {
-    return get_constant_impl(ty, null);
-    // type ptrty = dyn_cast<pointer_type>(ty.arg());
-    // return get_constant_impl(ptrty, nullptr); }
+    if(auto p = dyn_cast<pointer_type>(ty))
+      return get_constant_impl(p, null);
+    throw type_error(
+        "Expecting LHS of type PointerType for RHS of type std::nullptr_t"
+      );
   }
 
   //@{
