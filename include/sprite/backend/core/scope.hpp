@@ -29,15 +29,15 @@ namespace sprite { namespace backend
     // Scope creation.
     scope(module);
     scope(function);
-    scope(label);
+    scope(label &);
 
     // Scope access.
     static module current_module();
     static function current_function();
-    static label current_label();
+    static label & current_label();
 
     /// Replaces the current label with a new one.
-    static void set_continuation(label const &);
+    static void replace_label(label &);
 
     // The context comes from the current module, but exposing it in this way
     // may allow some compilation units to avoid a dependency on module.hpp.

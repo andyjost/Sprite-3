@@ -57,14 +57,20 @@ namespace sprite { namespace backend
 
   inline label globalobj<Function>::entry() const
   {
-    assert(this->px);
-    if(this->px->empty())
-    {
-      SPRITE_APICALL(llvm::BasicBlock::Create(
-          scope::current_context(), ".entry", this->px
-        ));
-    }
+    assert(this->px && this->px->empty());
+    SPRITE_APICALL(llvm::BasicBlock::Create(
+        scope::current_context(), ".entry", this->px
+      ));
+    
     assert(!this->px->empty());
     return label(&this->px->front());
   }
+
+  // inline label globalobj<Function>::insertion() const
+  // {
+  //   assert(this->px);
+  //   if(this->px->empty())
+  //     return this->entry();
+  //   return label(&this->px->back());
+  // }
 }}

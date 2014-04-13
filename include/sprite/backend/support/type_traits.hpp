@@ -147,13 +147,27 @@ namespace sprite { namespace backend
   /**
    * @brief Identifies raw initializers.
    *
-   * A raw initializer is defined as "not a typearg, ellipsis, or valuearg."
+   * A raw initializer is anything that is not a typearg, ellipsis, or
+   * valuearg, and can be converted to one of the input types accepted by @p
+   * get_constant_impl.
    */
   template<typename T>
   struct is_raw_initializer
     : std::integral_constant<
           bool
-        , !(is_typearg_or_ellipsis<T>::value || is_valuearg<T>::value)
+        , !(is_typearg_or_ellipsis<T>::value || is_valuearg<T>::value) &&
+            (
+                std::is_convertible<T, null_arg>::value
+             || std::is_convertible<T, constant>::value
+             || std::is_convertible<T, uint64_t>::value
+             || std::is_convertible<T, string_ref>::value
+             || std::is_convertible<T, APInt>::value
+             || std::is_convertible<T, double>::value
+             || std::is_convertible<T, APFloat>::value
+             || std::is_convertible<T, non_finite_value>::value
+             || std::is_convertible<T, any_array_ref>::value
+             || std::is_convertible<T, any_tuple_ref>::value
+             )
         >
   {};
 

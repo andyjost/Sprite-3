@@ -57,7 +57,7 @@ namespace
     // when called from @p function_frame, otherwise, this constructor would
     // check against the previous function.
     label_frame(label && l = label(nullptr), bool check = true)
-      : m_prev_label(l), m_prev_builder(nullptr)
+      : m_prev_label(std::move(l)), m_prev_builder(nullptr)
     {
       if(check) check_function(m_prev_label);
 
@@ -171,7 +171,7 @@ namespace sprite { namespace backend
     : m_frame(new function_frame(std::move(f)))
   {}
 
-  scope::scope(label l)
+  scope::scope(label & l)
     : m_frame(new label_frame(std::move(l)))
   {}
 
@@ -179,9 +179,9 @@ namespace sprite { namespace backend
 
   function scope::current_function() { return g_current_function; }
 
-  label scope::current_label() { return g_current_label; }
+  label & scope::current_label() { return g_current_label; }
 
-  void scope::set_continuation(label const & cont)
+  void scope::replace_label(label & cont)
   {
     // The old basic block should have a terminator.
     assert(g_current_label->getTerminator());
@@ -193,7 +193,7 @@ namespace sprite { namespace backend
       g_current_builder->~builder_type();
       new(g_current_builder) builder_type(cont.ptr());
     }
-    g_current_label = cont; // nothrow
+    g_current_label = std::move(cont); // nothrow
   }
 
   llvm::LLVMContext & scope::current_context()

@@ -588,15 +588,17 @@ namespace sprite { namespace backend
       , case_< FPType,       null_arg, constant, double, string_ref, APFloat, non_finite_value>
       , case_< StructType,   null_arg, any_array_ref, any_tuple_ref>
       , case_< ArrayType,    null_arg, any_array_ref, any_tuple_ref>
-      , case_< PointerType,  null_arg, constant, std::nullptr_t, string_ref>
+        /* See note with the next function for the handling of nullptr_t. */
+      , case_< PointerType,  null_arg, constant, /*std::nullptr_t,*/ string_ref>
 
       > const handler;
 
     return handler(ty, arg);
   }
 
-  // This overload avoids an ambiguity for integer types, since constant and
-  // string_ref can both be constructed from a nullptr.
+  // This overload avoids an ambiguity for several types by handling nullptr.
+  // Since constant and string_ref can both be constructed from a nullptr, the
+  // above function would be ambiguous if it accepted nullptr.
   inline constant get_constant_impl(type_with_flags const & ty, std::nullptr_t const &)
   {
     if(auto p = dyn_cast<pointer_type>(ty))

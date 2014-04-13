@@ -21,7 +21,9 @@ namespace sprite { namespace backend
 
   // Values.
   using value = valueobj<>;
-  using label = valueobj<BasicBlock>;
+  using instruction = valueobj<Instruction>;
+  using metadata = valueobj<MDNode>;
+  struct label;
   struct ref;
 
   // Constants.

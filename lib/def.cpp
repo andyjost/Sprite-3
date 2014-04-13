@@ -9,6 +9,7 @@ namespace sprite { namespace backend
     , type const & ty
     , twine const & name
     , array_ref<twine> const & arg_names
+    , codeblock const & body
     )
   {
     // Create a function for function types.
@@ -19,6 +20,13 @@ namespace sprite { namespace backend
     {
       throw value_error(
           "No arg names may be supplied for a global variable definition."
+        );
+    }
+
+    if(body)
+    {
+      throw value_error(
+          "No function body may be supplied for a global variable definition."
         );
     }
 
@@ -41,6 +49,7 @@ namespace sprite { namespace backend
     , function_type const & ty
     , twine const & name
     , array_ref<twine> const & arg_names
+    , codeblock const & body
     )
   {
     module const mod = scope::current_module();
@@ -54,6 +63,13 @@ namespace sprite { namespace backend
     llvm::Function::arg_iterator arg = fun->arg_begin();
     for(auto const & name : arg_names)
       SPRITE_APICALL((arg++)->setName(name));
+
+    // Evaluate the function body, if one was supplied.
+    if(body)
+    {
+      scope _ = fun;
+      body();
+    }
 
     return fun;
   }

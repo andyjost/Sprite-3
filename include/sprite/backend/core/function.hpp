@@ -27,6 +27,9 @@ namespace sprite { namespace backend
 
     /// Returns the function entry point.
     label entry() const;
+
+    /// Returns the last basic block, which is the current insertion point.
+    // label insertion() const;
   };
 
   /// Get an argument (by its position) for the function currently in scope.

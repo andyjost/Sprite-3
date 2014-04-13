@@ -64,6 +64,7 @@ namespace llvm
   class Function;
   class GlobalValue;
   class GlobalVariable;
+  class MDNode;
 
   // Instructions.
   class Instruction;
@@ -124,6 +125,7 @@ namespace sprite { namespace backend
   using llvm::GlobalValue;
   using llvm::GlobalVariable;
   using llvm::Instruction;
+  using llvm::MDNode;
 
   SPRITE_DECLARE_TYPENAME(Value)
   SPRITE_DECLARE_TYPENAME(BasicBlock)
@@ -131,6 +133,7 @@ namespace sprite { namespace backend
   SPRITE_DECLARE_TYPENAME(GlobalValue)
   SPRITE_DECLARE_TYPENAME(GlobalVariable)
   SPRITE_DECLARE_TYPENAME(Instruction)
+  SPRITE_DECLARE_TYPENAME(MDNode)
 
   // Constants.
   using llvm::Constant;

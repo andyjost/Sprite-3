@@ -25,6 +25,7 @@ namespace sprite
 #include <sprite/backend/core/get_constant.hpp>
 #include <sprite/backend/core/global.hpp>
 #include <sprite/backend/core/label.hpp>
+#include <sprite/backend/core/metadata.hpp>
 #include <sprite/backend/core/module.hpp>
 #include <sprite/backend/core/object.hpp>
 #include <sprite/backend/core/operations.hpp>

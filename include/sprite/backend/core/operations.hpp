@@ -63,16 +63,16 @@ namespace sprite { namespace backend
    *
    * @snippet constexprs.cpp select
    */
-  template<typename If, typename Then, typename Else>
+  template<typename If, typename True, typename False>
   inline typename std::enable_if<
-      is_constarg<If>::value && is_constarg<Then>::value
-        && is_constarg<Else>::value
+      is_constarg<If>::value && is_constarg<True>::value
+        && is_constarg<False>::value
     , constant
     >::type
-  select(If const & if_, Then const & then, Else const & else_)
+  select(If const & cond, True const & true_, False const & false_)
   {
     return constant(SPRITE_APICALL(
-        ConstantExpr::getSelect(ptr(if_), ptr(then), ptr(else_))
+        ConstantExpr::getSelect(ptr(cond), ptr(true_), ptr(false_))
       ));
   }
 
@@ -403,38 +403,51 @@ namespace sprite { namespace backend
 
   /// Appends a return instruction to the active label scope.
   template<typename T>
-  void return_(T && arg)
+  instruction return_(T && arg)
   {
     llvm::IRBuilder<> & bldr = current_builder();
     type const retty = type(bldr.GetInsertBlock()->getParent()->getReturnType());
     value const x = get_value(retty, arg);
-    SPRITE_APICALL(bldr.CreateRet(x.ptr()));
+    return instruction(SPRITE_APICALL(bldr.CreateRet(x.ptr())));
   }
 
   //@{
   /// Appends a conditional branch instruction to the active label scope.
   template<typename T>
-  void if_(T && cond, label const & true_, label const & false_)
+  instruction if_(T && cond, label && true_, label && false_)
   {
     llvm::IRBuilder<> & bldr = current_builder();
     value const cond_ = get_value(types::bool_(), cond);
-    SPRITE_APICALL(bldr.CreateCondBr(cond_.ptr(), true_.ptr(), false_.ptr()));
+    auto rv = SPRITE_APICALL(
+        bldr.CreateCondBr(cond_.ptr(), true_.ptr(), false_.ptr())
+      );
+    label next;
+    scope::replace_label(next);
+    true_._set_continuation(next);
+    false_._set_continuation(next);
+    return instruction(rv);
   }
 
   template<typename T>
-  void if_(T && cond, label const & true_)
+  instruction if_(T && cond, label && true_)
   {
-    label c;
-    if_(cond, true_, c);
-    scope::set_continuation(c);
+    label next;
+    llvm::IRBuilder<> & bldr = current_builder();
+    value const cond_ = get_value(types::bool_(), cond);
+    auto rv = SPRITE_APICALL(
+        bldr.CreateCondBr(cond_.ptr(), true_.ptr(), next.ptr())
+      );
+    scope::replace_label(next);
+    true_._set_continuation(next);
+    return instruction(rv);
   }
   //@}
 
   /// Appends an unconditional branch instruction to the active label scope.
-  inline void goto_(label const & target)
+  inline instruction goto_(label const & target)
   {
     llvm::IRBuilder<> & bldr = current_builder();
-    SPRITE_APICALL(bldr.CreateBr(target.ptr()));
+    return instruction(SPRITE_APICALL(bldr.CreateBr(target.ptr())));
   }
 
   //@{

@@ -45,6 +45,11 @@ namespace sprite { namespace backend
     array_ref(std::array<T,N> const & args)
       : llvm::ArrayRef<T>(args.begin(), N)
     {}
+
+    /// Accept zero-sized arrays.
+    array_ref(T(&arr)[0])
+      : llvm::ArrayRef<T>()
+    {}
   };
 
   /**

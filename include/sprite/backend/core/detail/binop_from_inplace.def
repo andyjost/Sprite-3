@@ -3,7 +3,10 @@
 
 #ifdef SPRITE_BINOP
 template<typename Lhs, typename Rhs>
-inline typename op_result_type<Lhs,Rhs>::type
+inline typename std::enable_if<
+    is_value_initializer<Lhs>::value && is_value_initializer<Rhs>::value
+  , typename op_result_type<Lhs,Rhs>::type
+  >::type
 operator SPRITE_BINOP(Lhs const & lhs, aux::arg_with_flags<Rhs> const & arg)
 {
   using result_type = typename op_result_type<Lhs,Rhs>::type;
@@ -14,7 +17,8 @@ operator SPRITE_BINOP(Lhs const & lhs, aux::arg_with_flags<Rhs> const & arg)
 
 template<typename Lhs, typename Rhs>
 inline typename std::enable_if<
-    is_valuearg<Lhs>::value || is_valuearg<Rhs>()
+    (is_value_initializer<Lhs>::value && is_value_initializer<Rhs>::value)
+      && (is_valuearg<Lhs>::value || is_valuearg<Rhs>())
   , typename op_result_type<Lhs,Rhs>::type
   >::type
 operator SPRITE_BINOP(Lhs const & lhs, Rhs const & arg)
@@ -22,3 +26,4 @@ operator SPRITE_BINOP(Lhs const & lhs, Rhs const & arg)
 #endif
 
 #undef SPRITE_BINOP
+
