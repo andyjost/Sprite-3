@@ -59,10 +59,10 @@ namespace sprite { namespace backend
       );
   };
 
-  instruction & valueobj<llvm::Instruction>::set_metadata(string_ref kind)
+  inline instruction & valueobj<llvm::Instruction>::set_metadata(string_ref kind)
     { return this->set_metadata(kind, metadata()); }
 
-  instruction & valueobj<llvm::Instruction>::set_metadata(
+  inline instruction & valueobj<llvm::Instruction>::set_metadata(
       string_ref kind, metadata const & arg
     )
   {

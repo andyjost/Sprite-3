@@ -30,6 +30,10 @@ namespace sprite { namespace backend
 
     /// Returns the last basic block, which is the current insertion point.
     // label insertion() const;
+
+    /// Returns the function return type.
+    type return_type() const
+      { return type(SPRITE_APICALL(ptr()->getReturnType())); }
   };
 
   /// Get an argument (by its position) for the function currently in scope.

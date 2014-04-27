@@ -401,15 +401,32 @@ namespace sprite { namespace backend
   #define SPRITE_CMPOP_IS_ORDERING 0
   #include "sprite/backend/core/detail/comparison_operator.def"
 
+  //@{
   /// Appends a return instruction to the active label scope.
+  inline instruction return_()
+  {
+    if(!scope::current_function().return_type()->isVoidTy())
+    {
+      throw type_error(
+          "A return value must be supplied for functions not returning void."
+        );
+    }
+    return instruction(SPRITE_APICALL(current_builder().CreateRetVoid()));
+  }
   template<typename T>
   instruction return_(T && arg)
   {
-    llvm::IRBuilder<> & bldr = current_builder();
-    type const retty = type(bldr.GetInsertBlock()->getParent()->getReturnType());
+    type const retty = scope::current_function().return_type();
+    if(retty->isVoidTy())
+    {
+      throw type_error(
+          "A return value may not be supplied for functions returning void."
+        );
+    }
     value const x = get_value(retty, arg);
-    return instruction(SPRITE_APICALL(bldr.CreateRet(x.ptr())));
+    return instruction(SPRITE_APICALL(current_builder().CreateRet(x.ptr())));
   }
+  //@}
 
   //@{
   /// Appends a conditional branch instruction to the active label scope.

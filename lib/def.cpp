@@ -1,5 +1,6 @@
 #include "sprite/backend/core/def.hpp"
 #include "sprite/backend/core/module.hpp"
+#include "sprite/backend/core/operations.hpp"
 #include "sprite/backend/core/scope.hpp"
 
 namespace sprite { namespace backend
@@ -69,7 +70,12 @@ namespace sprite { namespace backend
     {
       scope _ = fun;
       body();
+
+      // If the function returns void, then the terminator can be implied.
+      if(fun.return_type()->isVoidTy() && !scope::current_label()->getTerminator())
+        return_();
     }
+
 
     return fun;
   }

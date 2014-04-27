@@ -12,8 +12,10 @@ int main()
 {
   module m;
   scope _ = m;
-  // type int_ = types::int_();
+  type int_ = types::int_();
   type void_ = types::void_();
+  (void) int_;
+  (void) void_;
 
   // NamedMDNode *NMD = m->getOrInsertNamedMetadata("sprite");
   // NMD->addOperand(metadata(5).ptr());
@@ -36,8 +38,7 @@ int main()
   {
     scope _ = f;
     f(); // FIXME: null functions fail to compile when called
-    return_(0);
-    return_(1).set_metadata("sprite.implied", _3);
+    return_().set_metadata("sprite.implied", _3);
   }
 
   // llvm::Instruction & ret = f->front().back();

@@ -22,7 +22,7 @@ namespace sprite { namespace backend
       else
         _msg = type + ": " + msg;
       
-      if(_msg.back() != '.') _msg.push_back('.');
+      // if(_msg.back() != '.') _msg.push_back('.');
     }
 
     /// Inherited what method.

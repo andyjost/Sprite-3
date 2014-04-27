@@ -47,7 +47,7 @@ namespace sprite { namespace backend
 
 
   // Overload ptr() for ref.
-  llvm::Value * ptr(ref const & arg) { return arg.ptr(); }
+  inline llvm::Value * ptr(ref const & arg) { return arg.ptr(); }
 
   // The * operator applied to a pointer value is a reference.
   template<typename T>

@@ -57,7 +57,9 @@ namespace sprite { namespace backend
 
   inline label globalobj<Function>::entry() const
   {
-    assert(this->px && this->px->empty());
+    assert(this->px);
+    if(!this->px->empty())
+      throw runtime_error("A function body was already provided.");
     SPRITE_APICALL(llvm::BasicBlock::Create(
         scope::current_context(), ".entry", this->px
       ));
