@@ -19,7 +19,7 @@ namespace sprite { namespace backend
       auto const ii = static_cast<unsigned>(i);
       return constant(SPRITE_APICALL((*this)->getAggregateElement(ii)));
     }
-    
+
     // Define in-place operators.
     #define SPRITE_LHS_TYPE constant
     #include "sprite/backend/core/detail/declare_class_operators.def"

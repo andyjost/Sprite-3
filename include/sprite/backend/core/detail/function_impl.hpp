@@ -68,6 +68,9 @@ namespace sprite { namespace backend
     return label(&this->px->front());
   }
 
+  inline constant globalobj<Function>::operator&() const
+    { return aux::addressof_impl(this->ptr()); }
+
   // inline label globalobj<Function>::insertion() const
   // {
   //   assert(this->px);

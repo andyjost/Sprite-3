@@ -64,8 +64,9 @@ namespace sprite { namespace backend
   {
     if(auto g = dyn_cast<globalvar>(*this))
       return &g; // Overloaded!  Not the address of a local.
-    // FIXME: it should be okay to take a function address.
-    throw type_error("Expected GlobalVariable.");
+    if(auto g = dyn_cast<function>(*this))
+      return &g; // Overloaded!  Not the address of a local.
+    throw type_error("Expected GlobalVariable or Function.");
   }
 
   namespace aux
@@ -102,15 +103,21 @@ namespace sprite { namespace backend
     }
   }
 
-  inline constant globalobj<GlobalVariable>::operator&() const
+  namespace aux
   {
-    auto const i64 = types::int_(64);
-    return constant(SPRITE_APICALL(
-        ConstantExpr::getInBoundsGetElementPtr(
-            this->ptr(), get_constant_impl(i64, 0).ptr()
-          )
-      ));
+    inline constant addressof_impl(Constant * ptr)
+    {
+      auto const i64 = types::int_(64);
+      return constant(SPRITE_APICALL(
+          ConstantExpr::getInBoundsGetElementPtr(
+              ptr, get_constant_impl(i64, 0).ptr()
+            )
+        ));
+    }
   }
+
+  inline constant globalobj<GlobalVariable>::operator&() const
+    { return aux::addressof_impl(this->ptr()); }
 
   template<typename Index>
   inline

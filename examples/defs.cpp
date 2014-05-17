@@ -111,5 +111,15 @@ int main()
     (void) myfunction;
   }
 
+  {
+    /// [Taking a function address]
+    // Creates an inline function named myfunction, taking no arguments and returning void.
+    auto const void_ = types::void_();
+    auto const myfunction = static_(void_(), "myfunction");
+    value const addr = &myfunction;
+    /// [Taking a function address]
+    (void) addr;
+  }
+
   return 0;
 }

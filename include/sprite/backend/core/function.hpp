@@ -25,6 +25,13 @@ namespace sprite { namespace backend
       >
     value operator()(Args &&... args) const;
 
+    /**
+     * @brief Takes the address of a function.
+     *
+     * @snippet defs.cpp Taking a function address
+     */
+    constant operator&() const;
+
     /// Returns the function entry point.
     label entry() const;
 
