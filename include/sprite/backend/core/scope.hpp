@@ -37,7 +37,10 @@ namespace sprite { namespace backend
     static label & current_label();
 
     /// Replaces the current label with a new one.
-    static void replace_label(label &);
+    static void replace_label(label const &);
+
+    /// Sets the default continuation.
+    static void set_continuation(label const & src, label const & tgt);
 
     // The context comes from the current module, but exposing it in this way
     // may allow some compilation units to avoid a dependency on module.hpp.

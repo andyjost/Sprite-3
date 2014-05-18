@@ -34,39 +34,49 @@ int main()
     );
 
   // Test if with two branches.
-  // test_function(
-  //     [](clib_h const & clib)
-  //     {
-  //       value file = arg("file");
-  //       clib.fprintf(file, "a");
-  //       if_(1
-  //         , [&]{clib.fprintf(file, "b"); return_(0);}
-  //         , [&]{clib.fprintf(file, "c"); return_(0);}
-  //         );
-  //       // TODO: need to remove the empty basic block, here.
-  //     }
-  //   , "ab"
-  //   );
-  // test_function(
-  //     [](clib_h const & clib)
-  //     {
-  //       value file = arg("file");
-  //       clib.fprintf(file, "a");
-  //       if_(1, [&]{clib.fprintf(file, "b");}, [&]{clib.fprintf(file, "c");});
-  //       clib.fprintf(file, "d");
-  //       return_(0);
-  //     }
-  //   , "abd"
-  //   );
-  // test_function(
-  //     [](clib_h const & clib)
-  //     {
-  //       value file = arg("file");
-  //       clib.fprintf(file, "a");
-  //       if_(0, [&]{clib.fprintf(file, "b");}, [&]{clib.fprintf(file, "c");});
-  //       clib.fprintf(file, "d");
-  //       return_(0);
-  //     }
-  //   , "acd"
-  //   );
+  test_function(
+      [](clib_h const & clib)
+      {
+        value file = arg("file");
+        clib.fprintf(file, "a");
+        if_(1
+          , [&]{clib.fprintf(file, "b"); return_(0);}
+          , [&]{clib.fprintf(file, "c"); return_(0);}
+          );
+      }
+    , "ab"
+    );
+  test_function(
+      [](clib_h const & clib)
+      {
+        value file = arg("file");
+        clib.fprintf(file, "a");
+        if_(1, [&]{clib.fprintf(file, "b");}, [&]{clib.fprintf(file, "c");});
+        clib.fprintf(file, "d");
+        return_(0);
+      }
+    , "abd"
+    );
+  test_function(
+      [](clib_h const & clib)
+      {
+        value file = arg("file");
+        clib.fprintf(file, "a");
+        if_(0, [&]{clib.fprintf(file, "b");}, [&]{clib.fprintf(file, "c");});
+        clib.fprintf(file, "d");
+        return_(0);
+      }
+    , "acd"
+    );
+  test_function(
+      [](clib_h const & clib)
+      {
+        value file = arg("file");
+        clib.fprintf(file, "a");
+        if_(1, [&]{clib.fprintf(file, "b"); return_(0);}, [&]{clib.fprintf(file, "c");});
+        clib.fprintf(file, "d");
+        return_(0);
+      }
+    , "ab"
+    );
 }

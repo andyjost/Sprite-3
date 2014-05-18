@@ -225,6 +225,18 @@ namespace sprite { namespace backend
       static string_ref string(std::tuple<T...> const & array)
         { return string_ref(); }
     };
+
+    //@{
+    /**
+     * @brief forms array_ref<T> if T is not abstract, otherwise void.
+     */
+    template<typename T, bool IsAbstract = std::is_abstract<T>::value>
+    struct safe_array_ref;
+    template<typename T> struct safe_array_ref<T, true>
+      { using type = void; };
+    template<typename T> struct safe_array_ref<T, false>
+      { using type = array_ref<T>; };
+    //@}
   }
 
   struct any_array_ref : aux::any_containerref_impl<aux::array_ref_policy>
@@ -240,7 +252,9 @@ namespace sprite { namespace backend
      */
     template<typename T
       , typename = typename std::enable_if<
-            std::is_constructible<array_ref<typename T::value_type>, T>::value
+            std::is_constructible<
+                typename aux::safe_array_ref<typename T::value_type>::type, T
+              >::value
           >::type
       >
     any_array_ref(T const & arg)

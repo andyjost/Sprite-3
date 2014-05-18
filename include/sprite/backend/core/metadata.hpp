@@ -40,16 +40,11 @@ namespace sprite { namespace backend
         );
     }
 
-    // auto a = metadata("a tree");
-    // auto b = metadata("int", a);
-    // auto c = metadata("const int", b, 1);
-
     friend size_t len(metadata const & md)
       { return md->getNumOperands(); }
 
     value operator[](unsigned i)
       { return value((*this)->getOperand(i)); }
-
 
   private:
 

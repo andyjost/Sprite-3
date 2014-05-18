@@ -5,6 +5,7 @@
 
 #include "sprite/backend/core/function.hpp"
 #include "sprite/backend/core/label.hpp"
+#include "sprite/backend/core/metadata.hpp"
 #include "sprite/backend/core/module.hpp"
 #include "sprite/backend/core/scope.hpp"
 #include "sprite/backend/support/exceptions.hpp"
@@ -12,6 +13,7 @@
 #include <utility>
 #include <vector>
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/Support/CFG.h"
 
 namespace sprite { namespace backend
 {
@@ -50,6 +52,50 @@ namespace
   label g_current_label(nullptr);
   builder_type * g_current_builder = nullptr;
 
+  // Finalizes the label state when done with it.
+  void finalize(label const & l)
+  {
+    auto const ptr = l.ptr();
+    if(ptr)
+    {
+      // If the block has multiple terminators, and the last one was implicitly
+      // added by Sprite, then remove it.
+      auto const it = ptr->rbegin();
+      auto const end = ptr->rend();
+      if(it != end && instruction(&*it).get_metadata(SPRITE_IMPLIED_METADATA))
+      {
+        auto prev = it; ++prev;
+        if(prev != end && prev->isTerminator())
+          it->eraseFromParent();
+      }
+
+      // Delete this block if it is empty.
+      if(ptr->empty())
+      {
+        // There should be no predecessors.
+        assert(llvm::pred_begin(ptr) == llvm::pred_end(ptr));
+        ptr->eraseFromParent();
+      }
+    }
+  }
+
+  /**
+   * @brief Returns the insertion position for a label.
+   *
+   * If the block has a terminator tagged with sprite.implied metadata, then
+   * the insertion position is just before that.  Otherwise, it is the end of
+   * the block.
+   */
+  llvm::BasicBlock::iterator get_insert_pos(label const & l)
+  {
+    if(llvm::Instruction * term = l->getTerminator())
+    {
+      if(instruction(term).get_metadata(SPRITE_IMPLIED_METADATA))
+        return --(l->end());
+    }
+    return l->end();
+  }
+
   struct label_frame : scope::frame
   {
     // When a new function is pushed onto the function stack, its entry label
@@ -63,7 +109,9 @@ namespace
 
       if(m_prev_label)
       {
-        new(&m_builder_loc) builder_type(m_prev_label.ptr());
+        new(&m_builder_loc) builder_type(
+            m_prev_label.ptr(), get_insert_pos(m_prev_label)
+          );
         m_prev_builder = reinterpret_cast<builder_type *>(&m_builder_loc);
       }
 
@@ -75,6 +123,7 @@ namespace
     {
       swap(m_prev_builder, g_current_builder);
       swap(m_prev_label, g_current_label);
+      finalize(m_prev_label);
       if(m_prev_builder) m_prev_builder->~builder_type();
     }
 
@@ -181,7 +230,7 @@ namespace sprite { namespace backend
 
   label & scope::current_label() { return g_current_label; }
 
-  void scope::replace_label(label & cont)
+  void scope::replace_label(label const & cont)
   {
     // The old basic block should have a terminator.
     assert(g_current_label->getTerminator());
@@ -191,9 +240,20 @@ namespace sprite { namespace backend
     if(g_current_builder)
     {
       g_current_builder->~builder_type();
-      new(g_current_builder) builder_type(cont.ptr());
+      new(g_current_builder) builder_type(cont.ptr(), get_insert_pos(cont));
     }
     g_current_label = std::move(cont); // nothrow
+  }
+
+  void scope::set_continuation(label const & src, label const & tgt)
+  {
+    if(src && !src->getTerminator())
+    {
+      assert(scope::current_label().ptr() != src.ptr());
+      llvm::IRBuilder<> bldr(src.ptr());
+      Instruction * term = SPRITE_APICALL(bldr.CreateBr(tgt.ptr()));
+      instruction(term).set_metadata(SPRITE_IMPLIED_METADATA);
+    }
   }
 
   llvm::LLVMContext & scope::current_context()

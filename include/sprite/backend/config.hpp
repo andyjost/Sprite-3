@@ -35,6 +35,9 @@ namespace sprite { namespace backend { namespace aux {
 #define SPRITE_APICALL(...) __VA_ARGS__
 #endif
 
+/// Defines the metadata used to indicated implicit operations added by Sprite.
+#define SPRITE_IMPLIED_METADATA "sprite.implied"
+
 // Forward-declare some LLVM types that will be used.
 namespace llvm
 {

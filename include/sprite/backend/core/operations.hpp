@@ -440,8 +440,8 @@ namespace sprite { namespace backend
       );
     label next;
     scope::replace_label(next);
-    true_._set_continuation(next);
-    false_._set_continuation(next);
+    scope::set_continuation(true_, next);
+    scope::set_continuation(false_, next);
     return instruction(rv);
   }
 
@@ -455,7 +455,7 @@ namespace sprite { namespace backend
         bldr.CreateCondBr(cond_.ptr(), true_.ptr(), next.ptr())
       );
     scope::replace_label(next);
-    true_._set_continuation(next);
+    scope::set_continuation(true_, next);
     return instruction(rv);
   }
   //@}
