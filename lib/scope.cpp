@@ -220,7 +220,7 @@ namespace sprite { namespace backend
     : m_frame(new function_frame(std::move(f)))
   {}
 
-  scope::scope(label & l)
+  scope::scope(label l)
     : m_frame(new label_frame(std::move(l)))
   {}
 
@@ -228,13 +228,27 @@ namespace sprite { namespace backend
 
   function scope::current_function() { return g_current_function; }
 
-  label & scope::current_label() { return g_current_label; }
+  label scope::current_label() { return g_current_label; }
 
-  void scope::replace_label(label const & cont)
+  void scope::update_current_label_after_branch(label const & cont)
   {
-    // The old basic block should have a terminator.
-    assert(g_current_label->getTerminator());
     label_frame::check_function(cont);
+
+    // The old basic block should have a terminator.  If it is implicit,
+    // then move it to the new block.
+    llvm::TerminatorInst * term = g_current_label->getTerminator();
+    if(!term)
+      throw runtime_error("Expected a terminated basic block.");
+    if(instruction(term).get_metadata(SPRITE_IMPLIED_METADATA))
+    {
+      assert(term->getNumSuccessors() == 1);
+      Instruction * term2 =
+          llvm::BranchInst::Create(term->getSuccessor(0), cont.ptr());
+      instruction(term2).set_metadata(SPRITE_IMPLIED_METADATA);
+      term->eraseFromParent();
+      // The block must still be terminated.
+      assert(g_current_label->getTerminator());
+    }
 
     // Replace the current builder and basic block.
     if(g_current_builder)
@@ -242,7 +256,7 @@ namespace sprite { namespace backend
       g_current_builder->~builder_type();
       new(g_current_builder) builder_type(cont.ptr(), get_insert_pos(cont));
     }
-    g_current_label = std::move(cont); // nothrow
+    g_current_label = cont; // nothrow
   }
 
   void scope::set_continuation(label const & src, label const & tgt)

@@ -79,4 +79,42 @@ int main()
       }
     , "ab"
     );
+  // Test creating branches inside a label.
+  test_function(
+      [](clib_h const & clib)
+      {
+        value file = arg("file");
+        clib.fprintf(file, "a");
+        label l([&]{
+            if_(0
+              , [&]{clib.fprintf(file, "b"); return_(0);}
+              , [&]{clib.fprintf(file, "c"); return_(0);}
+              );
+          });
+        goto_(l);
+      }
+    , "ac"
+    );
+  // Test implicit continuation with nested branches.
+  test_function(
+      [](clib_h const & clib)
+      {
+        value file = arg("file");
+        clib.fprintf(file, "a");
+        if_(1
+          , [&]{
+              clib.fprintf(file, "b");
+              if_(1, [&]{clib.fprintf(file, "c");});
+              clib.fprintf(file, "d");
+            }
+          );
+        clib.fprintf(file, "e");
+        return_(0);
+      }
+    , "abcde"
+    );
 }
+
+// TODO add this test.
+// while_([]{return true;}, []{break_();});
+

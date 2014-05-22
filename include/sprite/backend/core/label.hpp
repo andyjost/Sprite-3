@@ -9,6 +9,7 @@
 
 namespace sprite { namespace backend
 {
+  /// Represents a branch target.
   struct label : valueobj<llvm::BasicBlock>
   {
     using valueobj<llvm::BasicBlock>::valueobj;
@@ -26,13 +27,11 @@ namespace sprite { namespace backend
             is_code_block_specifier<T>::value
           >::type
       >
-    label(T && body, twine const & name = "")
+    explicit label(T && body, twine const & name = "")
       : valueobj<llvm::BasicBlock>(init(name))
     {
       scope _ = *this;
       body();
-      // *this = std::move(scope::current_label());
-      *this = scope::current_label();
     }
 
   private:
@@ -50,5 +49,49 @@ namespace sprite { namespace backend
    * (function) scope in which to evaluate the code block.
    */
   using codeblock = std::function<void()>;
+
+  /**
+   * @brief An label descriptor.
+   *
+   * Used by certain functions that create elements of the CFG, such as @p if_.
+   * The processes is devilishly complex if labels are allowed to be filled
+   * before being added to the CFG, so this descriptor represents either an
+   * empty label, or a code block that can be defered until after the proper
+   * links have already been made.
+   */
+  struct labeldescr : label
+  {
+    labeldescr(label const & l) : label(l), m_body()
+    {
+      if(!l->empty())
+        throw runtime_error("An empty label is required.");
+    }
+
+    labeldescr(codeblock const & b) : label(), m_body(b) {}
+
+    template<
+        typename T
+      , typename = typename std::enable_if<
+            is_code_block_specifier<T>::value
+          >::type
+      >
+    labeldescr(T && body)
+      : label(), m_body(body)
+    {}
+
+    void codegen() const
+    {
+      if(m_body)
+      {
+        scope _ = static_cast<label const &>(*this);
+        m_body();
+        m_body = codeblock();
+      }
+    }
+
+  private:
+
+    mutable codeblock m_body;
+  };
 }}
 

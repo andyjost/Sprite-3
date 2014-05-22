@@ -29,15 +29,18 @@ namespace sprite { namespace backend
     // Scope creation.
     scope(module);
     scope(function);
-    scope(label &);
+    scope(label);
 
     // Scope access.
     static module current_module();
     static function current_function();
-    static label & current_label();
+    static label current_label();
 
-    /// Replaces the current label with a new one.
-    static void replace_label(label const &);
+    /**
+     * @brief Replaces the current label with a new one, following a branch
+     * instruction.
+     */
+    static void update_current_label_after_branch(label const &);
 
     /// Sets the default continuation.
     static void set_continuation(label const & src, label const & tgt);

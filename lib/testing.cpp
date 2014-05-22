@@ -26,6 +26,13 @@ namespace
       module const & m, std::string const & expected_output, bool print_module
     )
   {
+    if(print_module)
+    {
+      PassManager pm;
+      pm.add(createPrintModulePass(&outs()));
+      pm.run(*m.ptr());
+    }
+  
     verifyModule(*m.ptr(), PrintMessageAction);
   
     std::string err;
@@ -37,13 +44,6 @@ namespace
     {
       std::cerr << "Failed to create JIT compiler: " << err << std::endl;
       std::exit(EXIT_FAILURE);
-    }
-  
-    if(print_module)
-    {
-      PassManager pm;
-      pm.add(createPrintModulePass(&outs()));
-      pm.run(*m.ptr());
     }
   
     // Run the program.
