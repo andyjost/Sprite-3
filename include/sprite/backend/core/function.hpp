@@ -22,7 +22,7 @@ namespace sprite { namespace backend
      */
     template<
         typename... Args
-      , SPRITE_ENABLE_FOR_VALUE_INITIALIZERS(Args...)
+      , SPRITE_ENABLE_FOR_ALL_VALUE_INITIALIZERS(Args...)
       >
     value operator()(Args &&... args) const;
 

@@ -52,7 +52,7 @@ namespace sprite { namespace backend
      */
     template<
         typename... Args
-      , SPRITE_ENABLE_FOR_FUNCTION_PROTOTYPES(Args...)
+      , SPRITE_ENABLE_FOR_ALL_FUNCTION_PROTOTYPES(Args...)
       >
     function_type operator()(Args &&... argtypes) const;
 
@@ -64,7 +64,7 @@ namespace sprite { namespace backend
      */
     template<
         typename Arg
-      , SPRITE_ENABLE_FOR_CONSTANT_INITIALIZERS(Arg)
+      , SPRITE_ENABLE_FOR_ALL_CONSTANT_INITIALIZERS(Arg)
       >
     constant operator()(Arg &&) const;
 

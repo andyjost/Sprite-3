@@ -141,7 +141,7 @@ int main()
       {
         value file = arg("file");
         clib.fprintf(file, "a");
-        while_([]{return true;}, [&]{clib.fprintf(file, "b"); break_();});
+        while_(true, [&]{clib.fprintf(file, "b"); break_();});
         clib.fprintf(file, "c");
         return_(0);
       }
@@ -154,10 +154,11 @@ int main()
         value file = arg("file");
         clib.fprintf(file, "a");
         while_(
-            []{return true;}
+            true
           , [&]{
               clib.fprintf(file, "b");
-              while_([]{return true;}
+              while_(
+                  true
                 , [&]{
                     clib.fprintf(file, "c");
                     if_(true, []{break_();});
@@ -174,6 +175,29 @@ int main()
       }
     , "abcdeg"
     );
+  test_function(
+      [](clib_h const & clib)
+      {
+        value file = arg("file");
+        clib.fprintf(file, "a");
+        if_(true
+          , [&]{
+              while_(
+                  false
+                , [&]{clib.fprintf(file, "b"); break_();}
+                );
+              while_(
+                  true
+                , [&]{clib.fprintf(file, "c"); break_();}
+                );
+            }
+          );
+        clib.fprintf(file, "d");
+        return_(0);
+      }
+    , "acd"
+    );
+
   #if 0
   test_function(
       [](clib_h const & clib)

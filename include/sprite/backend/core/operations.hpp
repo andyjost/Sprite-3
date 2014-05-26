@@ -6,6 +6,7 @@
 #pragma once
 #include "sprite/backend/core/castexpr.hpp"
 #include "sprite/backend/core/constant.hpp"
+#include "sprite/backend/core/descriptors.hpp"
 #include "sprite/backend/core/detail/current_builder.hpp"
 #include "sprite/backend/core/function.hpp"
 #include "sprite/backend/core/get_value.hpp"
@@ -49,24 +50,35 @@ namespace sprite { namespace backend
         SPRITE_APICALL(ConstantExpr::getOffsetOf(ty.ptr(), FieldNo.ptr()))
       );
   }
-
+  
+  //@{
   /**
    * @brief Performs a select operation.
    *
    * @snippet constexprs.cpp select
    */
+  // All constants -> constant.
   template<typename If, typename True, typename False>
-  inline typename std::enable_if<
-      is_constarg<If>::value && is_constarg<True>::value
-        && is_constarg<False>::value
-    , constant
-    >::type
+  inline SPRITE_ENABLE_FOR_ALL_CONSTANT_INITIALIZERS_RV(constant, If, True, False)
   select(If const & cond, True const & true_, False const & false_)
   {
     return constant(SPRITE_APICALL(
         ConstantExpr::getSelect(ptr(cond), ptr(true_), ptr(false_))
       ));
   }
+
+  // Not all constants -> value.
+  template<typename If, typename True, typename False
+    , SPRITE_ENABLE_FOR_ALL_VALUES(If, True, False)
+    >
+  inline SPRITE_DISABLE_FOR_ALL_CONSTANT_INITIALIZERS_RV(value, If, True, False)
+  select(If const & cond, True const & true_, False const & false_)
+  {
+    return value(SPRITE_APICALL(
+        current_builder().CreateSelect(ptr(cond), ptr(true_), ptr(false_))
+      ));
+  }
+  //@}
 
   /**
    * @brief Integer or floating-point negation.
@@ -412,31 +424,14 @@ namespace sprite { namespace backend
   }
   //@}
 
-  namespace aux
-  {
-    // Implements if with two arguments.
-    instruction if_impl(
-        value const & cond, labeldescr const & true_, labeldescr const & false_
-      );
-    // Implements if with one argument.
-    instruction if_impl(value const & cond, labeldescr const & true_);
-  }
-
   //@{
   /// Appends a conditional branch instruction to the active label scope.
-  template<typename T>
-  instruction if_(T && cond, labeldescr const & true_, labeldescr const & false_)
-  {
-    value const cond_ = get_value(types::bool_(), cond);
-    return aux::if_impl(cond_, true_, false_);
-  }
+  instruction if_(
+      conditiondescr const & cond
+    , labeldescr const & true_, labeldescr const & false_
+    );
 
-  template<typename T>
-  instruction if_(T && cond, labeldescr const & true_)
-  {
-    value const cond_ = get_value(types::bool_(), cond);
-    return aux::if_impl(cond_, true_);
-  }
+  instruction if_(conditiondescr const & cond, labeldescr const & true_);
   //@}
 
   /// Appends an unconditional branch instruction to the active label scope.
@@ -446,24 +441,8 @@ namespace sprite { namespace backend
     return instruction(SPRITE_APICALL(bldr.CreateBr(target.ptr())));
   }
 
-  namespace aux
-  {
-    instruction while_impl(value const & cond, labeldescr const & body);
-  }
-
   /// Creates a while loop.
-  template<
-      typename T
-    // FIXME: just using constant conditions, so far.
-    // , typename = typename std::enable_if<
-    //       is_code_block_specifier<T>::value // TODO: should return not void
-    //     >::type
-    >
-  inline instruction while_(T && cond, labeldescr const & body)
-  {
-    value const cond_ = get_value(types::bool_(), cond());
-    return aux::while_impl(cond_, body);
-  }
+  instruction while_(conditiondescr const & cond, labeldescr const & body);
 
   /// Creates an unconditional branch that escapes the nearest enclosing loop.
   instruction break_();

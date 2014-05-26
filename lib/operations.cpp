@@ -26,57 +26,55 @@ namespace sprite { namespace backend
     return instruction(SPRITE_APICALL(current_builder().CreateRetVoid()));
   }
 
-  namespace aux
+  instruction if_(
+      conditiondescr const & cond
+    , labeldescr const & true_, labeldescr const & false_
+    )
   {
-    instruction if_impl(
-        value const & cond, labeldescr const & true_, labeldescr const & false_
-      )
-    {
-      llvm::IRBuilder<> & bldr = current_builder();
-      auto rv = SPRITE_APICALL(
-          bldr.CreateCondBr(cond.ptr(), true_.ptr(), false_.ptr())
-        );
-      label next;
-      scope::update_current_label_after_branch(next);
-      scope::set_continuation(true_, next);
-      scope::set_continuation(false_, next);
-      // Perform codegen only after the continuations are set.
-      true_.codegen();
-      false_.codegen();
-      return instruction(rv);
-    }
+    llvm::IRBuilder<> & bldr = current_builder();
+    auto rv = SPRITE_APICALL(
+        bldr.CreateCondBr(cond.get().ptr(), true_.ptr(), false_.ptr())
+      );
+    label next;
+    scope::update_current_label_after_branch(next);
+    scope::set_continuation(true_, next);
+    scope::set_continuation(false_, next);
+    // Perform codegen only after the continuations are set.
+    true_.codegen();
+    false_.codegen();
+    return instruction(rv);
+  }
 
-    instruction if_impl(value const & cond, labeldescr const & true_)
-    {
-      label next;
-      llvm::IRBuilder<> & bldr = current_builder();
-      auto rv = SPRITE_APICALL(
-          bldr.CreateCondBr(cond.ptr(), true_.ptr(), next.ptr())
-        );
-      scope::update_current_label_after_branch(next);
-      scope::set_continuation(true_, next);
-      // Perform codegen only after the continuations are set.
-      true_.codegen();
-      return instruction(rv);
-    }
+  instruction if_(conditiondescr const & cond, labeldescr const & true_)
+  {
+    label next;
+    llvm::IRBuilder<> & bldr = current_builder();
+    auto rv = SPRITE_APICALL(
+        bldr.CreateCondBr(cond.get().ptr(), true_.ptr(), next.ptr())
+      );
+    scope::update_current_label_after_branch(next);
+    scope::set_continuation(true_, next);
+    // Perform codegen only after the continuations are set.
+    true_.codegen();
+    return instruction(rv);
+  }
 
-    instruction while_impl(value const & cond, labeldescr const & body)
+  instruction while_(conditiondescr const & cond, labeldescr const & body)
+  {
+    label test, next;
+    instruction const rv = goto_(test);
     {
-      label test, next;
-      instruction const rv = goto_(test);
-      {
-        scope _ = test;
-        llvm::IRBuilder<> & bldr = current_builder();
-        SPRITE_APICALL(
-            bldr.CreateCondBr(cond.ptr(), body.ptr(), next.ptr())
-          );
-      }
-      scope::update_current_label_after_branch(next);
-      scope::set_continuation(body, test, MD_LOOP);
-      // Perform codegen only after the continuations are set.
-      body.codegen();
-      return rv;
+      scope _ = test;
+      llvm::IRBuilder<> & bldr = current_builder();
+      SPRITE_APICALL(
+          bldr.CreateCondBr(cond.get().ptr(), body.ptr(), next.ptr())
+        );
     }
+    scope::update_current_label_after_branch(next);
+    scope::set_continuation(body, test, MD_LOOP);
+    // Perform codegen only after the continuations are set.
+    body.codegen();
+    return rv;
   }
 
   instruction break_()

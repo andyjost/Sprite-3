@@ -19,25 +19,53 @@
 #define SPRITE_INIT_LIST8(T) std::initializer_list<SPRITE_INIT_LIST7(T)>
 #define SPRITE_INIT_LIST9(T) std::initializer_list<SPRITE_INIT_LIST8(T)>
 
-// These macros simplify the look of certain declarations in the API.
-#define SPRITE_ENABLE_FOR_FUNCTION_PROTOTYPES(Args)                                      \
-    typename = typename std::enable_if<alltt<is_typearg_or_ellipsis, Args>::value>::type \
+// These macros simplify the declarations of certain declarations in the API.
+#define SPRITE_ENABLE_FOR_ALL_FUNCTION_PROTOTYPES(...)                                          \
+    typename = typename std::enable_if<alltt<is_typearg_or_ellipsis, __VA_ARGS__>::value>::type \
+  /**/
+#define SPRITE_ENABLE_FOR_ALL_FUNCTION_PROTOTYPES_RV(rv, ...)                                \
+    typename std::enable_if<alltt<is_typearg_or_ellipsis, __VA_ARGS__>::value, rv>::type \
   /**/
 
-#define SPRITE_ENABLE_FOR_CONSTANT_INITIALIZERS(Args)                                     \
-    typename = typename std::enable_if<alltt<is_constant_initializer, Args>::value>::type \
+//
+
+#define SPRITE_ENABLE_FOR_ALL_CONSTANT_INITIALIZERS(...)                                         \
+    typename = typename std::enable_if<alltt<is_constant_initializer, __VA_ARGS__>::value>::type \
+  /**/
+#define SPRITE_ENABLE_FOR_ALL_CONSTANT_INITIALIZERS_RV(rv, ...)                           \
+    typename std::enable_if<alltt<is_constant_initializer, __VA_ARGS__>::value, rv>::type \
   /**/
 
-#define SPRITE_ENABLE_FOR_VALUES(Args)                                        \
-    typename = typename std::enable_if<alltt<is_valuearg, Args>::value>::type \
+#define SPRITE_DISABLE_FOR_ALL_CONSTANT_INITIALIZERS(...)                                         \
+    typename = typename std::enable_if<!alltt<is_constant_initializer, __VA_ARGS__>::value>::type \
+  /**/
+#define SPRITE_DISABLE_FOR_ALL_CONSTANT_INITIALIZERS_RV(rv, ...)                           \
+    typename std::enable_if<!alltt<is_constant_initializer, __VA_ARGS__>::value, rv>::type \
   /**/
 
-#define SPRITE_DISABLE_FOR_VALUES(Args)                                        \
-    typename = typename std::enable_if<!alltt<is_valuearg, Args>::value>::type \
+//
+
+#define SPRITE_ENABLE_FOR_ALL_VALUES(...)                                            \
+    typename = typename std::enable_if<alltt<is_valuearg, __VA_ARGS__>::value>::type \
+  /**/
+#define SPRITE_ENABLE_FOR_ALL_VALUES_RV(rv, ...)                              \
+    typename std::enable_if<alltt<is_valuearg, __VA_ARGS__>::value, rv>::type \
   /**/
 
-#define SPRITE_ENABLE_FOR_VALUE_INITIALIZERS(Args)                                     \
-    typename = typename std::enable_if<alltt<is_value_initializer, Args>::value>::type \
+#define SPRITE_DISABLE_FOR_ALL_VALUES(...)                                            \
+    typename = typename std::enable_if<!alltt<is_valuearg, __VA_ARGS__>::value>::type \
+  /**/
+#define SPRITE_DISABLE_FOR_ALL_VALUES_RV(...)                                  \
+    typename std::enable_if<!alltt<is_valuearg, __VA_ARGS__>::value, rv>::type \
+  /**/
+
+//
+
+#define SPRITE_ENABLE_FOR_ALL_VALUE_INITIALIZERS(...)                                         \
+    typename = typename std::enable_if<alltt<is_value_initializer, __VA_ARGS__>::value>::type \
+  /**/
+#define SPRITE_ENABLE_FOR_ALL_VALUE_INITIALIZERS_RV(rv, ...)                           \
+    typename std::enable_if<alltt<is_value_initializer, __VA_ARGS__>::value, rv>::type \
   /**/
 
 namespace sprite { namespace backend
