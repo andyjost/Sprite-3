@@ -19,7 +19,7 @@
 #define SPRITE_INIT_LIST8(T) std::initializer_list<SPRITE_INIT_LIST7(T)>
 #define SPRITE_INIT_LIST9(T) std::initializer_list<SPRITE_INIT_LIST8(T)>
 
-// These macros simplify the declarations of certain declarations in the API.
+// These macros simplify certain declarations in the API.
 #define SPRITE_ENABLE_FOR_ALL_FUNCTION_PROTOTYPES(...)                                          \
     typename = typename std::enable_if<alltt<is_typearg_or_ellipsis, __VA_ARGS__>::value>::type \
   /**/
@@ -486,6 +486,27 @@ namespace sprite { namespace backend
   template<typename T>
   struct is_code_block_specifier
     : aux::is_code_block_specifier_impl<T>
+  {};
+
+  namespace aux
+  {
+    template<typename T, bool IsCodeBlock=is_code_block_specifier<T>::value>
+    struct is_condition_specifier_impl;
+
+    template<typename T>
+    struct is_condition_specifier_impl<T,true>
+      : is_value_initializer<typename function_traits<T>::return_value>::value
+    {};
+
+    template<typename T>
+    struct is_condition_specifier_impl<T,false>
+      : std::false_type
+    {};
+  }
+  /// A condition specifier is a nullary function that returns a value.
+  template<typename T>
+  struct is_condition_specifier
+    : aux::is_condition_specifier_impl<T>
   {};
 }}
 

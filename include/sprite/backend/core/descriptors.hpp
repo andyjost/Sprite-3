@@ -59,22 +59,51 @@ namespace sprite { namespace backend
   /**
    * @brief A condition descriptor.
    *
-   * Implements the condition argument used for branching constructs.  The
+   * Accepts the condition argument used for branching constructs.  The
    * condition may be a literal value or some code the yields a value, and is
    * always interpreted as a Boolean value.
    */
   struct conditiondescr
   {
-    // A condition may be a literal value.
+    //// Builds a condition descriptor from a literal value.
     template<typename T, SPRITE_ENABLE_FOR_ALL_VALUE_INITIALIZERS(T)>
-    conditiondescr(T && arg) : m_cond(get_value(types::bool_(), arg))
+    conditiondescr(T && arg) : m_cond(get_value(types::bool_(), arg)), m_blk()
       {}
 
-    value const & get() const { return m_cond; }
-    operator value const &() const { return m_cond; }
+    //// Builds a condition descriptor from a code block.
+    template<typename T>
+    conditiondescr(
+        T && cond
+      , typename std::enable_if<
+            is_condition_specifier<T>::value
+          >::type* = nullptr
+      )
+      : m_cond(), m_blk(std::bind(converter(), cond))
+    {}
+
+    value const & get() const
+    {
+      if(!m_cond && m_blk)
+      {
+        m_cond = m_blk();
+        m_blk = std::function<value()>();
+      }
+      assert(m_cond);
+      return m_cond;
+    }
+    operator value const &() const { return this->get(); }
 
   private:
 
-    value m_cond;
+    // Helps convert a function returning a user-specified type to a function
+    // returning value. 
+    struct converter
+    {
+      template<typename F> bool operator()(F && f)
+        { return get_value(types::bool_(), f()); }
+    };
+
+    mutable value m_cond;
+    mutable std::function<value()> m_blk;
   };
 }}

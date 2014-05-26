@@ -49,6 +49,5 @@ namespace sprite { namespace backend
    * (function) scope in which to evaluate the code block.
    */
   using codeblock = std::function<void()>;
-
 }}
 
