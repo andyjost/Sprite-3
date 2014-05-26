@@ -37,7 +37,7 @@ namespace sprite { namespace backend { namespace generics
     {
       /// Converts to anything (for type-checking; cannot actually be called).
       template<typename T> operator T() const
-        { throw runtime_error("Illegal conversion of weak_return"); }
+        { throw compile_error("Illegal conversion of weak_return"); }
     };
 
     /// Implements the generic get_constant_impl function.

@@ -63,5 +63,6 @@ namespace sprite { namespace backend { namespace testing
       std::function<void(clib_h const &)> const & body
     , std::string const & expected_output
     , bool print_module = false
+    , bool view_cfg = false
     );
 }}}

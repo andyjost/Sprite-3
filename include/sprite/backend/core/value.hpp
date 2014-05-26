@@ -23,11 +23,17 @@ namespace sprite { namespace backend
         dyn_cast<instruction &>(*this_).set_metadata(kind, arg);
         return *this_;
       }
-      Derived & get_metadata(string_ref kind)
+      Derived const & get_metadata(string_ref kind) const
       {
-        Derived * this_ = static_cast<Derived *>(this);
+        Derived const * this_ = static_cast<Derived const *>(this);
         assert(this_->ptr());
         return dyn_cast<instruction &>(*this_).get_metadata(kind);
+      }
+      Derived & get_metadata(string_ref kind)
+      {
+        metadata_support const * this_ =
+            static_cast<metadata_support const *>(this);
+        return const_cast<Derived &>(this_->get_metadata(kind));
       }
     };
   }

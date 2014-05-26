@@ -50,8 +50,8 @@ namespace sprite { namespace backend
   /// Indicates an incorrect parameter was supplied.
   SPRITE_DECLARE_ERROR_TYPE(parameter_error)
 
-  /// Indicates an error at runtime.
-  SPRITE_DECLARE_ERROR_TYPE(runtime_error)
+  /// Indicates an error at compile time.
+  SPRITE_DECLARE_ERROR_TYPE(compile_error)
 
   /// Indicates an error using class scope.
   SPRITE_DECLARE_ERROR_TYPE(scope_error)

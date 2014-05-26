@@ -238,7 +238,7 @@ namespace sprite { namespace backend
       case non_finite_value::Snan:
         return get_constant_impl(ty, SPRITE_APICALL(APFloat::getSNaN(sem, nfv.negative())));
     }
-    throw runtime_error("Bad non-finite value specifier");
+    throw compile_error("Bad non-finite value specifier");
   }
 
   // ====== Instantiation functions for StructType ======

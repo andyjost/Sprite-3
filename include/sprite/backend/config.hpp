@@ -35,8 +35,20 @@ namespace sprite { namespace backend { namespace aux {
 #define SPRITE_APICALL(...) __VA_ARGS__
 #endif
 
-/// Defines the metadata used to indicated implicit operations added by Sprite.
+/// Defines the metadata used to tag implicit continuation targets added by sprite.
 #define SPRITE_IMPLIED_METADATA "sprite.implied"
+
+namespace sprite { namespace backend
+{
+  /// Metadata used to indicate how an implicit branch is used.
+  enum MdBranchType {
+      MD_CONT /// The associated implied branch instruction is a continuation.
+    , MD_LOOP /// The associated implied branch instruction is a loopback.
+  };
+}}
+
+/// Defines the metadata used to tag loop back edges.
+#define SPRITE_LOOP_METADATA "sprite.loop"
 
 // Forward-declare some LLVM types that will be used.
 namespace llvm

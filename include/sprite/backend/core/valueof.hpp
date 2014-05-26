@@ -1,4 +1,4 @@
-#include "sprite/backend/core/constant.hpp"
+#include "sprite/backend/core/value.hpp"
 #include <type_traits>
 
 namespace sprite { namespace backend
@@ -36,12 +36,12 @@ namespace sprite { namespace backend
   inline typename std::enable_if<
       can_get_as_cref<Target, APInt>::value, APInt const &
     >::type
-  valueof(constant const & c)
+  valueof(value const & arg)
   {
-    if(constant_int const ci = dyn_cast<constant_int>(c))
+    if(constant_int const ci = dyn_cast<constant_int>(arg))
       return valueof<Target>(ci);
     throw type_error(
-        "Expected integer value, not " + typename_(c->getType())
+        "Expected integer value, not " + typename_(arg->getType())
       );
   }
   //@}
@@ -66,12 +66,12 @@ namespace sprite { namespace backend
   inline typename std::enable_if<
       aux::is_ok_integer_for_value<Target>(), Target
     >::type
-  valueof(constant const & c)
+  valueof(value const & arg)
   {
-    if(constant_int const ci = dyn_cast<constant_int>(c))
+    if(constant_int const ci = dyn_cast<constant_int>(arg))
       return valueof<Target>(ci);
     throw type_error(
-        "Expected integer value, not " + typename_(c->getType())
+        "Expected integer value, not " + typename_(arg->getType())
       );
   }
   //@}
@@ -89,9 +89,9 @@ namespace sprite { namespace backend
   inline typename std::enable_if<
       can_get_as_cref<Target, APFloat>::value, APFloat const &
     >::type
-  valueof(constant const & c)
+  valueof(value const & arg)
   {
-    if(constant_fp const lfp = dyn_cast<constant_fp>(c))
+    if(constant_fp const lfp = dyn_cast<constant_fp>(arg))
       return valueof<Target>(lfp);
     throw type_error("Expected floating-point value");
   }
@@ -102,9 +102,9 @@ namespace sprite { namespace backend
   inline typename std::enable_if<
       std::is_same<Target, float>::value, Target
     >::type
-  valueof(constant const & c)
+  valueof(value const & arg)
   {
-    APFloat const & val = valueof<APFloat>(c);
+    APFloat const & val = valueof<APFloat>(arg);
     llvm::fltSemantics const & sem = SPRITE_APICALL(val.getSemantics());
     if(&sem == &APFloat::IEEEsingle)
       return val.convertToFloat();
@@ -118,9 +118,9 @@ namespace sprite { namespace backend
   inline typename std::enable_if<
       std::is_same<Target, double>::value, Target
     >::type
-  valueof(constant const & c)
+  valueof(value const & arg)
   {
-    APFloat const & val = valueof<APFloat>(c);
+    APFloat const & val = valueof<APFloat>(arg);
     llvm::fltSemantics const & sem = SPRITE_APICALL(val.getSemantics());
     if(&sem == &APFloat::IEEEsingle)
       return val.convertToFloat();

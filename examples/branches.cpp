@@ -113,6 +113,83 @@ int main()
       }
     , "abcde"
     );
+  test_function(
+      [](clib_h const & clib)
+      {
+        value file = arg("file");
+        clib.fprintf(file, "a");
+        label c;
+        if_(1
+          , [&]{
+              clib.fprintf(file, "b");
+              if_(1, c);
+              clib.fprintf(file, "d");
+            }
+          );
+        {
+          scope _ = c;
+          clib.fprintf(file, "c");
+        }
+        clib.fprintf(file, "e");
+        return_(0);
+      }
+    , "abcde"
+    );
+  // Test a simple while loop.
+  test_function(
+      [](clib_h const & clib)
+      {
+        value file = arg("file");
+        clib.fprintf(file, "a");
+        while_([]{return true;}, [&]{clib.fprintf(file, "b"); break_();});
+        clib.fprintf(file, "c");
+        return_(0);
+      }
+    , "abc"
+    );
+  // Test break with nested branches.
+  test_function(
+      [](clib_h const & clib)
+      {
+        value file = arg("file");
+        clib.fprintf(file, "a");
+        while_(
+            []{return true;}
+          , [&]{
+              clib.fprintf(file, "b");
+              while_([]{return true;}
+                , [&]{
+                    clib.fprintf(file, "c");
+                    if_(true, []{break_();});
+                  }
+                );
+              clib.fprintf(file, "d");
+              if_(false, []{}, [&]{clib.fprintf(file, "e"); break_();});
+              clib.fprintf(file, "f");
+              break_();
+            }
+          );
+        clib.fprintf(file, "g");
+        return_(0);
+      }
+    , "abcdeg"
+    );
+  #if 0
+  test_function(
+      [](clib_h const & clib)
+      {
+        value file = arg("file");
+        clib.fprintf(file, "a");
+        type i64 = types::int_(64);
+        ref i = local(i64, "i");
+        i = 0;
+        while_([&]{i<3;}, [&]{clib.fprintf(file, "b"); ++i;});
+        clib.fprintf(file, "b");
+        return_(0);
+      }
+    , "abbbc"
+    );
+  #endif
 }
 
 // TODO add this test.

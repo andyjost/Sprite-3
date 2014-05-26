@@ -7,6 +7,7 @@
 
 namespace sprite { namespace backend
 {
+  // API: function
   template<> struct globalobj<Function> : constobj<Function>
   {
     using basic_type = Function;
@@ -34,9 +35,6 @@ namespace sprite { namespace backend
 
     /// Returns the function entry point.
     label entry() const;
-
-    /// Returns the last basic block, which is the current insertion point.
-    // label insertion() const;
 
     /// Returns the function return type.
     type return_type() const

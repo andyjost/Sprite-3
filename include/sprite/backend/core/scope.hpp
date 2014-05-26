@@ -43,7 +43,9 @@ namespace sprite { namespace backend
     static void update_current_label_after_branch(label const &);
 
     /// Sets the default continuation.
-    static void set_continuation(label const & src, label const & tgt);
+    static void set_continuation(
+        label const & src, label const & tgt, MdBranchType = MD_CONT
+      );
 
     // The context comes from the current module, but exposing it in this way
     // may allow some compilation units to avoid a dependency on module.hpp.

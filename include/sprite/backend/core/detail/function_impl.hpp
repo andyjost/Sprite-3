@@ -59,7 +59,7 @@ namespace sprite { namespace backend
   {
     assert(this->px);
     if(!this->px->empty())
-      throw runtime_error("A function body was already provided.");
+      throw compile_error("A function body was already provided.");
     SPRITE_APICALL(llvm::BasicBlock::Create(
         scope::current_context(), ".entry", this->px
       ));

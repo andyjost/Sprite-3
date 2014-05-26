@@ -15,6 +15,9 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/CFG.h"
 
+// DEBUG
+#include "sprite/backend/core/valueof.hpp"
+
 namespace sprite { namespace backend
 {
   struct scope::frame { virtual ~frame() {} };
@@ -238,16 +241,20 @@ namespace sprite { namespace backend
     // then move it to the new block.
     llvm::TerminatorInst * term = g_current_label->getTerminator();
     if(!term)
-      throw runtime_error("Expected a terminated basic block.");
+      throw compile_error("Expected a terminated basic block.");
     if(instruction(term).get_metadata(SPRITE_IMPLIED_METADATA))
     {
-      assert(term->getNumSuccessors() == 1);
-      Instruction * term2 =
-          llvm::BranchInst::Create(term->getSuccessor(0), cont.ptr());
-      instruction(term2).set_metadata(SPRITE_IMPLIED_METADATA);
-      term->eraseFromParent();
-      // The block must still be terminated.
+      term->removeFromParent();
+      cont->getInstList().push_back(term);
+      // term->moveBefore(cont->end());
+      // assert(term->getNumSuccessors() == 1);
+      // Instruction * term2 =
+      //     llvm::BranchInst::Create(term->getSuccessor(0), cont.ptr());
+      // instruction(term2).set_metadata(SPRITE_IMPLIED_METADATA);
+      // term->eraseFromParent();
+      // // The block must still be terminated.
       assert(g_current_label->getTerminator());
+      assert(cont->getTerminator());
     }
 
     // Replace the current builder and basic block.
@@ -259,14 +266,18 @@ namespace sprite { namespace backend
     g_current_label = cont; // nothrow
   }
 
-  void scope::set_continuation(label const & src, label const & tgt)
+  void scope::set_continuation(
+      label const & src, label const & tgt, MdBranchType tag
+    )
   {
     if(src && !src->getTerminator())
     {
       assert(scope::current_label().ptr() != src.ptr());
       llvm::IRBuilder<> bldr(src.ptr());
       Instruction * term = SPRITE_APICALL(bldr.CreateBr(tgt.ptr()));
-      instruction(term).set_metadata(SPRITE_IMPLIED_METADATA);
+      instruction(term).set_metadata(
+          SPRITE_IMPLIED_METADATA, static_cast<int>(tag)
+        );
     }
   }
 

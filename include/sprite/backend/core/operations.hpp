@@ -7,6 +7,7 @@
 #include "sprite/backend/core/castexpr.hpp"
 #include "sprite/backend/core/constant.hpp"
 #include "sprite/backend/core/detail/current_builder.hpp"
+#include "sprite/backend/core/function.hpp"
 #include "sprite/backend/core/get_value.hpp"
 #include "sprite/backend/core/global.hpp"
 #include "sprite/backend/core/label.hpp"
@@ -35,16 +36,7 @@ namespace sprite { namespace backend
    *
    * @snippet constexprs.cpp offsetof_
    */
-  inline constant offsetof_(type const & ty, unsigned FieldNo)
-  {
-    if(auto const p = dyn_cast<StructType>(ty))
-    {
-      return constant(
-          SPRITE_APICALL(ConstantExpr::getOffsetOf(p.ptr(), FieldNo))
-        );
-    }
-    throw type_error("Expected StructType for offsetof_.");
-  }
+  constant offsetof_(type const & ty, unsigned FieldNo);
 
   /**
    * @brief Computes the offset of a field in a struct.
@@ -403,16 +395,8 @@ namespace sprite { namespace backend
 
   //@{
   /// Appends a return instruction to the active label scope.
-  inline instruction return_()
-  {
-    if(!scope::current_function().return_type()->isVoidTy())
-    {
-      throw type_error(
-          "A return value must be supplied for functions not returning void."
-        );
-    }
-    return instruction(SPRITE_APICALL(current_builder().CreateRetVoid()));
-  }
+  instruction return_();
+
   template<typename T>
   instruction return_(T && arg)
   {
@@ -428,40 +412,30 @@ namespace sprite { namespace backend
   }
   //@}
 
+  namespace aux
+  {
+    // Implements if with two arguments.
+    instruction if_impl(
+        value const & cond, labeldescr const & true_, labeldescr const & false_
+      );
+    // Implements if with one argument.
+    instruction if_impl(value const & cond, labeldescr const & true_);
+  }
+
   //@{
   /// Appends a conditional branch instruction to the active label scope.
   template<typename T>
   instruction if_(T && cond, labeldescr const & true_, labeldescr const & false_)
   {
-    llvm::IRBuilder<> & bldr = current_builder();
     value const cond_ = get_value(types::bool_(), cond);
-    auto rv = SPRITE_APICALL(
-        bldr.CreateCondBr(cond_.ptr(), true_.ptr(), false_.ptr())
-      );
-    label next;
-    scope::update_current_label_after_branch(next);
-    scope::set_continuation(true_, next);
-    scope::set_continuation(false_, next);
-    // Perform codegen only after the continuations are set.
-    true_.codegen();
-    false_.codegen();
-    return instruction(rv);
+    return aux::if_impl(cond_, true_, false_);
   }
 
   template<typename T>
   instruction if_(T && cond, labeldescr const & true_)
   {
-    label next;
-    llvm::IRBuilder<> & bldr = current_builder();
     value const cond_ = get_value(types::bool_(), cond);
-    auto rv = SPRITE_APICALL(
-        bldr.CreateCondBr(cond_.ptr(), true_.ptr(), next.ptr())
-      );
-    scope::update_current_label_after_branch(next);
-    scope::set_continuation(true_, next);
-    // Perform codegen only after the continuations are set.
-    true_.codegen();
-    return instruction(rv);
+    return aux::if_impl(cond_, true_);
   }
   //@}
 
@@ -472,28 +446,27 @@ namespace sprite { namespace backend
     return instruction(SPRITE_APICALL(bldr.CreateBr(target.ptr())));
   }
 
+  namespace aux
+  {
+    instruction while_impl(value const & cond, labeldescr const & body);
+  }
+
   /// Creates a while loop.
   template<
       typename T
-    , typename = typename std::enable_if<
-          is_code_block_specifier<T>::value // TODO: should return not void
-        >::type
+    // FIXME: just using constant conditions, so far.
+    // , typename = typename std::enable_if<
+    //       is_code_block_specifier<T>::value // TODO: should return not void
+    //     >::type
     >
   inline instruction while_(T && cond, labeldescr const & body)
   {
-    label test, next;
-    instruction const rv = goto_(test);
-    {
-      scope _ = test;
-      auto const cond_ = cond();
-      if_(cond_, body, next);
-    }
-    scope::update_current_label_after_branch(next);
-    scope::set_continuation(body, test);
-    // Perform codegen only after the continuations are set.
-    body.codegen();
-    return rv;
+    value const cond_ = get_value(types::bool_(), cond());
+    return aux::while_impl(cond_, body);
   }
+
+  /// Creates an unconditional branch that escapes the nearest enclosing loop.
+  instruction break_();
   
   //@{
   /// Allocates a local variable.  Returns a pointer.

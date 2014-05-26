@@ -22,19 +22,12 @@ namespace
    * The module must have a function called "main" with the correct signature.
    * see test_function).
    */
-  void test_function_impl(
-      module const & m, std::string const & expected_output, bool print_module
+  void run_and_test_module(
+      module const & m, std::string const & expected_output
     )
   {
-    if(print_module)
-    {
-      PassManager pm;
-      pm.add(createPrintModulePass(&outs()));
-      pm.run(*m.ptr());
-    }
-  
     verifyModule(*m.ptr(), PrintMessageAction);
-  
+
     std::string err;
     ExecutionEngine * jit = EngineBuilder(m.ptr())
         .setErrorStr(&err)
@@ -79,8 +72,10 @@ namespace sprite { namespace backend { namespace testing
       std::function<void(clib_h const &)> const & body
     , std::string const & expected_output
     , bool print_module
+    , bool view_cfg
     )
   {
+    // Build the module.
     using namespace sprite::backend;
     InitializeNativeTarget();
 
@@ -95,8 +90,22 @@ namespace sprite { namespace backend { namespace testing
       scope _ = main;
       body(clib);
     }
+
+    // Print debug info, if requested.
+    if(print_module)
+    {
+      PassManager pm;
+      pm.add(createPrintModulePass(&outs()));
+      pm.run(*m.ptr());
+    }
+
+    if(view_cfg)
+      main->viewCFG();
   
-    test_function_impl(m, expected_output, print_module);
+    // JIT Compile and check the output.
+    if(print_module)
+    run_and_test_module(m, expected_output);
+
     delete m.ptr(); // FIXME: this is pretty ugly.
   }
 }}}

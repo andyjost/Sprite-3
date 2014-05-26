@@ -40,11 +40,18 @@ namespace sprite { namespace backend
         );
     }
 
-    friend size_t len(metadata const & md)
-      { return md->getNumOperands(); }
+    size_t size() const
+      { return (*this)->getNumOperands(); }
 
     value operator[](unsigned i)
       { return value((*this)->getOperand(i)); }
+
+    // FIXME: should be able to use ref instead.
+    template<typename T
+      , typename = typename std::enable_if<is_value_initializer<T>::value>::type
+      >
+    void set(unsigned i, T const & arg)
+      { return (*this)->replaceOperandWith(i, get_value(arg).ptr()); }
 
   private:
 

@@ -64,7 +64,7 @@ namespace sprite { namespace backend
     labeldescr(label const & l) : label(l), m_body()
     {
       if(!l->empty())
-        throw runtime_error("An empty label is required.");
+        throw compile_error("An empty label is required.");
     }
 
     labeldescr(codeblock const & b) : label(), m_body(b) {}

@@ -48,7 +48,7 @@ operator SPRITE_CMPOP(Lhs const & lhs, aux::arg_with_flags<Rhs> const & rhs)
           )
       );
   }
-  throw runtime_error("Expected an integer or floating-point type.");
+  throw compile_error("Expected an integer or floating-point type.");
 }
 
 // Value comparison.
@@ -97,7 +97,7 @@ operator SPRITE_CMPOP(Lhs const & lhs, aux::arg_with_flags<Rhs> const & rhs)
           )
       );
   }
-  throw runtime_error("Expected an integer or floating-point type.");
+  throw compile_error("Expected an integer or floating-point type.");
 }
 
 // Constant or value comparison.
