@@ -65,12 +65,12 @@ namespace sprite { namespace backend
    */
   struct conditiondescr
   {
-    //// Builds a condition descriptor from a literal value.
-    template<typename T, SPRITE_ENABLE_FOR_ALL_VALUE_INITIALIZERS(T)>
-    conditiondescr(T && arg) : m_cond(get_value(types::bool_(), arg)), m_blk()
+    //// Builds a condition descriptor from a constant.
+    template<typename T, SPRITE_ENABLE_FOR_ALL_CONSTANT_INITIALIZERS(T)>
+    conditiondescr(T && arg) : m_cond(get_constant(types::bool_(), arg)), m_blk()
       {}
 
-    //// Builds a condition descriptor from a code block.
+    //// Builds a condition descriptor from a code block that generates a value.
     template<typename T>
     conditiondescr(
         T && cond

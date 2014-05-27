@@ -1,0 +1,49 @@
+ 8 files changed, 216 insertions(+), 150 deletions(-)
+ create mode 100644 include/sprite/backend/core/descriptors.hpp
+hydrox16 [12] % git push -u origin master
+Enter passphrase for key '/remote/us03home4/ajost/.ssh/id_rsa':
+Counting objects: 32, done.
+Delta compression using up to 12 threads.
+Compressing objects: 100% (16/16), done.
+Writing objects: 100% (17/17), 3.14 KiB, done.
+Total 17 (delta 12), reused 0 (delta 0)
+To git@github.com:andyjost/Sprite-3.git
+   3356ac7..3f99d17  master -> master
+Branch master set up to track remote branch master from origin.
+hydrox16 [13] % git status
+# On branch master
+# Changed but not updated:
+#   (use "git add <file>..." to update what will be committed)
+#   (use "git checkout -- <file>..." to discard changes in working directory)
+#
+#       modified:   include/sprite/backend/core/descriptors.hpp
+#       modified:   include/sprite/backend/core/label.hpp
+#       modified:   include/sprite/backend/support/type_traits.hpp
+#
+no changes added to commit (use "git add" and/or "git commit -a")
+hydrox16 [14] % git add .
+hydrox16 [15] % ls
+buildtags  Doxyfile  enumsrc  examples  include  lib  LICENSE  log  Makefile  Make.include  README.md  setup.csh
+hydrox16 [16] % git status
+# On branch master
+# Changes to be committed:
+#   (use "git reset HEAD <file>..." to unstage)
+#
+#       modified:   include/sprite/backend/core/descriptors.hpp
+#       modified:   include/sprite/backend/core/label.hpp
+#       modified:   include/sprite/backend/support/type_traits.hpp
+#
+hydrox16 [17] % git commit -m 'Adds the ability to specify a condition as a code block.  Needs an implementation of ref to be useful.'
+[master 11c46eb] Adds the ability to specify a condition as a code block.  Needs an implementation of ref to be useful.
+ 3 files changed, 57 insertions(+), 8 deletions(-)
+hydrox16 [18] % git push -u origin master
+Enter passphrase for key '/remote/us03home4/ajost/.ssh/id_rsa':
+Counting objects: 19, done.
+Delta compression using up to 12 threads.
+Compressing objects: 100% (9/9), done.
+Writing objects: 100% (10/10), 1.36 KiB, done.
+Total 10 (delta 6), reused 0 (delta 0)
+To git@github.com:andyjost/Sprite-3.git
+   3f99d17..11c46eb  master -> master
+Branch master set up to track remote branch master from origin.
+hydrox16 [19] %
