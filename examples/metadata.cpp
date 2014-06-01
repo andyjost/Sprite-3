@@ -52,7 +52,7 @@ int main()
   auto it = f->front().rbegin();
   instruction a(&*it);
   // if(it->getMetadata("sprite.implied"))
-  if(a.get_metadata("sprite.implied"))
+  if(a.has_metadata("sprite.implied"))
   {
     std::cout << "Got sprite metadata" << std::endl;;
     // a->eraseFromParent();

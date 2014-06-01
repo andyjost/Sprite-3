@@ -83,7 +83,7 @@ namespace sprite { namespace backend { namespace types
   struct_type struct_(string_ref const & name)
   {
     module const mod = scope::current_module();
-    if(!mod)
+    if(!mod.ptr())
     {
       throw compile_error(
           "No current module (needed to lookup named struct)."

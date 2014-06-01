@@ -76,7 +76,7 @@ namespace sprite { namespace backend
     {
       elem = element_type(t);
       t = dyn_cast<array_type>(elem);
-      if(!t) return elem;
+      if(!t.ptr()) return elem;
     }
   }
 
@@ -103,46 +103,46 @@ namespace sprite { namespace backend
 
   inline type_with_flags element_type(type_with_flags const & arg)
   {
-    if(auto const a = dyn_cast<array_type>(arg))
-      { return element_type(a); }
+    auto const a = dyn_cast<array_type>(arg);
+    if(a.ptr()) return element_type(a);
 
     // The pointer type is not allowed to have flags.
     SPRITE_ALLOW_FLAGS(arg.flags(), "element_type", 0);
 
-    if(auto const c = dyn_cast<pointer_type>(arg))
-      { return element_type(c); }
+    auto const c = dyn_cast<pointer_type>(arg);
+    if(c.ptr()) return element_type(c);
     throw type_error("Expected array or pointer type.");
   }
 
   inline type element_type(type const & arg, unsigned i)
   {
-    if(auto const a = dyn_cast<function_type>(arg))
-      { return element_type(a, i); }
+    auto const a = dyn_cast<function_type>(arg);
+    if(a.ptr()) return element_type(a, i);
     throw type_error("Expected function type.");
   }
 
   inline uint64_t len(type const & arg)
   {
-    if(auto const a = dyn_cast<array_type>(arg))
-      { return len(a); }
-    if(auto const b = dyn_cast<struct_type>(arg))
-      { return len(b); }
-    if(auto const c = dyn_cast<function_type>(arg))
-      { return len(c); }
+    auto const a = dyn_cast<array_type>(arg);
+    if(a.ptr()) return len(a);
+    auto const b = dyn_cast<struct_type>(arg);
+    if(b.ptr()) return len(b);
+    auto const c = dyn_cast<function_type>(arg);
+    if(c.ptr()) return len(c);
     throw type_error("Expected array, function, or struct type.");
   }
 
   inline type remove_all_extents(type const & arg)
   {
-    if(array_type const a = dyn_cast<array_type>(arg))
-      { return remove_all_extents(a); }
+    array_type const a = dyn_cast<array_type>(arg);
+    if(a.ptr()) return remove_all_extents(a);
     throw type_error("Expected array type.");
   }
 
   inline type result_type(type const & arg)
   {
-    if(auto const a = dyn_cast<function_type>(arg))
-      { return result_type(a); }
+    auto const a = dyn_cast<function_type>(arg);
+    if(a.ptr()) return result_type(a);
     throw type_error("Expected function type.");
   }
 

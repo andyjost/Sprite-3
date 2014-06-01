@@ -151,7 +151,8 @@ namespace sprite { namespace backend { namespace generics
       {
         // If the generic LHS argument can be cast to the target type, then
         // dispatch the operation.
-        if(auto const p = dyn_cast<typename Case::Target>(lhs))
+        auto const p = dyn_cast<typename Case::Target>(lhs);
+        if(p.ptr())
         {
           static typename Case::template dispatcher<What>::type const dispatcher;
           return dispatcher(p, arg);

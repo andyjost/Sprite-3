@@ -424,7 +424,8 @@ namespace sprite { namespace backend
       return aux::build_data_array<float>(ty, values);
     if(elem_ty->isDoubleTy())
       return aux::build_data_array<double>(ty, values);
-    if(integer_type const ity = dyn_cast<integer_type>(elem_ty))
+    integer_type const ity = dyn_cast<integer_type>(elem_ty);
+    if(ity.ptr())
     {
       switch (ity->getBitWidth())
       {
@@ -601,8 +602,8 @@ namespace sprite { namespace backend
   // above function would be ambiguous if it accepted nullptr.
   inline constant get_constant_impl(type_with_flags const & ty, std::nullptr_t const &)
   {
-    if(auto p = dyn_cast<pointer_type>(ty))
-      return get_constant_impl(p, null);
+    auto p = dyn_cast<pointer_type>(ty);
+    if(p.ptr()) return get_constant_impl(p, null);
     throw type_error(
         "Expecting LHS of type PointerType for RHS of type std::nullptr_t"
       );

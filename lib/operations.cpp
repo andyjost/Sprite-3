@@ -6,7 +6,8 @@ namespace sprite { namespace backend
 {
   constant offsetof_(type const & ty, unsigned FieldNo)
   {
-    if(auto const p = dyn_cast<StructType>(ty))
+    auto const p = dyn_cast<StructType>(ty);
+    if(p.ptr())
     {
       return constant(
           SPRITE_APICALL(ConstantExpr::getOffsetOf(p.ptr(), FieldNo))
@@ -93,7 +94,7 @@ namespace sprite { namespace backend
 
       metadata md = instruction(term).get_metadata(SPRITE_IMPLIED_METADATA);
 
-      if(!md)
+      if(!md.ptr())
         throw compile_error("break_ used outside of a loop(2).");
       else
         bb = term->getSuccessor(0);

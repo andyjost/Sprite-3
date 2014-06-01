@@ -45,7 +45,7 @@ module build_module()
     fflush(nullptr);
     value buf = local(char_, 256);
     value ok = gets(buf);
-    if_(!ok, [&printf] // FIXME: the bool test is not really working
+    if_(/*!*/ok, [&printf] // FIXME: the bool test is not really working
     {
       printf("gets failed!");
       return_(1);

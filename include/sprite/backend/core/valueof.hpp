@@ -38,7 +38,8 @@ namespace sprite { namespace backend
     >::type
   valueof(value const & arg)
   {
-    if(constant_int const ci = dyn_cast<constant_int>(arg))
+    constant_int const ci = dyn_cast<constant_int>(arg);
+    if(ci.ptr())
       return valueof<Target>(ci);
     throw type_error(
         "Expected integer value, not " + typename_(arg->getType())
@@ -68,7 +69,8 @@ namespace sprite { namespace backend
     >::type
   valueof(value const & arg)
   {
-    if(constant_int const ci = dyn_cast<constant_int>(arg))
+    constant_int const ci = dyn_cast<constant_int>(arg);
+    if(ci.ptr())
       return valueof<Target>(ci);
     throw type_error(
         "Expected integer value, not " + typename_(arg->getType())
@@ -91,7 +93,8 @@ namespace sprite { namespace backend
     >::type
   valueof(value const & arg)
   {
-    if(constant_fp const lfp = dyn_cast<constant_fp>(arg))
+    constant_fp const lfp = dyn_cast<constant_fp>(arg);
+    if(lfp.ptr())
       return valueof<Target>(lfp);
     throw type_error("Expected floating-point value");
   }

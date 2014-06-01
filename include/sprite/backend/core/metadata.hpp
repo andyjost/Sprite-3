@@ -73,6 +73,10 @@ namespace sprite { namespace backend
   }
 
   inline metadata
-  valueobj<llvm::Instruction>::get_metadata(string_ref kind)
+  valueobj<llvm::Instruction>::get_metadata(string_ref kind) const
     { return metadata((*this)->getMetadata(kind)); }
+
+  inline bool
+  valueobj<llvm::Instruction>::has_metadata(string_ref kind) const
+      { return this->get_metadata(kind).ptr(); }
 }}

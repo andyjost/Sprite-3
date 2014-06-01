@@ -383,7 +383,8 @@ namespace sprite { namespace backend
     )
   {
     // Only functions may be inline.
-    if(function_type fun_type = dyn_cast<FunctionType>(ty))
+    function_type fun_type = dyn_cast<FunctionType>(ty);
+    if(fun_type.ptr())
       return inline_(fun_type, name, arg_names, body);
     throw type_error("Function type required for inline definition.");
   }

@@ -14,7 +14,8 @@ namespace sprite { namespace backend
     )
   {
     // Create a function for function types.
-    if(auto const fun_type = dyn_cast<FunctionType>(ty))
+    auto const fun_type = dyn_cast<FunctionType>(ty);
+    if(fun_type.ptr())
       return def(linkage, fun_type, name, arg_names);
 
     if(!arg_names.empty())
@@ -75,7 +76,6 @@ namespace sprite { namespace backend
       if(fun.return_type()->isVoidTy() && !scope::current_label()->getTerminator())
         return_();
     }
-
 
     return fun;
   }

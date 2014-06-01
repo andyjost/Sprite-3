@@ -65,7 +65,7 @@ namespace
       // added by Sprite, then remove it.
       auto const it = ptr->rbegin();
       auto const end = ptr->rend();
-      if(it != end && instruction(&*it).get_metadata(SPRITE_IMPLIED_METADATA))
+      if(it != end && instruction(&*it).has_metadata(SPRITE_IMPLIED_METADATA))
       {
         auto prev = it; ++prev;
         if(prev != end && prev->isTerminator())
@@ -93,7 +93,7 @@ namespace
   {
     if(llvm::Instruction * term = l->getTerminator())
     {
-      if(instruction(term).get_metadata(SPRITE_IMPLIED_METADATA))
+      if(instruction(term).has_metadata(SPRITE_IMPLIED_METADATA))
         return --(l->end());
     }
     return l->end();
@@ -110,7 +110,7 @@ namespace
     {
       if(check) check_function(m_prev_label);
 
-      if(m_prev_label)
+      if(m_prev_label.ptr())
       {
         new(&m_builder_loc) builder_type(
             m_prev_label.ptr(), get_insert_pos(m_prev_label)
@@ -132,7 +132,7 @@ namespace
 
     static void check_function(label const & new_label)
     {
-      if(!g_current_function)
+      if(!g_current_function.ptr())
       {
         throw scope_error(
             "No current function while setting label scope."
@@ -140,7 +140,7 @@ namespace
       }
 
       llvm::Function * new_func =
-          new_label ? new_label->getParent() : nullptr;
+          new_label.ptr() ? new_label->getParent() : nullptr;
       if(g_current_function.ptr() != new_func)
       {
         throw scope_error(
@@ -159,7 +159,7 @@ namespace
   struct function_frame : label_frame
   {
     function_frame(function && f = function(nullptr), bool check=true)
-      : label_frame(f ? f.entry() : label(nullptr), false), m_prev_function(f)
+      : label_frame(f.ptr() ? f.entry() : label(nullptr), false), m_prev_function(f)
     {
       if(check) check_module(m_prev_function);
       swap(m_prev_function, g_current_function);
@@ -170,7 +170,7 @@ namespace
 
     static void check_module(function const & new_function)
     {
-      if(!g_current_module)
+      if(!g_current_module.ptr())
       {
         throw scope_error(
             "No current module while setting function scope."
@@ -178,7 +178,7 @@ namespace
       }
 
       llvm::Module * new_module =
-          new_function ? new_function->getParent() : nullptr;
+          new_function.ptr() ? new_function->getParent() : nullptr;
       if(g_current_module.ptr() != new_module)
       {
         throw scope_error(
@@ -199,7 +199,7 @@ namespace
       { swap(m_prev_module, g_current_module); }
     ~module_frame() override
     {
-      assert(!g_current_function);
+      assert(!g_current_function.ptr());
       swap(m_prev_module, g_current_module);
     }
   private:
@@ -242,17 +242,10 @@ namespace sprite { namespace backend
     llvm::TerminatorInst * term = g_current_label->getTerminator();
     if(!term)
       throw compile_error("Expected a terminated basic block.");
-    if(instruction(term).get_metadata(SPRITE_IMPLIED_METADATA))
+    if(instruction(term).has_metadata(SPRITE_IMPLIED_METADATA))
     {
       term->removeFromParent();
       cont->getInstList().push_back(term);
-      // term->moveBefore(cont->end());
-      // assert(term->getNumSuccessors() == 1);
-      // Instruction * term2 =
-      //     llvm::BranchInst::Create(term->getSuccessor(0), cont.ptr());
-      // instruction(term2).set_metadata(SPRITE_IMPLIED_METADATA);
-      // term->eraseFromParent();
-      // // The block must still be terminated.
       assert(g_current_label->getTerminator());
       assert(cont->getTerminator());
     }
@@ -270,7 +263,7 @@ namespace sprite { namespace backend
       label const & src, label const & tgt, MdBranchType tag
     )
   {
-    if(src && !src->getTerminator())
+    if(src.ptr() && !src->getTerminator())
     {
       assert(scope::current_label().ptr() != src.ptr());
       llvm::IRBuilder<> bldr(src.ptr());

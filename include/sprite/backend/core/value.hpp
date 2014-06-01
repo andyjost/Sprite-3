@@ -29,12 +29,15 @@ namespace sprite { namespace backend
         assert(this_->ptr());
         return dyn_cast<instruction &>(*this_).get_metadata(kind);
       }
+      // FIXME: this looks totally wrong.
       Derived & get_metadata(string_ref kind)
       {
         metadata_support const * this_ =
             static_cast<metadata_support const *>(this);
         return const_cast<Derived &>(this_->get_metadata(kind));
       }
+      bool has_metadata(string_ref kind) const
+        { return this->get_metadata.ptr(); }
     };
   }
 
@@ -58,8 +61,8 @@ namespace sprite { namespace backend
 
     instruction & set_metadata(string_ref kind);
     instruction & set_metadata(string_ref kind, metadata const &);
-
-    metadata get_metadata(string_ref kind);
+    metadata get_metadata(string_ref kind) const;
+    bool has_metadata(string_ref kind) const;
 
   private:
 

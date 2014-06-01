@@ -25,7 +25,8 @@ namespace sprite { namespace backend
   template<typename U, typename>
   globalvar globalobj<T>::set_initializer(U const & value)
   {
-    if(auto g = dyn_cast<globalvar>(*this))
+    auto g = dyn_cast<globalvar>(*this);
+    if(g.ptr())
       return g.set_initializer(value);
     throw type_error("Expected GlobalVariable.");
   }
@@ -33,7 +34,8 @@ namespace sprite { namespace backend
   template<typename T>
   globalvar globalobj<T>::set_initializer(any_array_ref const & value)
   {
-    if(auto g = dyn_cast<globalvar>(*this))
+    auto g = dyn_cast<globalvar>(*this);
+    if(g.ptr())
       return g.set_initializer(value);
     throw type_error("Expected GlobalVariable.");
   }
@@ -42,7 +44,8 @@ namespace sprite { namespace backend
   aux::address_calculation<GlobalVariable>
   globalobj<T>::operator[](size_t i) const
   {
-    if(auto g = dyn_cast<globalvar>(*this))
+    auto g = dyn_cast<globalvar>(*this);
+    if(g.ptr())
       return std::move(g[i]);
     throw type_error("Expected GlobalVariable.");
   }
@@ -54,7 +57,8 @@ namespace sprite { namespace backend
     >::type
   globalobj<T>::operator[](Index const & i) const
   {
-    if(auto g = dyn_cast<globalvar>(*this))
+    auto g = dyn_cast<globalvar>(*this);
+    if(g.ptr())
       return std::move(g[i]);
     throw type_error("Expected GlobalVariable.");
   }
@@ -62,10 +66,12 @@ namespace sprite { namespace backend
   template<typename T>
   constant globalobj<T>::operator&() const
   {
-    if(auto g = dyn_cast<globalvar>(*this))
+    auto g = dyn_cast<globalvar>(*this);
+    if(g.ptr())
       return &g; // Overloaded!  Not the address of a local.
-    if(auto g = dyn_cast<function>(*this))
-      return &g; // Overloaded!  Not the address of a local.
+    auto f = dyn_cast<function>(*this);
+    if(f.ptr())
+      return &f; // Overloaded!  Not the address of a local.
     throw type_error("Expected GlobalVariable or Function.");
   }
 

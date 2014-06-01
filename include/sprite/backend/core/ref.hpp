@@ -15,7 +15,7 @@ namespace sprite { namespace backend
     explicit ref(value const & arg)
       : m_value(arg)
     {
-      if(!arg || arg->getType()->isPointerTy())
+      if(!arg.ptr() || arg->getType()->isPointerTy())
         parameter_error("Pointer type required to form a reference.");
     }
 
