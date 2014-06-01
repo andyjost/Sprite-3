@@ -1,6 +1,7 @@
 #pragma once
 #include "sprite/backend/config.hpp"
 #include "sprite/backend/core/detail/current_builder.hpp"
+#include "sprite/backend/core/get_value.hpp"
 #include "sprite/backend/core/value.hpp"
 #include "sprite/backend/support/exceptions.hpp"
 
@@ -35,10 +36,21 @@ namespace sprite { namespace backend
       return *this;
     }
 
+    /// Load the value from the stored address.
     operator value() const { return value(this->ptr()); }
+    value get() const { return *this; }
+
+    /// Get the stored address.
+    value operator&() const { return m_value; }
+    value address() const { return m_value; }
 
     llvm::Value * ptr() const 
       { return SPRITE_APICALL(current_builder().CreateLoad(m_value.ptr())); }
+
+    // TODO: generate operators through file inclusion.
+    ref & operator++() { return (*this = get() + 1); }
+
+    template<typename T> value operator<(T const & arg) { return get() < arg; }
 
   private:
 

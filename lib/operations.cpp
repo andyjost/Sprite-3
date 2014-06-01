@@ -27,7 +27,7 @@ namespace sprite { namespace backend
   }
 
   instruction if_(
-      conditiondescr const & cond
+      branch_condition const & cond
     , labeldescr const & true_, labeldescr const & false_
     )
   {
@@ -45,7 +45,7 @@ namespace sprite { namespace backend
     return instruction(rv);
   }
 
-  instruction if_(conditiondescr const & cond, labeldescr const & true_)
+  instruction if_(branch_condition const & cond, labeldescr const & true_)
   {
     label next;
     llvm::IRBuilder<> & bldr = current_builder();
@@ -59,7 +59,7 @@ namespace sprite { namespace backend
     return instruction(rv);
   }
 
-  instruction while_(conditiondescr const & cond, labeldescr const & body)
+  instruction while_(loop_condition const & cond, labeldescr const & body)
   {
     label test, next;
     instruction const rv = goto_(test);

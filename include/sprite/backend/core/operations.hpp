@@ -427,11 +427,11 @@ namespace sprite { namespace backend
   //@{
   /// Appends a conditional branch instruction to the active label scope.
   instruction if_(
-      conditiondescr const & cond
+      branch_condition const & cond
     , labeldescr const & true_, labeldescr const & false_
     );
 
-  instruction if_(conditiondescr const & cond, labeldescr const & true_);
+  instruction if_(branch_condition const & cond, labeldescr const & true_);
   //@}
 
   /// Appends an unconditional branch instruction to the active label scope.
@@ -442,7 +442,7 @@ namespace sprite { namespace backend
   }
 
   /// Creates a while loop.
-  instruction while_(conditiondescr const & cond, labeldescr const & body);
+  instruction while_(loop_condition const & cond, labeldescr const & body);
 
   /// Creates an unconditional branch that escapes the nearest enclosing loop.
   instruction break_();

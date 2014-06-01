@@ -68,6 +68,7 @@
     typename std::enable_if<alltt<is_value_initializer, __VA_ARGS__>::value, rv>::type \
   /**/
 
+
 namespace sprite { namespace backend
 {
   SPRITE_DEF_ISOBJ_CHECK(object)    // is_object
@@ -486,27 +487,6 @@ namespace sprite { namespace backend
   template<typename T>
   struct is_code_block_specifier
     : aux::is_code_block_specifier_impl<T>
-  {};
-
-  namespace aux
-  {
-    template<typename T, bool IsCodeBlock=is_code_block_specifier<T>::value>
-    struct is_condition_specifier_impl;
-
-    template<typename T>
-    struct is_condition_specifier_impl<T,true>
-      : is_value_initializer<typename function_traits<T>::return_value>::value
-    {};
-
-    template<typename T>
-    struct is_condition_specifier_impl<T,false>
-      : std::false_type
-    {};
-  }
-  /// A condition specifier is a nullary function that returns a value.
-  template<typename T>
-  struct is_condition_specifier
-    : aux::is_condition_specifier_impl<T>
   {};
 }}
 

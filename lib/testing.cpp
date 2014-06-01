@@ -103,7 +103,6 @@ namespace sprite { namespace backend { namespace testing
       main->viewCFG();
   
     // JIT Compile and check the output.
-    if(print_module)
     run_and_test_module(m, expected_output);
 
     delete m.ptr(); // FIXME: this is pretty ugly.

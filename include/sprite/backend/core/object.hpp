@@ -51,6 +51,7 @@ namespace sprite { namespace backend
     // Default copy and assignment are OK.
 
     /// Explicit conversion to @p bool.  True if the wrapped pointer is valid.
+    // TODO: should be removed to avoid confusion with value operators.  Consider !!a for value.
     explicit operator bool() const { return px; }
 
     /// Conversion to the LLVM object.

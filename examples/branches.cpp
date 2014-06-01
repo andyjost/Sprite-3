@@ -197,7 +197,26 @@ int main()
       }
     , "acd"
     );
-
+  test_function(
+      [](clib_h const & clib)
+      {
+        value file = arg("file");
+        clib.fprintf(file, "a");
+        type i64 = types::int_(64);
+        ref x = *local(i64);
+        x = 0;
+        while_(
+            [&]{x<(signed_)(3);}
+          , [&]{
+              clib.fprintf(arg("file"), "%d.", x);
+              ++x;
+            }
+          );
+        clib.fprintf(file, "b");
+        return_(0);
+      }
+    , "a0.1.2.b"
+    );
   #if 0
   test_function(
       [](clib_h const & clib)
@@ -215,7 +234,4 @@ int main()
     );
   #endif
 }
-
-// TODO add this test.
-// while_([]{return true;}, []{break_();});
 

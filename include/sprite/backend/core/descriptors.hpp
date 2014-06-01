@@ -57,41 +57,47 @@ namespace sprite { namespace backend
   };
 
   /**
-   * @brief A condition descriptor.
+   * @brief A condition descriptor for loops.
    *
-   * Accepts the condition argument used for branching constructs.  The
-   * condition may be a literal value or some code the yields a value, and is
-   * always interpreted as a Boolean value.
+   * Accepts the condition argument used for looping constructs.  The condition
+   * may be a constant value or some code the yields a value, which is always
+   * interpreted as a Boolean value.  The condition is suitable for
+   * re-evaluation.
    */
-  struct conditiondescr
+  struct loop_condition
   {
     //// Builds a condition descriptor from a constant.
     template<typename T, SPRITE_ENABLE_FOR_ALL_CONSTANT_INITIALIZERS(T)>
-    conditiondescr(T && arg) : m_cond(get_constant(types::bool_(), arg)), m_blk()
+    loop_condition(T && arg) : m_cond(get_constant(types::bool_(), arg)), m_blk()
       {}
 
     //// Builds a condition descriptor from a code block that generates a value.
     template<typename T>
-    conditiondescr(
+    loop_condition(
         T && cond
       , typename std::enable_if<
-            is_condition_specifier<T>::value
+            is_code_block_specifier<T>::value
           >::type* = nullptr
       )
-      : m_cond(), m_blk(std::bind(converter(), cond))
+      : m_cond(nullptr), m_blk(std::bind(converter(), cond))
     {}
 
     value const & get() const
     {
-      if(!m_cond && m_blk)
+      if(!m_cond.ptr())
       {
+        assert(m_blk);
         m_cond = m_blk();
         m_blk = std::function<value()>();
       }
-      assert(m_cond);
+      assert(m_cond.ptr());
       return m_cond;
     }
     operator value const &() const { return this->get(); }
+
+  protected:
+
+    loop_condition(value const & cond) : m_cond(cond), m_blk() {}
 
   private:
 
@@ -99,11 +105,42 @@ namespace sprite { namespace backend
     // returning value. 
     struct converter
     {
-      template<typename F> bool operator()(F && f)
-        { return get_value(types::bool_(), f()); }
+      template<typename F> value operator()(F && f)
+      {
+        // Generate the block.
+        f();
+        label l = scope::current_label();
+        assert(!l->empty());
+        // Convert the last instruction to a Boolean.
+        return get_value(types::bool_(), &l->back());
+      }
     };
 
     mutable value m_cond;
     mutable std::function<value()> m_blk;
+  };
+
+  /**
+   * @brief A condition descriptor for branches.
+   *
+   * Accepts the condition argument used for branching constructs.  The
+   * condition may be anything accepted by loop_condition, or a plain value.
+   * The condition is not suitable for re-evaluation.
+   */
+  struct branch_condition : loop_condition
+  {
+    template<typename T, SPRITE_ENABLE_FOR_ALL_VALUE_INITIALIZERS(T)>
+    branch_condition(T && arg) : loop_condition(get_value(types::bool_(), arg))
+      {}
+
+    template<typename T>
+    branch_condition(
+        T && cond
+      , typename std::enable_if<
+            is_code_block_specifier<T>::value
+          >::type* = nullptr
+      )
+      : loop_condition(cond)
+    {}
   };
 }}
