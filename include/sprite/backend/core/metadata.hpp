@@ -79,4 +79,15 @@ namespace sprite { namespace backend
   inline bool
   valueobj<llvm::Instruction>::has_metadata(string_ref kind) const
       { return this->get_metadata(kind).ptr(); }
+
+  namespace aux
+  {
+    template<typename Derived>
+    metadata metadata_support<Derived>::get_metadata(string_ref kind) const
+    {
+      Derived const * this_ = static_cast<Derived const *>(this);
+      assert(this_->ptr());
+      return dyn_cast<instruction const &>(*this_).get_metadata(kind);
+    }
+  }
 }}

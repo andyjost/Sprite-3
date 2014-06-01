@@ -23,21 +23,17 @@ namespace sprite { namespace backend
         dyn_cast<instruction &>(*this_).set_metadata(kind, arg);
         return *this_;
       }
-      Derived const & get_metadata(string_ref kind) const
+      Derived & set_metadata(string_ref kind)
       {
-        Derived const * this_ = static_cast<Derived const *>(this);
+        Derived * this_ = static_cast<Derived *>(this);
         assert(this_->ptr());
-        return dyn_cast<instruction &>(*this_).get_metadata(kind);
+        dyn_cast<instruction &>(*this_).set_metadata(kind);
+        return *this_;
       }
-      // FIXME: this looks totally wrong.
-      Derived & get_metadata(string_ref kind)
-      {
-        metadata_support const * this_ =
-            static_cast<metadata_support const *>(this);
-        return const_cast<Derived &>(this_->get_metadata(kind));
-      }
+      // Defined in metadata.hpp.
+      metadata get_metadata(string_ref kind) const;
       bool has_metadata(string_ref kind) const
-        { return this->get_metadata.ptr(); }
+        { return this->get_metadata(kind).ptr(); }
     };
   }
 
@@ -59,6 +55,7 @@ namespace sprite { namespace backend
     using basic_type = Instruction;
     using object<llvm::Instruction>::object;
 
+    // Defined in metadata.hpp.
     instruction & set_metadata(string_ref kind);
     instruction & set_metadata(string_ref kind, metadata const &);
     metadata get_metadata(string_ref kind) const;
