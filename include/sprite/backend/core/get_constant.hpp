@@ -694,22 +694,34 @@ namespace sprite { namespace backend
    */
   /// Initializes (or default-initializes) a constant of type @p T with the given value.
 
-  // Simple version with argument.
+  // Simple version with type argument.
   template<
       typename T, typename U
-    , typename = typename std::enable_if<!std::is_constructible<any_array_ref, U>::value>::type
+    , typename = typename std::enable_if<
+          !std::is_constructible<any_array_ref, U>::value
+            && !std::is_same<T, U>::value
+        >::type
     >
   inline auto get_constant(U && value)
     -> decltype(get_constant_impl(get_type<T>(), value))
     { return get_constant(get_type<T>(), std::forward<U>(value)); }
 
-  // // Simple version with no argument.
-  // template<typename T>
-  // // inline decltype(get_constant(get_type<T>(), null)) get_constant(null_arg const & = null)
-  // inline constant get_constant(null_arg const & x)
-  //   { return get_constant(get_type<T>(), x); }
+  // Simple version with no type argument (not for arrays).
+  template<typename T
+    , typename = typename std::enable_if<
+          !std::is_constructible<any_array_ref, T>::value
+            && !std::is_array<T>::value
+        >::type
+    >
+  inline constant get_constant(T && value)
+    { return get_constant(get_type<T>(), std::forward<T>(value)); }
 
-  // Array version.
+  // Simple version with no type argument (for arrays).
+  template<typename T, size_t N>
+  inline constant get_constant(T (&value)[N])
+    { return get_constant(get_type<T[N]>(), any_array_ref(value)); }
+
+  // Array version with type argument.
   template<typename T>
   inline typename std::enable_if<std::is_array<T>::value, constant>::type
   get_constant(any_array_ref const & value)

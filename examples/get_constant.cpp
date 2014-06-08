@@ -250,6 +250,23 @@ int main()
         CHECK_VALUE(x[2], int, 4);
         CHECK_VALUE(x[3], double, 7.0);
       }
+
+      // Check that the simple form of get_constant with no type argument
+      // compiles for a variety of types.
+      {
+        int a = 0;
+        float b = 0.0f;
+        int c[3] = {1,2,3};
+        char d[] = "hello";
+        std::tuple<int, float> e{0, 3.14f};
+        int const f = 0;
+        get_constant(a);
+        get_constant(b);
+        get_constant(c);
+        get_constant(d);
+        get_constant(e);
+        get_constant(f);
+      }
     }
 
     // Check multi-step creations involving implicit conversion.
@@ -265,7 +282,6 @@ int main()
       auto a = unsigned_(i64)(char_(-1));
       assert(valueof<uint64_t>(a) == 255);
     }
-
 
     // DELETEME
     static_(int_, "x").set_initializer(0);

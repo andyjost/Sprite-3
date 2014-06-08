@@ -263,6 +263,24 @@ namespace sprite { namespace backend
   inline typename std::enable_if<(sizeof...(T) != 1), struct_type>::type
   get_type()
     { return get_type<std::tuple<T...>>(); }
+
+  // Handle references.
+  template<typename T>
+  inline typename std::enable_if<
+      std::is_reference<T>::value
+    , decltype(get_type<typename std::remove_reference<T>::type>())
+    >::type
+  get_type()
+    { return get_type<typename std::remove_reference<T>::type>(); }
+
+  // Handle cv-qualifiers.
+  template<typename T>
+  inline typename std::enable_if<
+      std::is_const<T>::value || std::is_volatile<T>::vlaue
+    , decltype(get_type<typename std::remove_cv<T>::type>())
+    >::type
+  get_type()
+    { return get_type<typename std::remove_cv<T>::type>(); }
   //@}
 
   //@{
