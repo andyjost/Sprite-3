@@ -34,23 +34,23 @@ module build_module()
   {
     scope _ = main;
 
-    value x = local(i64);
+    value x = &local(i64);
     *x = 42;
 
-    ref y = *local(i64);
+    ref y = local(i64);
     y = 5;
 
     printf("hello world!, x=%d, y=%d\n", *x, y);
     printf("Enter some text: \n");
     fflush(nullptr);
-    value buf = local(char_, 256);
-    value ok = gets(buf);
+    ref buf = local(char_, 256);
+    value ok = gets(&buf);
     if_(/*!*/ok, [&printf] // FIXME: the bool test is not really working
     {
       printf("gets failed!");
       return_(1);
     });
-    printf("You entered \"%s\"\n", buf);
+    printf("You entered \"%s\"\n", &buf);
     return_(0);
   }
 

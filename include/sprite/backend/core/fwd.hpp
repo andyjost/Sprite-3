@@ -19,12 +19,22 @@ namespace sprite { namespace backend
   using pointer_type = typeobj<PointerType>;
   using struct_type = typeobj<StructType>;
 
-  // Values.
+  // Globals (anything the linker sees, even symbols marked private).
+  using global = globalobj<GlobalValue>;
+  using function = globalobj<Function>;
+  using globalvar = globalobj<GlobalVariable>;
+
+  // Values and references.
   using value = valueobj<>;
   using instruction = valueobj<Instruction>;
   using metadata = valueobj<MDNode>;
   struct label;
-  struct ref;
+  template<typename Value=value> struct basic_reference;
+  using ref = basic_reference<>;
+  // template<typename T> struct globalrefobj;
+  // using globalref = globalrefobj<GlobalValue>;
+  // using globalvarref = globalrefobj<GlobalVariable>;
+  // using functionref = globalrefobj<Function>;
 
   // Constants.
   using constant = constobj<>;
@@ -34,11 +44,9 @@ namespace sprite { namespace backend
   using constant_fp = constobj<ConstantFP>;
   using constant_int = constobj<ConstantInt>;
   using constant_struct = constobj<ConstantStruct>;
+  using globalvaraddr = constobj<GlobalVariable>;
 
-  // Globals (anything the linker sees, even symbols marked private).
-  using global = globalobj<GlobalValue>;
-  using function = globalobj<Function>;
-  using globalvar = globalobj<GlobalVariable>;
+
 
   // ========================================================================== 
   // Constructs related to flags.

@@ -1,6 +1,7 @@
 #include "sprite/backend/core/def.hpp"
 #include "sprite/backend/core/module.hpp"
 #include "sprite/backend/core/operations.hpp"
+#include "sprite/backend/core/control_flow.hpp"
 #include "sprite/backend/core/scope.hpp"
 
 namespace sprite { namespace backend

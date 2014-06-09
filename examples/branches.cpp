@@ -203,7 +203,7 @@ int main()
         value file = arg("file");
         clib.fprintf(file, "a");
         type i64 = types::int_(64);
-        ref x = *local(i64);
+        ref x = local(i64);
         x = 0;
         while_(
             [&]{x<(signed_)(3);}

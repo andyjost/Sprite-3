@@ -3,6 +3,7 @@
 #include "sprite/backend/core/detail/current_builder.hpp"
 #include "sprite/backend/core/get_value.hpp"
 #include "sprite/backend/core/value.hpp"
+#include "sprite/backend/core/operations.hpp"
 #include "sprite/backend/support/exceptions.hpp"
 
 namespace sprite { namespace backend
@@ -10,9 +11,10 @@ namespace sprite { namespace backend
   /**
    * @brief Provides a value-like interface to the target of a pointer value.
    */
-  struct ref
+  template<typename ValueType>
+  struct basic_reference
   {
-    explicit ref(value const & arg)
+    basic_reference(ValueType const & arg)
       : m_value(arg)
     {
       if(!arg.ptr() || arg->getType()->isPointerTy())
@@ -21,10 +23,10 @@ namespace sprite { namespace backend
 
     // Default copy is okay.
 
-    ref & operator=(ref const & arg) { return (*this = value(arg)); }
+    basic_reference & operator=(basic_reference const & arg) { return (*this = ValueType(arg)); }
 
     template<typename T>
-    typename std::enable_if<is_value_initializer<T>::value, ref &>::type
+    typename std::enable_if<is_value_initializer<T>::value, basic_reference &>::type
     operator=(T const & arg)
     {
       type const ty = element_type(get_type(m_value));
@@ -37,34 +39,88 @@ namespace sprite { namespace backend
     }
 
     /// Load the value from the stored address.
-    operator value() const { return value(this->ptr()); }
-    value get() const { return *this; }
+    operator ValueType() const { return ValueType(this->ptr()); }
+    ValueType get() const { return *this; }
 
     /// Get the stored address.
-    value operator&() const { return m_value; }
-    value address() const { return m_value; }
+    ValueType operator&() const { return m_value; }
+    ValueType address() const { return m_value; }
+
+    template<typename T, SPRITE_ENABLE_FOR_ALL_VALUE_INITIALIZERS(T)>
+    ref operator[](T const & arg) const;
 
     llvm::Value * ptr() const 
       { return SPRITE_APICALL(current_builder().CreateLoad(m_value.ptr())); }
 
     // TODO: generate operators through file inclusion.
-    ref & operator++() { return (*this = get() + 1); }
+    basic_reference & operator++() { return (*this = get() + 1); }
 
     template<typename T> value operator<(T const & arg) { return get() < arg; }
 
   private:
 
-    value m_value;
+    ValueType m_value;
+
+    static_assert(
+        std::is_base_of<llvm::Value, typename ValueType::element_type>::value
+      , "Expected an LLVM Value object"
+      );
   };
 
-
-  // Overload ptr() for ref.
-  inline llvm::Value * ptr(ref const & arg) { return arg.ptr(); }
+  // Overload ptr() for basic_reference.
+  template<typename ValueType>
+  inline llvm::Value * ptr(basic_reference<ValueType> const & arg)
+    { return arg.ptr(); }
 
   // The * operator applied to a pointer value is a reference.
   template<typename T>
-  typename std::enable_if<is_valuearg<T>::value, ref>::type
+  typename std::enable_if<is_valuearg<T>::value, basic_reference<T>>::type
   operator*(T const & arg)
-    { return ref(arg); }
+    { return basic_reference<T>(arg); }
 
+  template<typename ValueType>
+  template<typename T, typename>
+  ref basic_reference<ValueType>::operator[](T const & arg) const
+  {
+    llvm::Value * tmp[2] {get_constant<int32_t>(0).ptr(), get_value(arg).ptr()};
+    try
+    {
+      auto & bldr = current_builder();
+      value v(
+          SPRITE_APICALL(bldr.CreateGEP(address().ptr(), array_ref<llvm::Value*>(tmp)))
+        );
+      return ref(v);
+    }
+    catch(scope_error const &)
+    {
+      using namespace llvm;
+      // If all arguments are constants, then this is just a constant expression.
+      if(Constant *pc = dyn_cast<Constant>(address().ptr()))
+      if(Constant * arg0 = dyn_cast<Constant>(tmp[0]))
+      if(Constant * arg1 = dyn_cast<Constant>(tmp[1]))
+      {
+        Constant * tmp2[2] {arg0, arg1};
+        return value(ConstantFolder().CreateGetElementPtr(pc, tmp2));
+      }
+      throw;
+    }
+  }
+
+  //@{
+  /// Allocates a local variable.  Returns a pointer.
+  template<typename T>
+  inline typename std::enable_if<is_value_initializer<T>::value, ref>::type
+  local(
+      type const & ty, T const & size, unsigned alignment=0
+    )
+  {
+    llvm::IRBuilder<> & bldr = current_builder();
+    llvm::AllocaInst * px =
+        SPRITE_APICALL(bldr.CreateAlloca(ty.ptr(), get_value(size).ptr()));
+    if(alignment) SPRITE_APICALL(px->setAlignment(alignment));
+    return ref(value(px));
+  }
+
+  inline ref local(type const & ty) { return local(ty, value(nullptr)); }
+  //@}
 }}

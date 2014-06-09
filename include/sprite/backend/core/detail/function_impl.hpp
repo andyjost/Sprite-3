@@ -68,14 +68,19 @@ namespace sprite { namespace backend
     return label(&this->px->front());
   }
 
+  namespace aux
+  {
+    inline constant addressof_impl(Constant * ptr)
+    {
+      auto const i64 = types::int_(64);
+      return constant(SPRITE_APICALL(
+          ConstantExpr::getInBoundsGetElementPtr(
+              ptr, get_constant_impl(i64, 0).ptr()
+            )
+        ));
+    }
+  }
+
   inline constant globalobj<Function>::operator&() const
     { return aux::addressof_impl(this->ptr()); }
-
-  // inline label globalobj<Function>::insertion() const
-  // {
-  //   assert(this->px);
-  //   if(this->px->empty())
-  //     return this->entry();
-  //   return label(&this->px->back());
-  // }
 }}
