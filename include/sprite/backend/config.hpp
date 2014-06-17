@@ -72,6 +72,7 @@ namespace llvm
   class ConstantInt;
   class ConstantPointerNull;
   class ConstantStruct;
+  class BlockAddress;
 
   // Values.
   class Value;

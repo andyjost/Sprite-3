@@ -1,7 +1,8 @@
 #pragma once
 #include "sprite/backend/core/global.hpp"
-#include "sprite/backend/core/value.hpp"
 #include "sprite/backend/core/label.hpp"
+#include "sprite/backend/core/value.hpp"
+#include "sprite/backend/support/exceptions.hpp"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 
@@ -47,6 +48,7 @@ namespace sprite { namespace backend
   /// Get an argument (by its name) for the function currently in scope.
   value arg(string_ref const &);
 }}
+
 
 #include "sprite/backend/core/detail/function_impl.hpp"
 

@@ -217,6 +217,44 @@ int main()
       }
     , "a0.1.2.b"
     );
+  // Test indirect branches.
+  test_function(
+      [](clib_h const & clib)
+      {
+        type char_p = *types::char_();
+        type int_ = types::int_();
+        value file = arg("file");
+        clib.fprintf(file, ".beg");
+        label a, b, c, jump;
+        globalvar jt = static_(char_p[3]).set_initializer({&a, &b, &c});
+        ref i = local(int_);
+        i = 0;
+        goto_(jump);
+        {
+          scope _ = jump;
+          goto_(jt[i], {a, b, c});
+        }
+
+        {
+          scope _ = a;
+          clib.fprintf(file, ".a");
+          i = 1;
+          goto_(jump);
+        }
+        {
+          scope _ = b;
+          clib.fprintf(file, ".b");
+          i = 2;
+          goto_(jump);
+        }
+        {
+          scope _ = c;
+          clib.fprintf(file, ".c");
+          return_(0);
+        }
+      }
+    , ".beg.a.b.c"
+    );
   #if 0
   test_function(
       [](clib_h const & clib)

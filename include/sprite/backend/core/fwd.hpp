@@ -31,10 +31,6 @@ namespace sprite { namespace backend
   struct label;
   template<typename Value=value> struct basic_reference;
   using ref = basic_reference<>;
-  // template<typename T> struct globalrefobj;
-  // using globalref = globalrefobj<GlobalValue>;
-  // using globalvarref = globalrefobj<GlobalVariable>;
-  // using functionref = globalrefobj<Function>;
 
   // Constants.
   using constant = constobj<>;
@@ -45,7 +41,7 @@ namespace sprite { namespace backend
   using constant_int = constobj<ConstantInt>;
   using constant_struct = constobj<ConstantStruct>;
   using globalvaraddr = constobj<GlobalVariable>;
-
+  using block_address = constobj<llvm::BlockAddress>;
 
 
   // ========================================================================== 

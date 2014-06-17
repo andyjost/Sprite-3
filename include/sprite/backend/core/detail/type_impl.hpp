@@ -116,9 +116,19 @@ namespace sprite { namespace backend
 
   inline type element_type(type const & arg, unsigned i)
   {
+    // Function.
     auto const a = dyn_cast<function_type>(arg);
     if(a.ptr()) return element_type(a, i);
-    throw type_error("Expected function type.");
+
+    // Function pointer.
+    auto const b = dyn_cast<pointer_type>(arg);
+    if(b.ptr())
+    {
+      auto const c = dyn_cast<function_type>(element_type(b));
+      if(c.ptr())
+        return element_type(c, i);
+    }
+    throw type_error("Expected function or function pointer type.");
   }
 
   inline uint64_t len(type const & arg)
@@ -141,9 +151,19 @@ namespace sprite { namespace backend
 
   inline type result_type(type const & arg)
   {
+    // Function.
     auto const a = dyn_cast<function_type>(arg);
     if(a.ptr()) return result_type(a);
-    throw type_error("Expected function type.");
+
+    // Function pointer.
+    auto const b = dyn_cast<pointer_type>(arg);
+    if(b.ptr())
+    {
+      auto const c = dyn_cast<function_type>(element_type(b));
+      if(c.ptr())
+        return result_type(c);
+    }
+    throw type_error("Expected function or function pointer type.");
   }
 
   namespace aux

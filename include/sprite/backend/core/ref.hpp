@@ -1,7 +1,9 @@
 #pragma once
 #include "sprite/backend/config.hpp"
 #include "sprite/backend/core/detail/current_builder.hpp"
+#include "sprite/backend/core/get_constant.hpp"
 #include "sprite/backend/core/get_value.hpp"
+#include "sprite/backend/core/operations.hpp"
 #include "sprite/backend/core/value.hpp"
 #include "sprite/backend/core/operations.hpp"
 #include "sprite/backend/support/exceptions.hpp"
@@ -23,20 +25,23 @@ namespace sprite { namespace backend
 
     // Default copy is okay.
 
-    basic_reference & operator=(basic_reference const & arg) { return (*this = ValueType(arg)); }
+    basic_reference & operator=(basic_reference const & arg)
+      { return (*this = ValueType(arg)); }
 
-    template<typename T>
-    typename std::enable_if<is_value_initializer<T>::value, basic_reference &>::type
-    operator=(T const & arg)
-    {
-      type const ty = element_type(get_type(m_value));
-      SPRITE_APICALL(
-          current_builder().CreateStore(
-              get_value(ty, arg).ptr(), m_value.ptr()
-            )
-        );
-      return *this;
-    }
+    template<typename T, SPRITE_ENABLE_FOR_ALL_VALUE_INITIALIZERS(T)>
+    ref & operator=(T const & arg);
+
+    /// Performs member access into a struct.
+    ref dot(uint32_t i) const;
+    ref arrow(uint32_t i) const { return get().arrow(i); }
+
+    /// See function::operator().
+    template<
+        typename... Args
+      , SPRITE_ENABLE_FOR_ALL_VALUE_INITIALIZERS(Args...)
+      >
+    value operator()(Args &&... args) const
+      { return get()(std::forward<Args...>(args...)); }
 
     /// Load the value from the stored address.
     operator ValueType() const { return ValueType(this->ptr()); }
@@ -106,8 +111,39 @@ namespace sprite { namespace backend
     }
   }
 
+  template<typename ValueType>
+  template<typename T, typename>
+  inline ref & basic_reference<ValueType>::operator=(T const & arg)
+  {
+    type const ty = element_type(get_type(m_value));
+    SPRITE_APICALL(
+        current_builder().CreateStore(
+            get_value(ty, arg).ptr(), m_value.ptr()
+          )
+      );
+    return *this;
+  }
+
+  template<typename ValueType>
+  inline ref basic_reference<ValueType>::dot(uint32_t i) const
+  {
+    type const i32 = types::int_(32);
+    Value * tmp[2] {get_constant(i32,0).ptr(), get_constant(i32, i).ptr()};
+    auto & bldr = current_builder();
+    value v(
+        SPRITE_APICALL(bldr.CreateGEP(address().ptr(), array_ref<Value*>(tmp)))
+      );
+    return ref(v);
+  }
+
+  inline ref valueobj<llvm::Value>::arrow(uint32_t i) const
+  {
+    ref r(*this);
+    return r.dot(i);
+  }
+
   //@{
-  /// Allocates a local variable.  Returns a pointer.
+  /// Allocates a local variable.  Returns a @p ref.
   template<typename T>
   inline typename std::enable_if<is_value_initializer<T>::value, ref>::type
   local(
@@ -118,7 +154,7 @@ namespace sprite { namespace backend
     llvm::AllocaInst * px =
         SPRITE_APICALL(bldr.CreateAlloca(ty.ptr(), get_value(size).ptr()));
     if(alignment) SPRITE_APICALL(px->setAlignment(alignment));
-    return ref(value(px));
+    return *value(px);
   }
 
   inline ref local(type const & ty) { return local(ty, value(nullptr)); }

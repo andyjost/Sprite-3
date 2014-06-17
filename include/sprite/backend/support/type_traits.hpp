@@ -469,7 +469,13 @@ namespace sprite { namespace backend
 
   namespace aux
   {
-    template<typename T, bool IsCallable=is_callable<T>::value>
+    // A "callable" here does not include value, which has a templatized
+    // operator() that confuses function_traits.
+    template<
+        typename T
+      , bool IsCallable=is_callable<T>::value
+          && !std::is_base_of<value, T>::value
+      >
     struct is_code_block_specifier_impl;
 
     template<typename T>

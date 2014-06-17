@@ -8,6 +8,10 @@
 
 namespace sprite { namespace backend
 {
+  // FIXME: becuase globalvar uses basic_reference as its base, but this class
+  // uses constobj, there is no automatic conversion, and things like
+  // operator[] do not easily forward.  Can globalobj use basic_reference, too
+  // (i.e., even for functions?).
   template<typename T> struct globalobj : constobj<T>
   {
     using basic_type = GlobalValue;

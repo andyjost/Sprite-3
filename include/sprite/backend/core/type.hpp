@@ -168,6 +168,9 @@ namespace sprite { namespace backend { namespace types
 
   /// Creates the void type.
   type void_();
+  
+  /// Creates the label type (for holding a @p block_address).
+  type label();
 
   /** 
    * @brief Creates an anonymous struct (uniqued by structural equivalence).

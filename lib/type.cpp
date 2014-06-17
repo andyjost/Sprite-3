@@ -67,6 +67,12 @@ namespace sprite { namespace backend { namespace types
     return type(SPRITE_APICALL(Type::getVoidTy(cxt)));
   }
 
+  type label()
+  {
+    auto & cxt = scope::current_context();
+    return type(SPRITE_APICALL(Type::getLabelTy(cxt)));
+  }
+
   struct_type struct_(array_ref<type> const & elements)
   {
     auto & cxt = scope::current_context();

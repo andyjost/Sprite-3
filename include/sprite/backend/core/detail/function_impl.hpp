@@ -1,7 +1,10 @@
+#include "sprite/backend/core/detail/current_builder.hpp"
 #include "sprite/backend/core/get_value.hpp"
-#include "sprite/backend/support/exceptions.hpp"
 #include "sprite/backend/core/scope.hpp"
+#include "sprite/backend/support/exceptions.hpp"
 #include <algorithm>
+// DEBUG
+#include "llvm/IR/Function.h"
 
 namespace sprite { namespace backend
 {
@@ -47,7 +50,7 @@ namespace sprite { namespace backend
   template<typename... Args, typename>
   value globalobj<Function>::operator()(Args &&... args) const
   {
-    // The is an array initialized with the result of calling @p get_value
+    // tmp is an array initialized with the result of calling @p get_value
     // for each argument.
     auto fun = (*this)->getFunctionType();
     aux::parameter_builder get_param(*fun);
@@ -83,4 +86,60 @@ namespace sprite { namespace backend
 
   inline constant globalobj<Function>::operator&() const
     { return aux::addressof_impl(this->ptr()); }
+
+  template<typename... Args, typename>
+  inline value value::operator()(Args &&... args) const
+  {
+    // Function.
+    function f = dyn_cast<function>(*this);
+    if(f.ptr())
+      return f(std::forward<Args>(args)...);
+
+    // !!!!!!
+    // TODO: Fix this garbage.  How the hell am I supposed to call a function pointer, anyway?
+    // !!!!!!
+
+    // Option #0.
+    Type * ty = (*this)->getType();
+    if(ty && ty->isPointerTy())
+    {
+      PointerType * pt = cast<PointerType>(ty);
+      ty = pt->getPointerElementType();
+      if(FunctionType * fun = dyn_cast<FunctionType>(ty))
+      {
+        aux::parameter_builder get_param(*fun);
+        Value * tmp[sizeof...(args)] {get_param(std::forward<Args>(args))...};
+        return value(SPRITE_APICALL(current_builder().CreateCall(ptr(), array_ref<Value*>(tmp))));
+        // return aux::invoke(this->px, tmp);
+      }
+    }
+    // Option #1
+    // value x(SPRITE_APICALL(current_builder().CreateLoad(ptr())));
+    // return x(std::forward<Args>(args)...);
+
+    // Option #2
+    // Function pointer.
+    // Type * ty = (*this)->getType();
+    // if(ty && ty->isPointerTy())
+    // {
+    //   PointerType * pt = cast<PointerType>(ty);
+    //   ty = pt->getPointerElementType();
+    //   if(FunctionType * ft = dyn_cast<FunctionType>(ty))
+    //   {
+    //     auto fv = SPRITE_APICALL(current_builder().CreateLoad(ptr()));
+    //     if(Function * abc = dyn_cast<Function>(fv))
+    //     {
+    //       function def(abc);
+    //       return f(std::forward<Args>(args)...);
+    //     }
+
+    //     // auto fun = (*this)->getFunctionType();
+    //     // aux::parameter_builder get_param(*fun);
+    //     // Value * tmp[sizeof...(args)] {get_param(std::forward<Args>(args))...};
+    //     // return aux::invoke(this->px, tmp);
+    //   }
+    // }
+
+    throw type_error("Expected function or function pointer type.");
+  }
 }}

@@ -176,7 +176,7 @@ namespace sprite { namespace backend
   constant bitcast(constant const & src, type const & tgt)
     { return apply_cast<llvm::Instruction::BitCast>(src.ptr(), tgt.ptr()); }
 
-  value bitcast(value const & src, type tgt)
+  value bitcast(value const & src, type const & tgt)
     { return apply_cast<llvm::Instruction::BitCast>(src.ptr(), tgt.ptr()); }
 
   type coerce(type const & lhs, type const & rhs)

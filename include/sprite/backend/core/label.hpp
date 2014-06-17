@@ -1,5 +1,6 @@
 #pragma once
 #include "sprite/backend/config.hpp"
+#include "sprite/backend/core/constant.hpp"
 #include "sprite/backend/core/scope.hpp"
 #include "sprite/backend/core/value.hpp"
 #include "sprite/backend/support/exceptions.hpp"
@@ -33,6 +34,10 @@ namespace sprite { namespace backend
       scope _ = *this;
       body();
     }
+
+    /// Returns the label address.
+    block_address operator&() const
+      { return block_address(SPRITE_APICALL(llvm::BlockAddress::get(ptr()))); }
 
   private:
 

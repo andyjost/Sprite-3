@@ -12,6 +12,4 @@ namespace sprite { namespace backend
   // Returns the current llvm::IRBuilder<> or raises an exception if none is
   // available.
   llvm::IRBuilder<> & current_builder();
-
-  // void update_curent_builder()
 }}

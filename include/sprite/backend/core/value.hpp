@@ -1,12 +1,15 @@
 #pragma once
 #include "sprite/backend/config.hpp"
-#include "sprite/backend/core/object.hpp"
+#include "sprite/backend/core/type.hpp"
 #include "sprite/backend/support/casting.hpp"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Instruction.h"
 
 namespace sprite { namespace backend
 {
+  /// Specifies an attribute to attach to an instruction.
+  enum attribute { tailcall };
+
   namespace aux
   {
     /**
@@ -44,9 +47,24 @@ namespace sprite { namespace backend
     using basic_type = Value;
     using object<llvm::Value>::object;
 
+    valueobj() : object<llvm::Value>::object(nullptr) {}
+
     // Define in-place operators.
     #define SPRITE_LHS_TYPE value
     #include "sprite/backend/core/detail/declare_class_operators.def"
+
+    /// See function::operator().
+    template<
+        typename... Args
+      , SPRITE_ENABLE_FOR_ALL_VALUE_INITIALIZERS(Args...)
+      >
+    value operator()(Args &&... args) const;
+
+    /// Performs pointer dereference followed by member access into a struct.
+    ref arrow(uint32_t i) const;
+
+    /// Sets an attribute.
+    value const & set_attribute(attribute) const;
   };
 
   template<>
@@ -81,4 +99,9 @@ namespace sprite { namespace backend
         std::is_base_of<basic_type, T>::value, "Expected an LLVM Value object"
       );
   };
+
+  /// Get the type of a value.
+  template<typename T>
+  type typeof_(valueobj<T> const & arg)
+    { return type(SPRITE_APICALL(arg.ptr()->getType())); }
 }}
