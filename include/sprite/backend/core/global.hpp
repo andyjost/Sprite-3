@@ -6,7 +6,6 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 
-#define FOO 1
 namespace sprite { namespace backend
 {
   template<typename T> struct globalobj : constobj<T>
