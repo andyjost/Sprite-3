@@ -3,7 +3,7 @@
  * @brief Implements class scope.
  */
 
-#include "sprite/backend/core/function.hpp"
+#include "sprite/backend/core/global.hpp"
 #include "sprite/backend/core/label.hpp"
 #include "sprite/backend/core/metadata.hpp"
 #include "sprite/backend/core/module.hpp"

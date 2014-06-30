@@ -1,5 +1,4 @@
 #pragma once
-#include "sprite/backend/core/function.hpp"
 #include "sprite/backend/core/global.hpp"
 #include "sprite/backend/core/label.hpp"
 #include "sprite/backend/core/type.hpp"

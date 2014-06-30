@@ -6,8 +6,8 @@
 #pragma once
 #include "sprite/backend/core/descriptors.hpp"
 #include "sprite/backend/core/detail/current_builder.hpp"
-#include "sprite/backend/core/function.hpp"
 #include "sprite/backend/core/get_value.hpp"
+#include "sprite/backend/core/global.hpp"
 #include "sprite/backend/core/label.hpp"
 #include "sprite/backend/core/scope.hpp"
 #include "sprite/backend/core/type.hpp"

@@ -18,9 +18,10 @@ namespace sprite { namespace backend { namespace testing
   struct clib_h
   {
     type char_ = types::char_();
+    type FILE_p = *types::struct_("FILE");
     type int_ = get_type<int>();
     type size_t_= get_type<size_t>();
-    type FILE_p = *types::struct_("FILE");
+    type void_ = types::void_();
   
     // int snprintf(char *str, size_t size, const char *format, ...);
     function const snprintf = extern_(int_(*char_, size_t_, *char_, dots), "snprintf");
@@ -34,6 +35,10 @@ namespace sprite { namespace backend { namespace testing
     function const fflush = extern_(int_(FILE_p), "fflush");
     // int fclose(FILE *fp);
     function const fclose = extern_(int_(FILE_p), "fclose");
+    // void *malloc(size_t size);
+    function const malloc = extern_((*char_)(size_t_), "malloc");
+    // void free(void *ptr);
+    function const free = extern_(void_(*char_), "free");
   };
   
   /**

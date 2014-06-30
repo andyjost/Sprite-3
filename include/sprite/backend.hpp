@@ -21,7 +21,6 @@ namespace sprite
 #include "sprite/backend/core/constant.hpp"
 #include "sprite/backend/core/control_flow.hpp"
 #include "sprite/backend/core/def.hpp"
-#include "sprite/backend/core/function.hpp"
 #include "sprite/backend/core/fwd.hpp"
 #include "sprite/backend/core/get_constant.hpp"
 #include "sprite/backend/core/global.hpp"

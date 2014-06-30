@@ -1,10 +1,16 @@
 #pragma once
 #include "sprite/backend/config.hpp"
 #include "sprite/backend/core/constant.hpp"
+#include "sprite/backend/core/label.hpp"
 #include "sprite/backend/core/ref.hpp"
+#include "sprite/backend/core/value.hpp"
+#include "sprite/backend/support/exceptions.hpp"
 #include "sprite/backend/support/type_erasures.hpp"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Instructions.h"
+//
 
 namespace sprite { namespace backend
 {
@@ -51,6 +57,60 @@ namespace sprite { namespace backend
     /// Sets the initializer for a global array variable.
     globalvar & set_initializer(any_array_ref const & value);
   };
+
+  // Forward specialization.
+  template<> struct globalobj<Function>;
+
+  inline global module::getglobal(string_ref name) const
+  {
+    llvm::GlobalValue * gv = ptr()->getNamedValue(name);
+    if(!gv)
+      throw value_error("global object not found");
+    return global(gv);
+  }
+
+  inline bool module::hasglobal(string_ref name) const
+    { return ptr()->getNamedValue(name); }
+
+  // API: function
+  template<> struct globalobj<Function> : constobj<Function>
+  {
+    using basic_type = Function;
+    using constobj<Function>::constobj;
+
+    /**
+     * @brief Inserts a call instruction in the current context.
+     *
+     * Each argument can be a value, or raw initializer.  A raw initializer is
+     * any object -- such as a built-in integer or floating-point value, to
+     * name two -- that can be used to initialize a constant.
+     */
+    template<
+        typename... Args
+      , SPRITE_ENABLE_FOR_ALL_VALUE_INITIALIZERS(Args...)
+      >
+    value operator()(Args &&... args) const;
+
+    /**
+     * @brief Takes the address of a function.
+     *
+     * @snippet defs.cpp Taking a function address
+     */
+    constant operator&() const;
+
+    /// Returns the function entry point.
+    label entry() const;
+
+    /// Returns the function return type.
+    type return_type() const
+      { return type(SPRITE_APICALL(ptr()->getReturnType())); }
+  };
+
+  /// Get an argument (by its position) for the function currently in scope.
+  value arg(size_t);
+
+  /// Get an argument (by its name) for the function currently in scope.
+  value arg(string_ref const &);
 }}
 
 #include "sprite/backend/core/detail/global_impl.hpp"

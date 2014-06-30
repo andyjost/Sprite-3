@@ -4,6 +4,7 @@
 #include "sprite/backend/support/type_traits.hpp"
 #include "llvm/ADT/ArrayRef.h"
 #include <initializer_list>
+#include <memory>
 #include <type_traits>
 
 namespace sprite { namespace backend
@@ -38,6 +39,15 @@ namespace sprite { namespace backend
 
     array_ref(std::initializer_list<T> args)
       : llvm::ArrayRef<T>(args.begin(), args.size())
+    {}
+
+    // Corrects the buggy implementation provided by LLVM.
+    template<typename A>
+    array_ref(const std::vector<T, A> &Vec)
+      : llvm::ArrayRef<T>(
+            Vec.empty() ? (T*)0 : std::addressof(Vec.front())
+          , Vec.size()
+          )
     {}
 
     /// Initializes from std::array.
