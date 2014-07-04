@@ -6,6 +6,32 @@
 
 namespace sprite { namespace backend
 {
+  /**
+   * @brief Behaves just like a string ref, but also includes a flag indicating
+   * whether the name is flexible (i.e., can be modified by the system).
+   *
+   * By default, global names are not flexible, meaning that if the specified
+   * name is already taken, then an error is raised.  However, if @p flexible
+   * is used to create the name, then conflicts are resolved by creating a new
+   * name.
+   *
+   * @snippet defs.cpp Using flexible names
+   */
+  struct globalname : string_ref
+  {
+    using string_ref::string_ref;
+
+    globalname(string_ref str, bool is_flexible_)
+      : string_ref(str), is_flexible(is_flexible_)
+    {}
+
+    bool is_flexible = false;
+  };
+
+  // Creates a flexible name.
+  inline globalname flexible(string_ref str)
+    { return globalname(str, true); }
+
   //@{
   /**
    * @brief Declares a global variable or function with user-specified linkage.
@@ -38,7 +64,7 @@ namespace sprite { namespace backend
   global def(
       GlobalValue::LinkageTypes linkage
     , type const & ty
-    , twine const & name = ""
+    , globalname const & name = flexible("")
     , array_ref<twine> const & = {}
     , codeblock const & body = codeblock()
     );
@@ -46,7 +72,7 @@ namespace sprite { namespace backend
   inline global def(
       GlobalValue::LinkageTypes linkage
     , type const & ty
-    , twine const & name
+    , globalname const & name
     , codeblock const & body
     )
   { return def(linkage, ty, name, {}, body); }
@@ -69,7 +95,7 @@ namespace sprite { namespace backend
   function def(
       GlobalValue::LinkageTypes linkage
     , function_type const &
-    , twine const & name = ""
+    , globalname const & name = flexible("")
     , array_ref<twine> const & = {}
     , codeblock const & body = codeblock()
     );
@@ -77,7 +103,7 @@ namespace sprite { namespace backend
   inline function def(
       GlobalValue::LinkageTypes linkage
     , function_type const & ty
-    , twine const & name
+    , globalname const & name
     , codeblock const & body
     )
   { return def(linkage, ty, name, {}, body); }
@@ -101,7 +127,7 @@ namespace sprite { namespace backend
   inline auto def(
       GlobalValue::LinkageTypes linkage
     , type const & ty
-    , twine const & name = ""
+    , globalname const & name = flexible("")
     , array_ref<twine> const & arg_names = {}
     , codeblock const & body = codeblock()
     )
@@ -112,7 +138,7 @@ namespace sprite { namespace backend
   inline auto def(
       GlobalValue::LinkageTypes linkage
     , type const & ty
-    , twine const & name
+    , globalname const & name
     , codeblock const & body
     )
     -> decltype(dyn_cast<T>(def(linkage, ty, name, {}, body)))
@@ -147,7 +173,7 @@ namespace sprite { namespace backend
    */
   inline global extern_(
       type const & ty
-    , twine const & name = ""
+    , globalname const & name = flexible("")
     , array_ref<twine> const & arg_names = {}
     , codeblock const & body = codeblock()
     )
@@ -155,7 +181,7 @@ namespace sprite { namespace backend
 
   inline global extern_(
       type const & ty
-    , twine const & name
+    , globalname const & name
     , codeblock const & body
     )
   { return def(GlobalValue::ExternalLinkage, ty, name, {}, body); }
@@ -175,7 +201,7 @@ namespace sprite { namespace backend
 
   inline function extern_(
       function_type const & ty
-    , twine const & name = ""
+    , globalname const & name = flexible("")
     , array_ref<twine> const & arg_names = {}
     , codeblock const & body = codeblock()
     )
@@ -183,7 +209,7 @@ namespace sprite { namespace backend
 
   inline function extern_(
       function_type const & ty
-    , twine const & name
+    , globalname const & name
     , codeblock const & body
     )
   { return def(GlobalValue::ExternalLinkage, ty, name, {}, body); }
@@ -204,7 +230,7 @@ namespace sprite { namespace backend
   template<typename T>
   inline auto extern_(
       type const & ty
-    , twine const & name = ""
+    , globalname const & name = flexible("")
     , array_ref<twine> const & arg_names = {}
     , codeblock const & body = codeblock()
     )
@@ -214,7 +240,7 @@ namespace sprite { namespace backend
   template<typename T>
   inline auto extern_(
       type const & ty
-    , twine const & name
+    , globalname const & name
     , codeblock const & body
     )
     -> decltype(dyn_cast<T>(extern_(ty, name, {}, body)))
@@ -246,7 +272,7 @@ namespace sprite { namespace backend
    */
   inline global static_(
       type const & ty
-    , twine const & name = ""
+    , globalname const & name = flexible("")
     , array_ref<twine> const & arg_names = {}
     , codeblock const & body = codeblock()
     )
@@ -254,7 +280,7 @@ namespace sprite { namespace backend
 
   inline global static_(
       type const & ty
-    , twine const & name
+    , globalname const & name
     , codeblock const & body
     )
   { return def(GlobalValue::InternalLinkage, ty, name, {}, body); }
@@ -274,7 +300,7 @@ namespace sprite { namespace backend
 
   inline function static_(
       function_type const & ty
-    , twine const & name = ""
+    , globalname const & name = flexible("")
     , array_ref<twine> const & arg_names = {}
     , codeblock const & body = codeblock()
     )
@@ -282,7 +308,7 @@ namespace sprite { namespace backend
 
   inline function static_(
       function_type const & ty
-    , twine const & name
+    , globalname const & name
     , codeblock const & body
     )
   { return def(GlobalValue::InternalLinkage, ty, name, {}, body); }
@@ -303,7 +329,7 @@ namespace sprite { namespace backend
   template<typename T>
   inline auto static_(
       type const & ty
-    , twine const & name = ""
+    , globalname const & name = flexible("")
     , array_ref<twine> const & arg_names = {}
     , codeblock const & body = codeblock()
     )
@@ -313,7 +339,7 @@ namespace sprite { namespace backend
   template<typename T>
   inline auto static_(
       type const & ty
-    , twine const & name
+    , globalname const & name
     , codeblock const & body
     )
     -> decltype(dyn_cast<T>(static_(ty, name, {}, body)))
@@ -348,7 +374,7 @@ namespace sprite { namespace backend
    */
   inline function inline_(
       function_type const & ty
-    , twine const & name = ""
+    , globalname const & name = flexible("")
     , array_ref<twine> const & arg_names = {}
     , codeblock const & body = codeblock()
     )
@@ -356,7 +382,7 @@ namespace sprite { namespace backend
 
   inline function inline_(
       function_type const & ty
-    , twine const & name
+    , globalname const & name
     , codeblock const & body
     )
   { return def(GlobalValue::LinkOnceAnyLinkage, ty, name, {}, body); }
@@ -376,7 +402,7 @@ namespace sprite { namespace backend
 
   inline function inline_(
       type const & ty
-    , twine const & name = ""
+    , globalname const & name = flexible("")
     , array_ref<twine> const & arg_names = {}
     , codeblock const & body = codeblock()
     )
@@ -390,7 +416,7 @@ namespace sprite { namespace backend
 
   inline function inline_(
       type const & ty
-    , twine const & name
+    , globalname const & name
     , codeblock const & body
     )
   { return inline_(ty, name, {}, body); }
@@ -414,7 +440,7 @@ namespace sprite { namespace backend
   template<typename T>
   inline auto inline_(
       type const & ty
-    , twine const & name = ""
+    , globalname const & name = flexible("")
     , array_ref<twine> const & arg_names = {}
     , codeblock const & body = codeblock()
     )
@@ -424,7 +450,7 @@ namespace sprite { namespace backend
   template<typename T>
   inline auto inline_(
       type const & ty
-    , twine const & name
+    , globalname const & name
     , codeblock const & body
     )
     -> decltype(dyn_cast<T>(inline_(ty, name, {}, body)))

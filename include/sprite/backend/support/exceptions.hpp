@@ -55,4 +55,7 @@ namespace sprite { namespace backend
 
   /// Indicates an error using class scope.
   SPRITE_DECLARE_ERROR_TYPE(scope_error)
+
+  /// Indicates a naming error (such as a conflict with a previous definition).
+  SPRITE_DECLARE_ERROR_TYPE(name_error)
 }}

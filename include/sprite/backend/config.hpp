@@ -6,8 +6,6 @@
 #pragma once
 #include <array>
 #include "sprite/backend/support/typenames.hpp"
-// DEBUG
-#include <iostream>
 
 /**
  * @brief Calls to the LLVM C++-API are wrapped in this macro.

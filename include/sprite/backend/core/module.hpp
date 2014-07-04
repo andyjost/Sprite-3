@@ -36,7 +36,7 @@ namespace sprite { namespace backend
 
     /// Creates a new module.
     explicit module(
-        string_ref const & name=".anon"
+        string_ref const & name
       , llvm::LLVMContext & context = SPRITE_APICALL(llvm::getGlobalContext())
       )
       : base_type(SPRITE_APICALL(new llvm::Module(name, context)))

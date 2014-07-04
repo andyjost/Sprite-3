@@ -4,12 +4,29 @@
 #include "sprite/backend/core/control_flow.hpp"
 #include "sprite/backend/core/scope.hpp"
 
+namespace
+{
+  using namespace sprite::backend;
+
+  // Checks that the desired name matches the given object name, conditional on
+  // the @p is_flexible property.
+  template<typename T>
+  inline void check_for_conflicts(globalname const & name, T const & obj)
+  {
+    if(!name.is_flexible && obj->getName() != name)
+    {
+      obj->eraseFromParent();
+      throw name_error("name conflict");
+    }
+  }
+}
+
 namespace sprite { namespace backend
 {
   global def(
       GlobalValue::LinkageTypes linkage
     , type const & ty
-    , twine const & name
+    , globalname const & name
     , array_ref<twine> const & arg_names
     , codeblock const & body
     )
@@ -35,7 +52,7 @@ namespace sprite { namespace backend
 
     // Create a global variable for other types.
     module const mod = scope::current_module();
-    return global(SPRITE_APICALL(
+    auto rv = global(SPRITE_APICALL(
         new GlobalVariable(
             /* Module      */ *mod.ptr()
           , /* Type        */ ty.ptr()
@@ -45,12 +62,14 @@ namespace sprite { namespace backend
           , /* Name        */ name
           )
       ));
+    check_for_conflicts(name, rv);
+    return rv;
   }
 
   function def(
       GlobalValue::LinkageTypes linkage
     , function_type const & ty
-    , twine const & name
+    , globalname const & name
     , array_ref<twine> const & arg_names
     , codeblock const & body
     )
@@ -59,6 +78,7 @@ namespace sprite { namespace backend
     function fun(SPRITE_APICALL(
         Function::Create(ty.ptr(), linkage, name, mod.ptr())
       ));
+    check_for_conflicts(name, fun);
 
     if(arg_names.size() > fun->arg_size())
       throw value_error("Too many arguments names.");

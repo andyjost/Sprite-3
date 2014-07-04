@@ -9,6 +9,7 @@
 #include "sprite/backend.hpp"
 #include <cmath>
 #include <limits>
+#include <iostream>
 
 int main()
 {
@@ -30,8 +31,8 @@ int main()
     auto const ga2 =
         extern_(i32[3], "ga2").set_initializer({1, 2, 3});
     /// [Global definitions with linkage]
-    (void) myfunction;
-    (void) ga;
+    myfunction->eraseFromParent();
+    ga->eraseFromParent();
     (void) ga2;
   }
 
@@ -78,11 +79,11 @@ int main()
     // Creates an external array from different initializer types.
     std::string const world("world");
     auto hello_world2 =
-        extern_((*char_)[2], "hello_world").set_initializer(_t("hello", world));
+        extern_((*char_)[2], "hello_world2").set_initializer(_t("hello", world));
 
     /// [Using extern_]
-    (void) myfunction;
-    (void) ga;
+    myfunction->eraseFromParent();
+    ga->eraseFromParent();
     (void) hello_world;
     (void) hello_world2;
   }
@@ -98,7 +99,7 @@ int main()
     auto global_float = 
         static_(float_, "global_float").set_initializer(1.0);
     /// [Using static_]
-    (void) myfunction;
+    myfunction->eraseFromParent();
     (void) global_float;
   }
 
@@ -108,7 +109,7 @@ int main()
     auto const void_ = types::void_();
     auto const myfunction = inline_(void_(), "myfunction");
     /// [Using inline_]
-    (void) myfunction;
+    myfunction->eraseFromParent();
   }
 
   {
@@ -119,6 +120,21 @@ int main()
     value const addr = &myfunction;
     /// [Taking a function address]
     (void) addr;
+  }
+
+  {
+    /// [Using flexible names]
+    auto const i32 = types::int_(32);
+    auto a = static_(i32, "a");
+    try
+    {
+      static_(i32, "a"); // Error: name conflict
+      assert(0);
+    } catch(name_error const &) {}
+    auto a2 = static_(i32, flexible("a")); // OK
+    /// [Using flexible names]
+    (void) a;
+    (void) a2;
   }
 
   return 0;

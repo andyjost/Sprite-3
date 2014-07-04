@@ -44,11 +44,13 @@ namespace
   {
     using LlvmConstantOrValue = typename ConstantOrValue::element_type;
     Type * const tgt_type = ptr(tgt);
-    assert(tgt_type);
+    // assert(tgt_type);
     LlvmConstantOrValue * const val = ptr(src);
-    assert(val);
-    Type * const src_type = val->getType();
-    assert(src_type);
+    // assert(val);
+    Type * const src_type = val ? val->getType() : nullptr;
+    // assert(src_type);
+    if(!tgt_type || !src_type)
+      throw parameter_error("Null arguments or invalid typecast");
 
     // Quick exit.
     if(src_type == tgt_type) return src;

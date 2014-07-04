@@ -118,5 +118,4 @@ namespace sprite { namespace backend
       }
     };
   }
-
 }}

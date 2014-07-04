@@ -4,13 +4,14 @@
 #include <llvm/IR/Metadata.h>
 #include "llvm/Analysis/Verifier.h"
 #include <llvm/Assembly/PrintModulePass.h>
+#include <iostream>
 
 using namespace llvm;
 using namespace sprite::backend;
 
 int main()
 {
-  module m;
+  module m(".anon");
   scope _ = m;
   type int_ = types::int_();
   type void_ = types::void_();

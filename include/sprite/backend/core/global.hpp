@@ -58,20 +58,6 @@ namespace sprite { namespace backend
     globalvar & set_initializer(any_array_ref const & value);
   };
 
-  // Forward specialization.
-  template<> struct globalobj<Function>;
-
-  inline global module::getglobal(string_ref name) const
-  {
-    llvm::GlobalValue * gv = ptr()->getNamedValue(name);
-    if(!gv)
-      throw value_error("global object not found");
-    return global(gv);
-  }
-
-  inline bool module::hasglobal(string_ref name) const
-    { return ptr()->getNamedValue(name); }
-
   // API: function
   template<> struct globalobj<Function> : constobj<Function>
   {
@@ -105,6 +91,18 @@ namespace sprite { namespace backend
     type return_type() const
       { return type(SPRITE_APICALL(ptr()->getReturnType())); }
   };
+
+  inline global module::getglobal(string_ref name) const
+  {
+    llvm::GlobalValue * gv = ptr()->getNamedValue(name);
+    if(!gv)
+      throw value_error("global object not found");
+    return global(gv);
+  }
+
+  inline bool module::hasglobal(string_ref name) const
+    { return ptr()->getNamedValue(name); }
+
 
   /// Get an argument (by its position) for the function currently in scope.
   value arg(size_t);

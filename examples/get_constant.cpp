@@ -20,7 +20,7 @@ static_assert(
 
 int main()
 {
-  module m;
+  module m(".anon");
   {
     scope _ = m;
 
@@ -284,8 +284,8 @@ int main()
     }
 
     // DELETEME
-    static_(int_, "x").set_initializer(0);
-    static_(int_, "x").set_initializer(get_constant<int>(42));
+    static_(int_).set_initializer(0);
+    static_(int_).set_initializer(get_constant<int>(42));
   }
   return 0;
 }

@@ -7,6 +7,7 @@
 #include "llvm/ExecutionEngine/JIT.h"
 #include "llvm/Support/TargetSelect.h"
 #include <cstdlib>
+#include <iostream>
 #include <sstream>
 
 using namespace llvm;
@@ -79,7 +80,7 @@ namespace sprite { namespace backend { namespace testing
     using namespace sprite::backend;
     InitializeNativeTarget();
 
-    module m;
+    module m(".anon");
     scope _ = m;
     clib_h clib;
   
