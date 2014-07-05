@@ -124,17 +124,36 @@ int main()
 
   {
     /// [Using flexible names]
+    // Global variables.
     auto const i32 = types::int_(32);
     auto a = static_(i32, "a");
+    auto a2 = static_(i32, "a");
+    assert(a.ptr() == a2.ptr()); // a and a2 are the same variable.
     try
     {
-      static_(i32, "a"); // Error: name conflict
+      static_(i32[2], "a"); // Error: type conflict.
       assert(0);
-    } catch(name_error const &) {}
-    auto a2 = static_(i32, flexible("a")); // OK
+    } catch(type_error const &) {}
+    auto a3 = static_(i32, flexible("a")); // OK: a3 is a new variable.
+    assert(a.ptr() != a3.ptr());
+
+    // Functions with a body.
+    auto b = static_(i32(), "b", {},[]{return_(0);});
+    auto b2 = static_(i32(), "b");
+    assert(b.ptr() == b2.ptr()); // b and b2 are the same variable.
+    try
+    {
+      static_(i32(i32), "b"); // Error: type conflict.
+      assert(0);
+    } catch(type_error const &) {}
+    auto b3 = static_(i32(), flexible("b")); // OK: b3 is a new function.
+    assert(b.ptr() != b3.ptr());
+    try
+    {
+      static_(i32(), "b", {}, []{return_(0);}); // Error: multiple definition.
+      assert(0);
+    } catch(compile_error const &) {}
     /// [Using flexible names]
-    (void) a;
-    (void) a2;
   }
 
   return 0;
