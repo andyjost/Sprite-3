@@ -6,6 +6,10 @@
 #pragma once
 #include "sprite/backend.hpp"
 
+void sprite_dumpvalue(llvm::Value *);
+void sprite_dumptype(llvm::Value *);
+void sprite_dumptype(llvm::Type *);
+
 namespace sprite { namespace backend
 {
   /// Indicates a test failed.

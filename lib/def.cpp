@@ -98,7 +98,7 @@ namespace sprite { namespace backend
     }
 
     if(arg_names.size() > fun->arg_size())
-      throw value_error("Too many arguments names.");
+      throw value_error("Too many argument names.");
 
     // Set the argument names.  If an existing definition was found, then the
     // argument names must match any name previously given.

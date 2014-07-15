@@ -13,6 +13,10 @@
 using namespace llvm;
 using namespace sprite::backend;
 
+void sprite_dumpvalue(llvm::Value * arg) { arg->dump(); }
+void sprite_dumptype(llvm::Value * arg) { arg->getType()->dump(); }
+void sprite_dumptype(llvm::Type * arg) { arg->dump(); }
+
 namespace
 {
   static size_t const BUFSZ = 4096;
