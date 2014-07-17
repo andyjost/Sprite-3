@@ -2,6 +2,7 @@ SOURCES = $(wildcard *.cpp)
 OBJECTS = $(SOURCES:.cpp=.o)
 EXECUTABLES = $(OBJECTS:.o=.exe)
 TESTS = $(EXECUTABLES:.exe=.test)
+BITCODE = $(EXECUTABLES:.exe=.bc)
 BAREWORDS = $(EXECUTABLES:.exe=)
 
 .PHONY : all clean $(BAREWORDS)
@@ -16,7 +17,7 @@ include ../Make.include
 -include $(OBJECTS:.o=.d)
 
 clean :
-	rm -f $(EXECUTABLES) $(OBJECTS) $(TESTS) $(TESTS:=.failed) *.d
+	rm -f $(EXECUTABLES) $(OBJECTS) $(TESTS) $(TESTS:=.failed) $(BITCODE) *.d *.result
 
 .cpp.o :
 	$(CC) $(CFLAGS) -c $< -o $@
