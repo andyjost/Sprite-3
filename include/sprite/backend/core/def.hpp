@@ -29,7 +29,7 @@ namespace sprite { namespace backend
   };
 
   // Creates a flexible name.
-  inline globalname flexible(string_ref str)
+  inline globalname flexible(string_ref str = string_ref())
     { return globalname(str, true); }
 
   //@{

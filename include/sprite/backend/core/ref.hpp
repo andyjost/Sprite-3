@@ -16,12 +16,20 @@ namespace sprite { namespace backend
   template<typename ValueType>
   struct basic_reference
   {
-    basic_reference(ValueType const & arg)
-      : m_value(arg)
+    basic_reference(std::nullptr_t) : m_value(nullptr) {}
+
+    basic_reference(ValueType const & arg) : m_value(nullptr)
+      { this->reset(arg); }
+
+    void reset(ValueType const & arg)
     {
-      if(!arg.ptr() || arg->getType()->isPointerTy())
-        parameter_error("Pointer type required to form a reference.");
+      m_value = arg;
+      if(m_value.ptr() && !m_value->getType()->isPointerTy())
+        throw type_error("Pointer type required to form a reference.");
     }
+    template<typename T>
+    void reset(basic_reference<T> const & arg)
+      { this->reset(arg.m_value); }
 
     // Default copy is okay.
 
@@ -41,7 +49,7 @@ namespace sprite { namespace backend
       , SPRITE_ENABLE_FOR_ALL_VALUE_INITIALIZERS(Args...)
       >
     value operator()(Args &&... args) const
-      { return get()(std::forward<Args...>(args...)); }
+      { return get()(std::forward<Args...>(args)...); }
 
     /// Load the value from the stored address.
     operator ValueType() const { return ValueType(this->ptr()); }

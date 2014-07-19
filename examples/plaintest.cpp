@@ -59,29 +59,29 @@ sprite::curry::Library makeplain()
             }
         }
     };
-  // Function && myappend {
-  //     "myappend" /* name */
-  //   , 2          /* arity */
-  //   , {          /* paths */
-  //         {1, {{{"plain", "myappend"}, 0}}}
-  //       , {2, {{{"plain", "myappend"}, 1}}}
-  //       , {3, {{{"plain", "myappend"}, 0}, {{"plain", "MyCons"}, 0}}}
-  //       , {4, {{{"plain", "myappend"}, 0}, {{"plain", "MyCons"}, 1}}}
-  //       }
-  //   , Branch {   /* def */
-  //         "", true, 1
-  //       , {
-  //             {{"plain", "MyNil"}, Ref{2}}
-  //           , {{"plain", "MyCons"}, Expr{{"plain", "MyCons"}, {Ref{3}, Expr{{"plain", "myappend"}, {Ref{4}, Ref{2}}}}}}
-  //           }
-  //       }
-  //   };
+  Function && myappend {
+      "myappend" /* name */
+    , 2          /* arity */
+    , {          /* paths */
+          {1, {{{"plain", "myappend"}, 0}}}
+        , {2, {{{"plain", "myappend"}, 1}}}
+        , {3, {{{"plain", "myappend"}, 0}, {{"plain", "MyCons"}, 0}}}
+        , {4, {{{"plain", "myappend"}, 0}, {{"plain", "MyCons"}, 1}}}
+        }
+    , Branch {   /* def */
+          "", true, 1
+        , {
+              {{"plain", "MyNil"}, Ref{2}}
+            , {{"plain", "MyCons"}, Expr{{"plain", "MyCons"}, {Ref{3}, Expr{{"plain", "myappend"}, {Ref{4}, Ref{2}}}}}}
+            }
+        }
+    };
 
   Module && plain {
       "plain"          /* name */
     , {"Prelude"}      /* imports */
     , {MyList, Nat}    /* datatypes */
-    , {half/*, myappend*/} /* functions */
+    , {half, myappend} /* functions */
     };
 
   Library const lib {{plain}};
@@ -117,7 +117,7 @@ int main()
           );
         module_stab.printexpr(root_p, true);
         compiler.clib.printf("\n");
-        sprite::compiler::invokeNH(root_p, VT_N);
+        sprite::compiler::vinvoke(root_p, VT_N);
         module_stab.printexpr(root_p, true);
         compiler.clib.printf("\n");
         tgt::return_(0);

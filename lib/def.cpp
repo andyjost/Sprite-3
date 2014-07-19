@@ -41,7 +41,7 @@ namespace sprite { namespace backend
     // Create a function for function types.
     auto const fun_type = dyn_cast<FunctionType>(ty);
     if(fun_type.ptr())
-      return def(linkage, fun_type, name, arg_names);
+      return def(linkage, fun_type, name, arg_names, body);
 
     if(!arg_names.empty())
     {

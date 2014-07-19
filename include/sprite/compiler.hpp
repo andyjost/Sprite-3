@@ -26,6 +26,15 @@ namespace sprite { namespace compiler
     // The type of a step-performing function (i.e., N or H).
     type stepfun_t = void_t(*node_t);
 
+    // The type of a function returning the node's label.
+    type labelfun_t = (*char_t)(*node_t);
+
+    // The type of a function returning the node's arity.
+    type arityfun_t = i64_t(*node_t);
+
+    // The type of a function that returns a child iterator.
+    type iterfun_t = (*node_t)(*node_t);
+
     // The type of the printexpr function.
     type printexprfun_t = void_t(*node_t, bool_t);
 
@@ -36,13 +45,15 @@ namespace sprite { namespace compiler
     type vtable_t = types::struct_(
         "vtable"
       , {
-            *char_t /*label*/
-          , i64_t /*arity*/
-          , *stepfun_t /*N*/
-          , *stepfun_t /*H*/
+            *labelfun_t /*label*/
+          , *arityfun_t /*arity*/
+          // , *iterfun_t  /*begin*/
+          // , *iterfun_t  /*end*/
+          , *stepfun_t  /*N*/
+          , *stepfun_t  /*H*/
           }
       #if 0
-      , {"label", "arity", "N", "H"}
+      , {"label", "arity" /*,"begin", "end"*/, "N", "H"}
       #endif
       );
 
@@ -62,9 +73,10 @@ namespace sprite { namespace compiler
   // FIXME: using strings to index via dot and arrow would be more convenient.
   namespace member_labels
   {
-    enum VtMember { VT_LABEL, VT_ARITY, VT_N, VT_H };
+    enum VtMember { VT_LABEL, VT_ARITY /*, VT_BEGIN, VT_END*/, VT_N, VT_H };
     enum NdMember { ND_VPTR, ND_TAG, ND_SLOT0, ND_SLOT1 };
   }
+  using namespace member_labels;
 
   // ===========================
   // ====== Symbol tables ======
@@ -134,6 +146,9 @@ namespace sprite { namespace compiler
 
     // A function for printing expressions.
     sprite::backend::function printexpr = nullptr;
+
+    // The vtable for FWD nodes.
+    sprite::backend::globalvar vt_fwd_p = nullptr;
   };
 
   struct LibrarySTab
@@ -211,11 +226,14 @@ namespace sprite { namespace compiler
     );
 
   //@{
-  /// Calls the N or H function of the given node.
-  value invokeNH(value const & root_p, member_labels::VtMember mem);
-  value invokeNH(
+  /// Calls the virtual function of the given node.
+  value vinvoke(value const & root_p, member_labels::VtMember mem);
+  value vinvoke(
       value const & root_p, member_labels::VtMember mem, attribute attr
     );
   //@}
+
+  /// Gets the vtable pointer from a node pointer.  Skips FWD nodes.
+  value get_vtable(value node_p);
 }}
 

@@ -270,18 +270,22 @@ int main()
     }
 
     // Check multi-step creations involving implicit conversion.
-    {
-      auto a = signed_(i64)(char_('a'));
-      assert(valueof<int64_t>(a) == 'a');
-    }
-    {
-      auto a = signed_(i64)(char_(-1));
-      assert(valueof<int64_t>(a) == -1);
-    }
-    {
-      auto a = unsigned_(i64)(char_(-1));
-      assert(valueof<uint64_t>(a) == 255);
-    }
+    static_(types::void_()(), flexible(), {}
+      , [&] {
+          {
+            auto a = signed_(i64)(char_('a'));
+            assert(valueof<int64_t>(a) == 'a');
+          }
+          {
+            auto a = signed_(i64)(char_(-1));
+            assert(valueof<int64_t>(a) == -1);
+          }
+          {
+            auto a = unsigned_(i64)(char_(-1));
+            assert(valueof<uint64_t>(a) == 255);
+          }
+        }
+      );
 
     // DELETEME
     static_(int_).set_initializer(0);

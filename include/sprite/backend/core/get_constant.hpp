@@ -8,6 +8,7 @@
 #include "sprite/backend/core/type.hpp"
 #include "sprite/backend/support/array_ref.hpp"
 #include "sprite/backend/support/casting.hpp"
+#include "sprite/backend/support/exceptions.hpp"
 #include "sprite/backend/support/generic_support.hpp"
 #include "sprite/backend/support/type_erasures.hpp"
 #include "sprite/backend/support/type_traits.hpp"
@@ -64,9 +65,14 @@ namespace sprite { namespace backend
   get_constant_impl(typeobj<T> const & ty, U const &)
     { return get_constant_impl(ty, 0); }
 
-  SPRITE_GETCONST_PREAMBLE(constant, T, IntegerType, U, constant)
+  SPRITE_GETCONST_PREAMBLE(constant, T, IntegerType, U, value)
   get_constant_impl(typeobj_with_flags<T> const & ty, U const & value)
-    { return typecast(value, ty); }
+  {
+    auto c = dyn_cast<constant>(typecast(value, ty));
+    if(!c.ptr())
+      throw value_error("expected a constant value");
+    return c;
+  }
 
   /**
    * @brief Instantiates an integer type with a numeric or Boolean constant.
@@ -166,9 +172,14 @@ namespace sprite { namespace backend
   get_constant_impl(typeobj<T> const & ty, U const &)
     { return get_constant_impl(ty, 0.0); }
 
-  SPRITE_GETCONST_PREAMBLE(constant, T, FPType, U, constant)
+  SPRITE_GETCONST_PREAMBLE(constant, T, FPType, U, value)
   get_constant_impl(typeobj_with_flags<T> const & ty, U const & value)
-    { return typecast(value, ty); }
+  {
+    auto c = dyn_cast<constant>(typecast(value, ty));
+    if(!c.ptr())
+      throw value_error("expected a constant value");
+    return c;
+  }
 
   /**
    * @brief Instantiates a floating-point type from a numeric constant.
@@ -475,9 +486,14 @@ namespace sprite { namespace backend
     { return nullptr_(SPRITE_APICALL(ConstantPointerNull::get(ty.ptr()))); }
 
   /// Instantiates a pointer from a constant, such as an integer.
-  SPRITE_GETCONST_PREAMBLE(constant, T, PointerType, U, constant)
+  SPRITE_GETCONST_PREAMBLE(constant, T, PointerType, U, value)
   get_constant_impl(typeobj_with_flags<T> const & ty, U const & value)
-    { return typecast(value, ty); }
+  {
+    auto c = dyn_cast<constant>(typecast(value, ty));
+    if(!c.ptr())
+      throw value_error("expected a constant value");
+    return c;
+  }
 
   namespace aux
   {
@@ -585,12 +601,12 @@ namespace sprite { namespace backend
 
         /*    LHS Match     Allowed RHSs */
         /*    ------------  ------------ */
-      , case_< IntegerType,  null_arg, constant, uint64_t, string_ref, APInt>
-      , case_< FPType,       null_arg, constant, double, string_ref, APFloat, non_finite_value>
+      , case_< IntegerType,  null_arg, value, uint64_t, string_ref, APInt>
+      , case_< FPType,       null_arg, value, double, string_ref, APFloat, non_finite_value>
       , case_< StructType,   null_arg, any_array_ref, any_tuple_ref>
       , case_< ArrayType,    null_arg, any_array_ref, any_tuple_ref>
         /* See note with the next function for the handling of nullptr_t. */
-      , case_< PointerType,  null_arg, constant, /*std::nullptr_t,*/ string_ref>
+      , case_< PointerType,  null_arg, value, /*std::nullptr_t,*/ string_ref>
 
       > const handler;
 

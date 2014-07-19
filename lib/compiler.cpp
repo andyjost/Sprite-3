@@ -79,8 +79,9 @@ namespace
     result_type operator()(curry::Ref rule)
     {
       tgt::value target = this->resolve_path(rule.pathid);
-      (void) target; // FIXME
-      assert(0 && "FWD nodes are not implemented");
+      this->root_p.arrow(ND_VPTR) = tgt::scope::current_module().getglobal(".fwd.vt");
+      this->root_p.arrow(ND_TAG) = compiler::FWD;
+      this->root_p.arrow(ND_SLOT0) = tgt::bitcast(target, *tgt::types::char_());
     }
 
     result_type operator()(curry::Expr const & expr)
@@ -218,7 +219,7 @@ namespace
       tgt::scope _ = printexpr;
       tgt::value node = tgt::arg("root_p");
       tgt::value is_outer = tgt::arg("is_outer");
-      tgt::value N = node.arrow(ND_VPTR).arrow(VT_ARITY);
+      tgt::value N = compiler::vinvoke(node, VT_ARITY);
 
       tgt::value test1 = is_outer ==(tgt::unsigned_) (false); // FIXME: overload operator!
       tgt::value test2 = N >(tgt::unsigned_) (0); // FIXME: overload operator!
@@ -232,7 +233,7 @@ namespace
             }
         );
 
-      compiler.clib.printf("%s", node.arrow(ND_VPTR).arrow(VT_LABEL));
+      compiler.clib.printf("%s", compiler::vinvoke(node, VT_LABEL));
       tgt::ref i = local(compiler.ir.i64_t);
       i = 0;
       // FIXME: need to support arity>2.
@@ -259,10 +260,44 @@ namespace
     }
     return printexpr;
   }
+
+  // Makes a function that returns the given static C-string.  Returns a
+  // pointer to that function.
+  tgt::constant make_name_func(
+      compiler::ModuleCompiler const & compiler, std::string const & name
+    )
+  {
+    tgt::function f = tgt::static_<tgt::function>(
+        compiler.ir.labelfun_t, tgt::flexible(".name"), {}
+      , [&] { tgt::return_(name); }
+      );
+    return &f;
+  }
+
+  // Makes a function that returns the given integer.  Returns a
+  // pointer to that function.
+  tgt::constant make_arity_func(
+      compiler::ModuleCompiler const & compiler, int64_t arity
+    )
+  {
+    tgt::function f = tgt::static_<tgt::function>(
+        compiler.ir.arityfun_t, tgt::flexible(".arity"), {}
+      , [&] { tgt::return_(arity); }
+      );
+    return &f;
+  }
 }
 
 namespace sprite { namespace compiler
 {
+  tgt::value vinvoke(tgt::value const & node_p, compiler::VtMember member)
+    { return node_p.arrow(compiler::ND_VPTR).arrow(member)(node_p); }
+
+  tgt::value vinvoke(
+      tgt::value const & node_p, compiler::VtMember member, tgt::attribute attr
+    )
+  { return vinvoke(node_p, member).set_attribute(attr); }
+
   ModuleSTab::ModuleSTab(
       LibrarySTab & lib_stab_, curry::Module const & src
     )
@@ -273,17 +308,6 @@ namespace sprite { namespace compiler
     this->compiler.reset(new ModuleCompiler(lib_stab_));
     this->printexpr = define_printexpr(*this->compiler);
   }
-
-  tgt::value invokeNH(tgt::value const & root_p, VtMember mem)
-  {
-    assert(mem == VT_N || mem == VT_H);
-    return root_p.arrow(ND_VPTR).arrow(mem)(root_p);
-  }
-
-  tgt::value invokeNH(
-      tgt::value const & root_p, VtMember mem, tgt::attribute attr
-    )
-  { return invokeNH(root_p, mem).set_attribute(attr); }
 
   // Constructs an expression at the given node address.
   value construct(
@@ -354,6 +378,55 @@ namespace sprite { namespace compiler
       if(!nullstep.ptr())
         nullstep = inline_(compiler.ir.stepfun_t, ".nullstep", {}, []{});
 
+      // Create the vtable for FWD nodes.
+      tgt::function fwd_name = tgt::inline_<tgt::function>(
+          compiler.ir.labelfun_t, ".fwd.name", {"node_p"}
+        , [&]
+          {
+            // REFACTOR
+            tgt::value node_p = arg("node_p");
+            // Get the target, which is in slot0.
+            node_p = bitcast(node_p.arrow(ND_SLOT0), *compiler.ir.node_t);
+            // Forward the call to get the label.
+            return_(
+                node_p.arrow(ND_VPTR).arrow(VT_LABEL)(node_p)
+                    .set_attribute(tailcall)
+              );
+          }
+        );
+      tgt::function fwd_arity = tgt::inline_<tgt::function>(
+          compiler.ir.arityfun_t, "fwd.arity", {"node_p"}
+        , [&]{
+            tgt::value node_p = arg("node_p");
+            // Get the target, which is in slot0.
+            node_p = bitcast(node_p.arrow(ND_SLOT0), *compiler.ir.node_t);
+            // Forward the call to get the label.
+            return_(
+                node_p.arrow(ND_VPTR).arrow(VT_ARITY)(node_p)
+                    .set_attribute(tailcall)
+              );
+          }
+        );
+      tgt::function fwd_N = inline_(
+          compiler.ir.stepfun_t, ".fwd.N", {"node_p"}
+        , [&]{
+            tgt::value node_p = arg("node_p");
+            vinvoke(node_p, VT_N, tailcall);
+          }
+        );
+      tgt::function fwd_H = inline_(
+          compiler.ir.stepfun_t, ".fwd.H", {"node_p"}
+        , [&]{
+            tgt::value node_p = arg("node_p");
+            vinvoke(node_p, VT_H, tailcall);
+          }
+        );
+
+      module_stab.vt_fwd_p.reset(
+          static_(compiler.ir.vtable_t, ".fwd.vt")
+              .set_initializer(_t(&fwd_name, &fwd_arity, &fwd_N, &fwd_H))
+        );
+
       // Add the static vtable for each constructor to the module.
       for(auto const & dtype: cymodule.datatypes)
       {
@@ -407,8 +480,14 @@ namespace sprite { namespace compiler
           }
   
           // Create the vtable.
-          tgt::globalvar vt = static_(compiler.ir.vtable_t, ".vtable.for." + ctor.name)
-              .set_initializer(_t(ctor.name, ctor.arity, &N, &nullstep));
+          tgt::globalvar vt = static_(
+              compiler.ir.vtable_t, ".vt.CTOR." + ctor.name
+            )
+              .set_initializer(_t(
+                  make_name_func(compiler, ctor.name)
+                , make_arity_func(compiler, ctor.arity)
+                , &N, &nullstep
+                ));
   
           // Update the symbol tables.
           module_stab.nodes.emplace(
@@ -429,7 +508,7 @@ namespace sprite { namespace compiler
           , [&]{
               tgt::value root_p = arg("root_p");
               step(root_p);
-              invokeNH(root_p, VT_N, tailcall);
+              vinvoke(root_p, VT_N, tailcall);
               return_();
             }
           );
@@ -438,13 +517,18 @@ namespace sprite { namespace compiler
           , [&]{
               tgt::value root_p = arg("root_p");
               step(root_p);
-              invokeNH(root_p, VT_H, tailcall);
+              vinvoke(root_p, VT_H, tailcall);
             }
           );
   
         tgt::globalvar vt =
             static_(compiler.ir.vtable_t, ".vtable.for." + fun.name)
-            .set_initializer(_t(fun.name, fun.arity, &N, &H));
+            .set_initializer(_t(
+                make_name_func(compiler, fun.name)
+              , make_arity_func(compiler, fun.arity)
+              , &N, &H
+              ));
+
         module_stab.nodes.emplace(
             fun.name
           , compiler::NodeSTab(fun, vt, compiler::OPER)
