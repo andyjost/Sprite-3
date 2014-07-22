@@ -9,3 +9,6 @@ dev/*
 doxygen-out/*
 tags
 setup.csh
+examples/*.bc
+examples/*.ll
+examples/*.result

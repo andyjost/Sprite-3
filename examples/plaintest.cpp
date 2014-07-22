@@ -90,6 +90,8 @@ sprite::curry::Library makeplain()
 
 int main()
 {
+  sprite::init_debug();
+
   // The symbol tables for this library.
   sprite::compiler::LibrarySTab stab;
   sprite::curry::Library lib = makeplain();
@@ -107,19 +109,30 @@ int main()
     , [&]{
         using namespace sprite::curry; // for Expr etc.
         using namespace sprite::compiler::member_labels; // for VT_N.
-        // main = (half (Succ Zero)
+
         tgt::value root_p = compiler.node_alloc();
         Qname const half{"plain", "half"};
         Qname const Succ{"plain", "Succ"};
         Qname const Zero{"plain", "Zero"};
-        root_p = construct(compiler, root_p
-          , Expr{half, {Expr{Succ, {Expr{Zero}}}}}
-          );
+        root_p = construct(compiler, root_p, {half, {{Succ, {Zero}}}});
         module_stab.printexpr(root_p, true);
         compiler.clib.printf("\n");
         sprite::compiler::vinvoke(root_p, VT_N);
         module_stab.printexpr(root_p, true);
         compiler.clib.printf("\n");
+
+        // Qname const myappend{"plain", "myappend"};
+        // Qname const MyCons{"plain", "MyCons"};
+        // Qname const MyNil{"plain", "MyNil"};
+        // root_p = construct(compiler, root_p
+        //   , {myappend, {{MyCons, {Zero, MyNil}}, MyNil}}
+        //   );
+        // module_stab.printexpr(root_p, true);
+        // compiler.clib.printf("\n");
+        // sprite::compiler::vinvoke(root_p, VT_N);
+        // module_stab.printexpr(root_p, true);
+        // compiler.clib.printf("\n");
+
         tgt::return_(0);
       }
     );

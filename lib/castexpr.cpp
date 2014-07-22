@@ -38,7 +38,7 @@ namespace
   #include "llvm/IR/Instruction.def"
   #undef HANDLE_CAST_INST
 
-  /// Implements the typecase function for either constants or values.
+  /// Implements the typecast function for either constants or values.
   template<typename ConstantOrValue>
   ConstantOrValue typecast_impl(ConstantOrValue const & src, aux::arg_with_flags<type> const & tgt)
   {
@@ -149,15 +149,19 @@ namespace
     }
     else if(src_type->isPointerTy())
     {
-      src_type->dump();
-      tgt_type->dump();
       if(tgt_type->isIntegerTy())
       {
         SPRITE_ALLOW_FLAGS(tgt.flags(), "pointer-to-integer conversion", 0)
         return apply_cast<llvm::Instruction::PtrToInt>(val, tgt_type);
       }
+      else if(tgt_type->isPointerTy())
+      {
+        SPRITE_ALLOW_FLAGS(tgt.flags(), "pointer-to-pointer conversion", 0)
+        return bitcast(src, tgt);
+      }
       throw type_error(
-          "Expected an integer type as the target of a typecast from a pointer type"
+          "Expected an integer or pointer type as the target of a typecast from "
+          "a pointer type"
         );
     }
     throw type_error(

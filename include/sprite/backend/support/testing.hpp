@@ -10,6 +10,8 @@ void sprite_dumpvalue(llvm::Value *);
 void sprite_dumptype(llvm::Value *);
 void sprite_dumptype(llvm::Type *);
 
+namespace sprite { size_t init_debug(); }
+
 namespace sprite { namespace backend
 {
   /// Indicates a test failed.

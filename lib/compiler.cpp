@@ -234,18 +234,52 @@ namespace
         );
 
       compiler.clib.printf("%s", compiler::vinvoke(node, VT_LABEL));
+      // Point arithmetic needs A LOT of work.
+      #if 0
       tgt::ref i = local(compiler.ir.i64_t);
       i = 0;
       // FIXME: need to support arity>2.
-      node = node.arrow(ND_SLOT0);
+      // node = node.arrow(ND_SLOT0);
+      auto sizeof_ptr = tgt::sizeof_(*compiler.ir.node_t);
+      tgt::type size_t_ = tgt::types::int_(sizeof_ptr * 8);
+      (void) size_t_;
+      tgt::ref pos = tgt::local(*compiler.ir.node_t);
+      pos = node.arrow(ND_SLOT0);
+      // // DEBUG
+      // compiler.clib.printf("DEBUG> root=0x%x\n", node);
+      // compiler.clib.printf("DEBUG> slot0=0x%x  slot1=0x%x\n", node.arrow(ND_SLOT0), node.arrow(ND_SLOT1));
+      // compiler.clib.printf("DEBUG> computed=0x%x\n\n", typecast(pos, size_t_) + sizeof_ptr);
+      // // END DEBUG
       tgt::while_(
           [&]{i <(tgt::unsigned_) (N);}
         , [&]{
-              printexpr(bitcast(node, *compiler.ir.node_t), false);
+              printexpr(pos, false);
               // FIXME: need to offset pointers.
               // node = &node[4];
+              // pos = typecast(pos, size_t_); // + sizeof_ptr;
               ++i;
             }
+        );
+      #endif
+      tgt::if_(
+          0 <(tgt::unsigned_) (N)
+        , [&]
+          {
+            printexpr(
+                bitcast(node.arrow(ND_SLOT0), *compiler.ir.node_t)
+              , false
+              );
+          }
+        );
+      tgt::if_(
+          1 <(tgt::unsigned_) (N)
+        , [&]
+          {
+            printexpr(
+                bitcast(node.arrow(ND_SLOT1), *compiler.ir.node_t)
+              , false
+              );
+          }
         );
 
       tgt::if_(test1 // FIXME: overload operator&&

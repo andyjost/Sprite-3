@@ -17,6 +17,18 @@ void sprite_dumpvalue(llvm::Value * arg) { arg->dump(); }
 void sprite_dumptype(llvm::Value * arg) { arg->getType()->dump(); }
 void sprite_dumptype(llvm::Type * arg) { arg->dump(); }
 
+namespace sprite
+{
+  size_t init_debug()
+  {
+    size_t x = 0;
+    x ^= (size_t)(void (*)(llvm::Value *))(&sprite_dumpvalue);
+    x ^= (size_t)(void (*)(llvm::Value *))(&sprite_dumptype);
+    x ^= (size_t)(void (*)(llvm::Type *))(&sprite_dumptype);
+    return x;
+  }
+}
+
 namespace
 {
   static size_t const BUFSZ = 4096;

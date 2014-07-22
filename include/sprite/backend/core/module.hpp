@@ -50,7 +50,6 @@ namespace sprite { namespace backend
       return px ? px->getContext() : SPRITE_APICALL(llvm::getGlobalContext());
     }
 
-    
     /**
      * Returns the named global value.  Raises value_error if the global does
      * not exist.

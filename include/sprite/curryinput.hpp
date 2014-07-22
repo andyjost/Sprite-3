@@ -69,6 +69,13 @@ namespace sprite { namespace curry
   {
     Qname qname;
     std::vector<Rule_> args;
+
+    Expr_(
+        Qname const & qname_
+      , std::vector<Rule_> const & args_ = std::vector<Rule_>()
+      )
+      : qname(qname_), args(args_)
+    {}
   };
   using Expr = Expr_<>;
 
@@ -86,7 +93,21 @@ namespace sprite { namespace curry
     Rule(int arg) : tag(INT), int_(arg) {}
     Rule(double arg) : tag(DOUBLE), double_(arg) {}
     Rule(Ref arg) : tag(VAR), var(arg) {}
-    Rule(Expr const & arg) : tag(NODE), expr(arg) {}
+
+    template<
+        typename...Args
+      , typename = typename std::enable_if<
+            std::is_constructible<Expr, Args...>::value
+          >::type
+      >
+    Rule(Args &&...args)
+      : tag(NODE), expr(std::forward<Args...>(args)...)
+    {}
+
+    Rule(Qname const & qname, std::vector<Rule> const & args)
+      : tag(NODE), expr(qname, std::move(args))
+    {}
+
     Rule(Rule && arg) : tag(arg.tag)
     {
       switch(tag)
