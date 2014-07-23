@@ -6,12 +6,19 @@ CFLAGS = -O0 -ggdb -std=c++11 -Wall $(LLVM_CFLAGS) -I$(TOPDIR)include -Werror
 LDFLAGS = -Wall $(LLVM_LDFLAGS)
 CC=g++
 
-# Target programs can depend on this variable to get the Sprite LLVM runtime
-# library made, when needed.
-SPRITE_RT_LIB = $(TOPDIR)lib/sprite-llvm.a
+# Target programs can depend on this variable to get the Sprite runtime library
+# made, when needed.
+SPRITE_RT_LIB = $(TOPDIR)runtime/sprite-rt.bc
 
-.PHONY : $(SPRITE_RT_LIB)
+# Target programs can depend on this variable to get the Sprite library made,
+# when needed.
+SPRITE_LIB = $(TOPDIR)lib/sprite.a
+
+.PHONY : $(SPRITE_RT_LIB) $(SPRITE_LIB)
+
+$(SPRITE_LIB) :
+	cd ../lib; $(MAKE) sprite.a
 
 $(SPRITE_RT_LIB) :
-	cd ../lib; $(MAKE) sprite-llvm.a
+	cd ../runtime; $(MAKE) sprite-rt.bc
 

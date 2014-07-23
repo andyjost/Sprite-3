@@ -115,23 +115,21 @@ int main()
         Qname const Succ{"plain", "Succ"};
         Qname const Zero{"plain", "Zero"};
         root_p = construct(compiler, root_p, {half, {{Succ, {Zero}}}});
-        module_stab.printexpr(root_p, true);
-        compiler.clib.printf("\n");
-        sprite::compiler::vinvoke(root_p, VT_N);
-        module_stab.printexpr(root_p, true);
-        compiler.clib.printf("\n");
+        compiler.rt.printexpr(root_p, "\n");
+        compiler.rt.normalize(root_p);
+        compiler.rt.printexpr(root_p, "\n");
 
-        // Qname const myappend{"plain", "myappend"};
-        // Qname const MyCons{"plain", "MyCons"};
-        // Qname const MyNil{"plain", "MyNil"};
-        // root_p = construct(compiler, root_p
-        //   , {myappend, {{MyCons, {Zero, MyNil}}, MyNil}}
-        //   );
-        // module_stab.printexpr(root_p, true);
-        // compiler.clib.printf("\n");
-        // sprite::compiler::vinvoke(root_p, VT_N);
-        // module_stab.printexpr(root_p, true);
-        // compiler.clib.printf("\n");
+        #if 0
+        Qname const myappend{"plain", "myappend"};
+        Qname const MyCons{"plain", "MyCons"};
+        Qname const MyNil{"plain", "MyNil"};
+        root_p = construct(compiler, root_p
+          , {myappend, {{MyCons, {Zero, MyNil}}, MyNil}}
+          );
+        compiler.rt.printexpr(root_p, "\n");
+        compiler.rt.normalize(root_p);
+        compiler.rt.printexpr(root_p, "\n");
+        #endif
 
         tgt::return_(0);
       }
@@ -144,6 +142,8 @@ int main()
     llvm::raw_fd_ostream fout("plaintest.bc", err, llvm::raw_fd_ostream::F_Binary);
     llvm::WriteBitcodeToFile(module_stab.module_ir.ptr(), fout);
   }
+  std::system("llvm-link plaintest.bc ../runtime/sprite-rt.bc > plaintest-tmp.bc");
+  std::system("mv plaintest-tmp.bc plaintest.bc");
   std::system("lli plaintest.bc > plaintest.result");
   int const status = std::system("diff plaintest.result plaintest.au");
   return WEXITSTATUS(status);

@@ -12,3 +12,5 @@ setup.csh
 examples/*.bc
 examples/*.ll
 examples/*.result
+runtime/*.bc
+runtime/*.ll

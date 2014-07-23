@@ -1,12 +1,12 @@
--include ../Make.include
-
 SOURCES = $(wildcard *.cpp)
 OBJECTS = $(SOURCES:.cpp=.o)
-STATICLIB = sprite-llvm.a
+STATICLIB = sprite.a
 
 .PHONY : all clean
 
 all : $(STATICLIB)
+
+-include ../Make.include
 
 clean :
 	rm -f $(OBJECTS) $(STATICLIB) *.d

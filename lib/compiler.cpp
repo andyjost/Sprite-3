@@ -209,92 +209,6 @@ namespace
     return fun.def.visit(c);
   }
 
-  // Defines the printexpr function.
-  tgt::function define_printexpr(compiler::ModuleCompiler const & compiler)
-  {
-    tgt::function printexpr = tgt::inline_<tgt::function>(
-        compiler.ir.printexprfun_t, "printexpr", {"root_p", "is_outer"}
-      );
-    {
-      tgt::scope _ = printexpr;
-      tgt::value node = tgt::arg("root_p");
-      tgt::value is_outer = tgt::arg("is_outer");
-      tgt::value N = compiler::vinvoke(node, VT_ARITY);
-
-      tgt::value test1 = is_outer ==(tgt::unsigned_) (false); // FIXME: overload operator!
-      tgt::value test2 = N >(tgt::unsigned_) (0); // FIXME: overload operator!
-
-      tgt::if_(test1 // FIXME: overload operator&&
-        , [&]{
-              tgt::if_(test2
-                , [&]{ compiler.clib.printf(" ("); }
-                , [&]{ compiler.clib.printf(" "); }
-                );
-            }
-        );
-
-      compiler.clib.printf("%s", compiler::vinvoke(node, VT_LABEL));
-      // Point arithmetic needs A LOT of work.
-      #if 0
-      tgt::ref i = local(compiler.ir.i64_t);
-      i = 0;
-      // FIXME: need to support arity>2.
-      // node = node.arrow(ND_SLOT0);
-      auto sizeof_ptr = tgt::sizeof_(*compiler.ir.node_t);
-      tgt::type size_t_ = tgt::types::int_(sizeof_ptr * 8);
-      (void) size_t_;
-      tgt::ref pos = tgt::local(*compiler.ir.node_t);
-      pos = node.arrow(ND_SLOT0);
-      // // DEBUG
-      // compiler.clib.printf("DEBUG> root=0x%x\n", node);
-      // compiler.clib.printf("DEBUG> slot0=0x%x  slot1=0x%x\n", node.arrow(ND_SLOT0), node.arrow(ND_SLOT1));
-      // compiler.clib.printf("DEBUG> computed=0x%x\n\n", typecast(pos, size_t_) + sizeof_ptr);
-      // // END DEBUG
-      tgt::while_(
-          [&]{i <(tgt::unsigned_) (N);}
-        , [&]{
-              printexpr(pos, false);
-              // FIXME: need to offset pointers.
-              // node = &node[4];
-              // pos = typecast(pos, size_t_); // + sizeof_ptr;
-              ++i;
-            }
-        );
-      #endif
-      tgt::if_(
-          0 <(tgt::unsigned_) (N)
-        , [&]
-          {
-            printexpr(
-                bitcast(node.arrow(ND_SLOT0), *compiler.ir.node_t)
-              , false
-              );
-          }
-        );
-      tgt::if_(
-          1 <(tgt::unsigned_) (N)
-        , [&]
-          {
-            printexpr(
-                bitcast(node.arrow(ND_SLOT1), *compiler.ir.node_t)
-              , false
-              );
-          }
-        );
-
-      tgt::if_(test1 // FIXME: overload operator&&
-        , [&]{
-              tgt::if_(test2
-                , [&]{ compiler.clib.printf(")"); }
-                );
-            }
-        );
-
-      tgt::return_();
-    }
-    return printexpr;
-  }
-
   // Makes a function that returns the given static C-string.  Returns a
   // pointer to that function.
   tgt::constant make_name_func(
@@ -340,7 +254,6 @@ namespace sprite { namespace compiler
     // Load the compiler data (e.g., headers) with the module in scope.
     scope _ = module_ir;
     this->compiler.reset(new ModuleCompiler(lib_stab_));
-    this->printexpr = define_printexpr(*this->compiler);
   }
 
   // Constructs an expression at the given node address.

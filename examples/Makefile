@@ -23,10 +23,10 @@ clean :
 	$(CC) $(CFLAGS) -c $< -o $@
 	$(CC) -MM $(CFLAGS) $< > $(@:.o=.d)
 
-$(EXECUTABLES) : $(SPRITE_RT_LIB)
+$(EXECUTABLES) : $(SPRITE_LIB) $(SPRITE_RT_LIB)
 
 %.exe : %.o
-	$(CC) $< $(SPRITE_RT_LIB) $(LDFLAGS) -o $@
+	$(CC) $< $(SPRITE_LIB) $(LDFLAGS) -o $@
 
 # Allow a bareword to be used as a target.  E.g., allow invocation as "make
 # hello" instead of requiring "make hello.test".

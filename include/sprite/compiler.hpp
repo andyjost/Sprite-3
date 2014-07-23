@@ -13,12 +13,12 @@ namespace sprite { namespace compiler
   // ====== Sprite IR ======
   // =======================
 
+  // LLVM declarations for the Sprite IR.
   struct ir_h
   {
     type void_t = types::void_();
     type char_t = types::char_();
     type i64_t = types::int_(64);
-    type bool_t = types::bool_();
 
     // Forward declaration.
     type node_t = types::struct_("node");
@@ -34,9 +34,6 @@ namespace sprite { namespace compiler
 
     // The type of a function that returns a child iterator.
     type iterfun_t = (*node_t)(*node_t);
-
-    // The type of the printexpr function.
-    type printexprfun_t = void_t(*node_t, bool_t);
 
     /**
      * @brief Each Curry symbol has a static vtable holding its non-instance
@@ -77,6 +74,19 @@ namespace sprite { namespace compiler
     enum NdMember { ND_VPTR, ND_TAG, ND_SLOT0, ND_SLOT1 };
   }
   using namespace member_labels;
+
+  // LLVM declarations for the Sprite runtime.
+  struct rt_h
+  {
+    type void_t = types::void_();
+    type char_t = types::char_();
+    type node_t = types::struct_("node");
+
+    function const printexpr =
+        extern_(void_t(*node_t, *char_t), "sprite_printexpr");
+
+    function const normalize = extern_(void_t(*node_t), "sprite_normalize");
+  };
 
   // ===========================
   // ====== Symbol tables ======
@@ -144,9 +154,6 @@ namespace sprite { namespace compiler
     // Everything needed to compile code in this module.
     std::shared_ptr<ModuleCompiler> compiler;
 
-    // A function for printing expressions.
-    sprite::backend::function printexpr = nullptr;
-
     // The vtable for FWD nodes.
     sprite::backend::globalvar vt_fwd_p = nullptr;
   };
@@ -183,6 +190,9 @@ namespace sprite { namespace compiler
 
     // The Sprite IR library, in the target program.
     compiler::ir_h ir;
+
+    // The Sprite runtime library, in the target program.
+    compiler::rt_h rt;
 
     // ========================
     // ====== Algorithms ======
