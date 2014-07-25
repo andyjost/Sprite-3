@@ -31,14 +31,20 @@ namespace
       )
       : compiler(compiler_)
       , root_p(bitcast(root_p_, *compiler_.ir.node_t))
+      , target_p(root_p)
       , fundef(fundef_)
     {}
 
     compiler::ModuleCompiler const & compiler;
 
-    // A pointer in the target to the root_p node undergoing pattern matching
+    // A pointer in the target to the root node undergoing pattern matching
     // or rewriting.
     tgt::value root_p;
+
+    // The current node that will be rewritten.  When constructing nested
+    // expressions, root_p will never change, but the target will change to
+    // point to the subexpression currently under construction.
+    tgt::value target_p;
 
     // The definition of the function being compiled.
     curry::Function const * fundef;
@@ -79,16 +85,16 @@ namespace
     result_type operator()(curry::Ref rule)
     {
       tgt::value target = this->resolve_path(rule.pathid);
-      this->root_p.arrow(ND_VPTR) = tgt::scope::current_module().getglobal(".fwd.vt");
-      this->root_p.arrow(ND_TAG) = compiler::FWD;
-      this->root_p.arrow(ND_SLOT0) = tgt::bitcast(target, *tgt::types::char_());
+      this->target_p.arrow(ND_VPTR) = tgt::scope::current_module().getglobal(".fwd.vt");
+      this->target_p.arrow(ND_TAG) = compiler::FWD;
+      this->target_p.arrow(ND_SLOT0) = target;
     }
 
     result_type operator()(curry::Expr const & expr)
     {
-      // The root node pointer is clobbered so that recursion can be used.
+      // The target node pointer is clobbered so that recursion can be used.
       // Save it for below.
-      tgt::value orig_root_p = this->root_p;
+      tgt::value orig_target_p = this->target_p;
 
       // Each child needs to be allocated and initialized.  This children are
       // stored as i8* pointers.
@@ -109,23 +115,23 @@ namespace
           tgt::value child = this->compiler.node_alloc();
           children.push_back(child);
           // Clobber the root so the recursive call works.
-          this->root_p = bitcast(child, *this->compiler.ir.node_t);
+          this->target_p = bitcast(child, *this->compiler.ir.node_t);
           (*this)(subexpr);
         }
       }
 
-      // Restore the original root.
-      this->root_p = orig_root_p;
+      // Restore the original target.
+      this->target_p = orig_target_p;
 
       // Set the vtable and tag.
       this->compiler.node_init(
-          this->root_p, lookup(compiler.lib_stab, expr.qname)
+          this->target_p, lookup(compiler.lib_stab, expr.qname)
         );
 
       // Set the child pointers.
       assert(children.size() <= 2 && "n>2 Not implemented");
       for(size_t i=0; i<children.size(); ++i)
-        this->root_p.arrow(ND_SLOT0+i) = children[i];
+        this->target_p.arrow(ND_SLOT0+i) = children[i];
     }
   };
 
@@ -193,7 +199,18 @@ namespace
 
     result_type operator()(curry::Rule const & rule)
     {
+      // Trace.
+      // compiler.clib.printf("S> --- ");
+      // compiler.rt.printexpr(target_p, "\n");
+      // compiler.clib.fflush(nullptr);
+
+      // Step.
       static_cast<Rewriter*>(this)->operator()(rule);
+
+      // Trace.
+      // compiler.clib.printf("S> +++ ");
+      // compiler.rt.printexpr(target_p, "\n");
+      // compiler.clib.fflush(nullptr);
       tgt::return_();
     }
   };
@@ -234,6 +251,45 @@ namespace
       );
     return &f;
   }
+  // Makes a function that returns the successor range of a node.  Returns a
+  // pointer to that function.
+  tgt::constant make_succ_func(
+      compiler::ModuleCompiler const & compiler, int64_t arity
+    )
+  {
+    tgt::function f = tgt::static_<tgt::function>(
+        compiler.ir.rangefun_t, tgt::flexible(".succ")
+      , {"node_p", "begin_out_pp", "end_out_pp"}
+      );
+
+    if(arity < 3)
+    {
+      tgt::scope _ = f;
+      // Compute the size of pointers and get an integer type with the same
+      // bitwidth.
+      size_t sizeof_ptr = sizeof_(*compiler.ir.node_t);
+      tgt::type size_t_ = tgt::types::int_(sizeof_ptr * 8);
+
+      // Get the function paramters.
+      tgt::value node_p = tgt::arg("node_p");
+      tgt::ref begin_out_pp = tgt::arg("begin_out_pp");
+      tgt::ref end_out_pp = tgt::arg("end_out_pp");
+
+      // Compute the begining address.
+      tgt::value begin_cp = &node_p.arrow(ND_SLOT0);
+      tgt::value begin = begin_cp;
+      tgt::value end = typecast(begin_cp, size_t_) + arity * sizeof_ptr;
+
+      // Assign the outputs.
+      begin_out_pp = begin;
+      end_out_pp = end;
+      tgt::return_();
+    }
+    else
+      assert(0 && "arity > 2 not supported");
+
+    return &f;
+  }
 }
 
 namespace sprite { namespace compiler
@@ -265,7 +321,7 @@ namespace sprite { namespace compiler
   {
     ::Rewriter c(compiler, root_p);
     expr.visit(c);
-    return c.root_p;
+    return c.target_p;
   }
 
   void prettyprint(curry::Library const & lib)
@@ -332,46 +388,59 @@ namespace sprite { namespace compiler
           {
             // REFACTOR
             tgt::value node_p = arg("node_p");
-            // Get the target, which is in slot0.
             node_p = bitcast(node_p.arrow(ND_SLOT0), *compiler.ir.node_t);
-            // Forward the call to get the label.
             return_(
                 node_p.arrow(ND_VPTR).arrow(VT_LABEL)(node_p)
                     .set_attribute(tailcall)
               );
           }
         );
+      // FIXME
       tgt::function fwd_arity = tgt::inline_<tgt::function>(
           compiler.ir.arityfun_t, "fwd.arity", {"node_p"}
         , [&]{
             tgt::value node_p = arg("node_p");
-            // Get the target, which is in slot0.
             node_p = bitcast(node_p.arrow(ND_SLOT0), *compiler.ir.node_t);
-            // Forward the call to get the label.
             return_(
                 node_p.arrow(ND_VPTR).arrow(VT_ARITY)(node_p)
                     .set_attribute(tailcall)
               );
           }
         );
+      tgt::function fwd_succ = tgt::inline_<tgt::function>(
+          compiler.ir.rangefun_t, "fwd.succ"
+        , {"node_p", "begin_out_pp", "end_out_pp"}
+        , [&]{
+            tgt::value node_p = arg("node_p");
+            node_p = bitcast(node_p.arrow(ND_SLOT0), *compiler.ir.node_t);
+            node_p.arrow(ND_VPTR).arrow(VT_SUCC)(
+                node_p, arg("begin_out_pp"), arg("end_out_pp")
+              ).set_attribute(tailcall);
+            return_();
+          }
+        );
       tgt::function fwd_N = inline_(
           compiler.ir.stepfun_t, ".fwd.N", {"node_p"}
         , [&]{
             tgt::value node_p = arg("node_p");
+            node_p = bitcast(node_p.arrow(ND_SLOT0), *compiler.ir.node_t);
             vinvoke(node_p, VT_N, tailcall);
+            return_();
           }
         );
       tgt::function fwd_H = inline_(
           compiler.ir.stepfun_t, ".fwd.H", {"node_p"}
         , [&]{
             tgt::value node_p = arg("node_p");
+            node_p = bitcast(node_p.arrow(ND_SLOT0), *compiler.ir.node_t);
             vinvoke(node_p, VT_H, tailcall);
+            return_();
           }
         );
 
       module_stab.vt_fwd_p.reset(
           static_(compiler.ir.vtable_t, ".fwd.vt")
-              .set_initializer(_t(&fwd_name, &fwd_arity, &fwd_N, &fwd_H))
+              .set_initializer(_t(&fwd_name, &fwd_arity, &fwd_succ, &fwd_N, &fwd_H))
         );
 
       // Add the static vtable for each constructor to the module.
@@ -432,7 +501,8 @@ namespace sprite { namespace compiler
             )
               .set_initializer(_t(
                   make_name_func(compiler, ctor.name)
-                , make_arity_func(compiler, ctor.arity)
+                , make_arity_func(compiler, ctor.arity) // FIXME
+                , make_succ_func(compiler, ctor.arity)
                 , &N, &nullstep
                 ));
   
@@ -472,7 +542,8 @@ namespace sprite { namespace compiler
             static_(compiler.ir.vtable_t, ".vtable.for." + fun.name)
             .set_initializer(_t(
                 make_name_func(compiler, fun.name)
-              , make_arity_func(compiler, fun.arity)
+              , make_arity_func(compiler, fun.arity) // FIXME
+              , make_succ_func(compiler, fun.arity)
               , &N, &H
               ));
 

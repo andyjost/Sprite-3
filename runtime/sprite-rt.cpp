@@ -8,11 +8,13 @@ namespace sprite { namespace compiler
   typedef char * labelfun_t(node *);
   typedef uint64_t arityfun_t(node *);
   typedef void stepfun_t(node *);
+  typedef void rangefun_t(node *, node ***, node ***);
 
   struct vtable
   {
     labelfun_t * label;
     arityfun_t * arity;
+    rangefun_t * succ;
     stepfun_t * N;
     stepfun_t * H;
   };
@@ -27,15 +29,15 @@ namespace sprite { namespace compiler
 
   void _printexpr(node * root, bool is_outer)
   {
-    size_t const N = root->vptr->arity(root);
+    node ** begin, ** end;
+    root->vptr->succ(root, &begin, &end);
+    size_t const N = end - begin;
     if(!is_outer && N > 0) fputs("(", stdout);
     fputs(root->vptr->label(root), stdout);
-    node ** p = (node **)(&root->slot0);
-    node ** e = p + N;
-    for(; p != e; ++p)
+    for(; begin != end; ++begin)
     {
       fputs(" ", stdout);
-      _printexpr(*p, false);
+      _printexpr(*begin, false);
     }
     if(!is_outer && N > 0) fputs(")", stdout);
   }
@@ -47,6 +49,7 @@ extern "C"
   {
     sprite::compiler::_printexpr(root, true);
     if(suffix) fputs(suffix, stdout);
+    fflush(0);
   }
 
   void sprite_normalize(sprite::compiler::node * root)

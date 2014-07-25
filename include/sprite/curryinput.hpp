@@ -101,7 +101,7 @@ namespace sprite { namespace curry
           >::type
       >
     Rule(Args &&...args)
-      : tag(NODE), expr(std::forward<Args...>(args)...)
+      : tag(NODE), expr(std::forward<Args>(args)...)
     {}
 
     Rule(Qname const & qname, std::vector<Rule> const & args)

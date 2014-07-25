@@ -32,8 +32,8 @@ namespace sprite { namespace compiler
     // The type of a function returning the node's arity.
     type arityfun_t = i64_t(*node_t);
 
-    // The type of a function that returns a child iterator.
-    type iterfun_t = (*node_t)(*node_t);
+    // The type of a function returning the node's children.
+    type rangefun_t = void_t(*node_t, ***node_t, ***node_t);
 
     /**
      * @brief Each Curry symbol has a static vtable holding its non-instance
@@ -44,13 +44,12 @@ namespace sprite { namespace compiler
       , {
             *labelfun_t /*label*/
           , *arityfun_t /*arity*/
-          // , *iterfun_t  /*begin*/
-          // , *iterfun_t  /*end*/
+          , *rangefun_t /*succ*/
           , *stepfun_t  /*N*/
           , *stepfun_t  /*H*/
           }
       #if 0
-      , {"label", "arity" /*,"begin", "end"*/, "N", "H"}
+      , {"label", "arity", "succ", "N", "H"}
       #endif
       );
 
@@ -70,7 +69,7 @@ namespace sprite { namespace compiler
   // FIXME: using strings to index via dot and arrow would be more convenient.
   namespace member_labels
   {
-    enum VtMember { VT_LABEL, VT_ARITY /*, VT_BEGIN, VT_END*/, VT_N, VT_H };
+    enum VtMember { VT_LABEL, VT_ARITY, VT_SUCC, VT_N, VT_H };
     enum NdMember { ND_VPTR, ND_TAG, ND_SLOT0, ND_SLOT1 };
   }
   using namespace member_labels;

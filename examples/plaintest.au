@@ -1,2 +1,4 @@
 half (Succ Zero)
 Zero
+myappend (MyCons Zero MyNil) MyNil
+MyCons Zero MyNil

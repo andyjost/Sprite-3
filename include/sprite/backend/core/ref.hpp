@@ -49,7 +49,7 @@ namespace sprite { namespace backend
       , SPRITE_ENABLE_FOR_ALL_VALUE_INITIALIZERS(Args...)
       >
     value operator()(Args &&... args) const
-      { return get()(std::forward<Args...>(args)...); }
+      { return get()(std::forward<Args>(args)...); }
 
     /// Load the value from the stored address.
     operator ValueType() const { return ValueType(this->ptr()); }

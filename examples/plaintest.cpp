@@ -29,11 +29,11 @@ sprite::curry::Library makeplain()
   //    myappend MyNil y = y
   //    myappend (MyCons x xs) y = MyCons x (myappend xs y)
   //    
-  //    main = (half (Succ Zero), myappend (MyCons Zero  MyNil) MyNil)
+  //    main = (half (Succ Zero), myappend (MyCons Zero MyNil) MyNil)
 
   using namespace sprite::curry;
 
-  DataType && MyList {"MyList", {{"MyCons", 2}, {"MyNil", 0}}};
+  DataType && MyList {"MyList", {{"MyNil", 0}, {"MyCons", 2}}};
   DataType && Nat {"Nat", {{"Zero", 0}, {"Succ", 1}}};
   Function && half {
       "half"  /* name */
@@ -119,7 +119,6 @@ int main()
         compiler.rt.normalize(root_p);
         compiler.rt.printexpr(root_p, "\n");
 
-        #if 0
         Qname const myappend{"plain", "myappend"};
         Qname const MyCons{"plain", "MyCons"};
         Qname const MyNil{"plain", "MyNil"};
@@ -129,7 +128,6 @@ int main()
         compiler.rt.printexpr(root_p, "\n");
         compiler.rt.normalize(root_p);
         compiler.rt.printexpr(root_p, "\n");
-        #endif
 
         tgt::return_(0);
       }
