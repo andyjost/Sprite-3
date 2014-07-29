@@ -13,9 +13,9 @@ clean :
 	rm -f $(STATICLIB) $(STATICLLVM)
 
 $(STATICLIB) : $(SOURCES)
-	clang++ -S -emit-llvm $(SOURCES) -o - | llvm-as > $@
+	$(CLANG) -S -emit-llvm $(SOURCES) -o - | $(LLVM-AS) > $@
 
 $(STATICLLVM) : $(STATICLIB)
-	llvm-dis $(STATICLIB)
+	$(LLVM-DIS) $(STATICLIB)
 
 llvm : $(STATICLLVM)

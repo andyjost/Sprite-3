@@ -1,10 +1,12 @@
 # Requires make >=3.81 for lastword.
 TOPDIR := $(dir $(lastword $(MAKEFILE_LIST)))
-LLVM_CFLAGS = $(shell llvm-config --cppflags --libs core jit native bitwriter)
-LLVM_LDFLAGS = $(shell llvm-config --ldflags --libs core jit native bitwriter)
+LLVM_CFLAGS = $(shell $(LLVM-CONFIG) --cppflags --libs core jit native bitwriter)
+LLVM_LDFLAGS = $(shell $(LLVM-CONFIG) --ldflags --libs core jit native bitwriter)
 CFLAGS = -O0 -ggdb -std=c++11 -Wall $(LLVM_CFLAGS) -I$(TOPDIR)include -Werror
 LDFLAGS = -Wall $(LLVM_LDFLAGS)
-CC=g++
+
+# Get the tool configuration.
+-include $(TOPDIR)/Make.config
 
 # Target programs can depend on this variable to get the Sprite runtime library
 # made, when needed.
