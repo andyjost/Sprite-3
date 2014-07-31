@@ -1,0 +1,30 @@
+
+module "myappend"
+  import Prelude
+  constructor ("myappend","Zero") 0
+  constructor ("myappend","Succ") 1
+  constructor ("myappend","MyNil") 0
+  constructor ("myappend","MyCons") 2
+  function ("myappend","myappend") 2
+    declare
+      path    1 [(("myappend","myappend"),0)]
+      path    2 [(("myappend","myappend"),1)]
+      path    3 [(("myappend","myappend"),0),(("myappend","MyCons"),0)]
+      path    4 [(("myappend","myappend"),0),(("myappend","MyCons"),1)]
+    JumpTable [] True
+      Var 1
+      ("myappend","MyNil")
+        Var 2
+      ("myappend","MyCons")
+        Node ("myappend","MyCons") (
+          Var 3 ,
+          Node ("myappend","myappend") (
+            Var 4 ,
+            Var 2 ) )
+  function ("myappend","main") 0
+    declare
+    Node ("myappend","myappend") (
+      Node ("myappend","MyCons") (
+        Node ("myappend","Zero") ,
+        Node ("myappend","MyNil") ) ,
+      Node ("myappend","MyNil") )

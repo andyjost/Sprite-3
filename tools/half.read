@@ -1,0 +1,29 @@
+
+module "half"
+  import Prelude
+  constructor ("half","Zero") 0
+  constructor ("half","Succ") 1
+  function ("half","half") 1
+    declare
+      path    1 [(("half","half"),0)]
+      path    2 [(("half","half"),0),(("half","Succ"),0)]
+      path    3 [(("half","half"),0),(("half","Succ"),0),(("half","Succ"),0)]
+    JumpTable [] True
+      Var 1
+      ("half","Zero")
+        Node ("half","Zero")
+      ("half","Succ")
+        JumpTable "_1" True
+          Var 2
+          ("half","Zero")
+            Node ("half","Zero")
+          ("half","Succ")
+            Node ("half","Succ") (
+              Node ("half","half") (
+                Var 3 ) )
+  function ("half","main") 0
+    declare
+      Node ("half","half") (
+        Node ("half","Succ") (
+          Node ("half","Zero") ) )
+      

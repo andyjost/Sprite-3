@@ -1,0 +1,52 @@
+
+module "plain"
+  import Prelude
+  constructor ("plain","Zero") 0
+  constructor ("plain","Succ") 1
+  constructor ("plain","MyNil") 0
+  constructor ("plain","MyCons") 2
+  function ("plain","half") 1
+    declare
+      path    1 [(("plain","half"),0)]
+      path    2 [(("plain","half"),0),(("plain","Succ"),0)]
+      path    3 [(("plain","half"),0),(("plain","Succ"),0),(("plain","Succ"),0)]
+    JumpTable [] True
+      Var 1
+      ("plain","Zero")
+        Node ("plain","Zero")
+      ("plain","Succ")
+        JumpTable "_1" True
+          Var 2
+          ("plain","Zero")
+            Node ("plain","Zero")
+          ("plain","Succ")
+            Node ("plain","Succ") (
+              Node ("plain","half") (
+                Var 3 ) )
+  function ("plain","myappend") 2
+    declare
+      path    1 [(("plain","myappend"),0)]
+      path    2 [(("plain","myappend"),1)]
+      path    3 [(("plain","myappend"),0),(("plain","MyCons"),0)]
+      path    4 [(("plain","myappend"),0),(("plain","MyCons"),1)]
+    JumpTable [] True
+      Var 1
+      ("plain","MyNil")
+        Var 2
+      ("plain","MyCons")
+        Node ("plain","MyCons") (
+          Var 3 ,
+          Node ("plain","myappend") (
+            Var 4 ,
+            Var 2 ) )
+  function ("plain","main") 0
+    declare
+    Node ("Prelude","(,)") (
+      Node ("plain","half") (
+        Node ("plain","Succ") (
+          Node ("plain","Zero") ) ) ,
+      Node ("plain","myappend") (
+        Node ("plain","MyCons") (
+          Node ("plain","Zero") ,
+          Node ("plain","MyNil") ) ,
+        Node ("plain","MyNil") ) )

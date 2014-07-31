@@ -71,7 +71,7 @@ namespace sprite { namespace curry
     std::vector<Rule_> args;
 
     Expr_(
-        Qname const & qname_
+        Qname const & qname_ = Qname()
       , std::vector<Rule_> const & args_ = std::vector<Rule_>()
       )
       : qname(qname_), args(args_)
@@ -104,7 +104,7 @@ namespace sprite { namespace curry
       : tag(NODE), expr(std::forward<Args>(args)...)
     {}
 
-    Rule(Qname const & qname, std::vector<Rule> const & args)
+    Rule(Qname const & qname, std::vector<Rule> && args)
       : tag(NODE), expr(qname, std::move(args))
     {}
 
@@ -127,6 +127,18 @@ namespace sprite { namespace curry
         case VAR: new(&var) Ref(arg.var); break;
         case NODE: new(&expr) Expr(arg.expr); break;
       }
+    }
+    Rule & operator=(Rule && arg)
+    {
+      this->~Rule();
+      new(this) Rule(std::move(arg));
+      return *this;
+    }
+    Rule & operator=(Rule const & arg)
+    {
+      this->~Rule();
+      new(this) Rule(arg);
+      return *this;
     }
     ~Rule() { if(tag == NODE) expr.~Expr(); }
     template<typename Visitor>
@@ -164,29 +176,47 @@ namespace sprite { namespace curry
    */
   struct Definition
   {
+    Definition() : tag(RULE), rule(0) {}
+    Definition(Branch const & arg) : tag(BRANCH), branch(arg) {}
     Definition(Branch && arg) : tag(BRANCH), branch(std::move(arg)) {}
-    template<typename ConvertsToRule
-      , typename = typename std::enable_if<
-            std::is_constructible<Rule, ConvertsToRule>::value
-          >::type
-      >
-    Definition(ConvertsToRule && arg) : tag(RULE), rule(std::move(arg))
-    {}
+    Definition(Rule const & arg) : tag(RULE), rule(arg) {}
+    Definition(Rule && arg) : tag(RULE), rule(std::move(arg)) {}
+    Definition(Expr const & arg) : tag(RULE), rule(arg) {}
+    Definition(Expr && arg) : tag(RULE), rule(std::move(arg)) {}
+    // template<typename ConvertsToRule
+    //   , typename = typename std::enable_if<
+    //         std::is_constructible<Rule, ConvertsToRule>::value
+    //       >::type
+    //   >
+    // Definition(ConvertsToRule && arg) : tag(RULE), rule(std::move(arg))
+    // {}
     Definition(Definition && arg) : tag(arg.tag)
     {
       switch(tag)
       {
-        case BRANCH: new(&branch) Branch(std::move(arg.branch));
-        case RULE: new(&rule) Rule(std::move(arg.rule));
+        case BRANCH: new(&branch) Branch(std::move(arg.branch)); break;
+        case RULE: new(&rule) Rule(std::move(arg.rule)); break;
       }
     }
     Definition(Definition const & arg) : tag(arg.tag)
     {
       switch(tag)
       {
-        case BRANCH: new(&branch) Branch(arg.branch);
-        case RULE: new(&rule) Rule(arg.rule);
+        case BRANCH: new(&branch) Branch(arg.branch); break;
+        case RULE: new(&rule) Rule(arg.rule); break;
       }
+    }
+    Definition & operator=(Definition && arg)
+    {
+      this->~Definition();
+      new(this) Definition(std::move(arg));
+      return *this;
+    }
+    Definition & operator=(Definition const & arg)
+    {
+      this->~Definition();
+      new(this) Definition(arg);
+      return *this;
     }
     ~Definition()
     {
