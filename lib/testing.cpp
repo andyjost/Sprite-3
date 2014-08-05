@@ -68,6 +68,7 @@ namespace
   
     int const ok = fclose(strm);
     assert(ok == 0);
+    (void) ok;
   
     // Check the output.
     std::string program_output(buf);
