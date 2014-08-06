@@ -1,5 +1,10 @@
-#include "sprite/backend.hpp"
+/**
+ * @file
+ * @brief Contains example code for get_constant.
+ */
 
+#undef NDEBUG // assert() is assumed to "use" a variable.
+#include "sprite/backend.hpp"
 using namespace sprite::backend;
 
 // Test nested_initializer_list_for.
