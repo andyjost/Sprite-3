@@ -14,12 +14,12 @@ SPRITE_RT_LIB = $(TOPDIR)runtime/sprite-rt.bc
 
 # Target programs can depend on this variable to get the Sprite library made,
 # when needed.
-SPRITE_LIB = $(TOPDIR)lib/sprite.a
+SPRITE_LIB = $(TOPDIR)src/sprite.a
 
 .PHONY : $(SPRITE_RT_LIB) $(SPRITE_LIB)
 
 $(SPRITE_LIB) :
-	cd ../lib; $(MAKE) sprite.a
+	cd ../src; $(MAKE) sprite.a
 
 $(SPRITE_RT_LIB) :
 	cd ../runtime; $(MAKE) sprite-rt.bc
