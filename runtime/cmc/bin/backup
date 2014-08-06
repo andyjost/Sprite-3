@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# Create a zip archive of the "interesting" files
+# Sergio Antoy, Sun Apr  6 13:59:25 PDT 2014
+
+BASE=$(dirname $(dirname $(readlink -f $0)))
+
+date=`date +%y%m%d%H%M`
+PREFIX=$(basename $BASE)
+archive=$date-BACKUP
+
+cd $BASE
+# echo BASE $BASE
+# echo PREFIX $PREFIX
+
+cd ..
+
+BIN=`find cmc -name "bin"`
+CPP=`find cmc/runtime \( -name "*.cpp" -o -name "*.hpp" -o -name SConstruct \) -print`
+CURRY=`find cmc -name "*.curry" | grep '[^/].curry'`
+
+# echo BIN $BIN
+# echo CPP $CPP
+# echo CURRY $CURRY
+
+ALL="$BIN $CPP $CURRY"
+# echo ALL $ALL
+
+zip -q -r $archive $ALL
+
+cd cmc
+
+mkdir -p saves
+mv ../$archive.zip saves
+ls -lt saves/$archive.zip

@@ -1,0 +1,26 @@
+#!/bin/bash
+
+BASE=$(dirname $(dirname $(readlink -f $0)))
+#echo BASE $BASE
+
+if [ "$1" = "" ]
+then
+  DIRECT=$BASE/Examples
+else
+  DIRECT=$1
+fi
+
+rm -rf $DIRECT/.curry/*
+
+echo `date`
+
+for PROG in $DIRECT/*.curry
+do
+  FILE=$DIRECT/$(basename $PROG .curry)
+  rm -rf $FILE
+  echo compiling $FILE
+  $BASE/bin/compile $FILE
+  if [ -f $FILE ]
+    then timeout 1 $FILE | head -200
+  fi
+done

@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Create a zip archive of the "interesting" files
+# Sergio Antoy, Tue Oct  6 21:03:22 PDT 2009
+
+BASEDIR=`(cd \`dirname $0\`/.. > /dev/null ; pwd)`
+
+dir=`dirname $BASEDIR`
+date=`date +%y%m%d%H%M`
+prefix=$(basename $BASEDIR)
+archive=$date-BACKUP
+
+cd $BASEDIR
+rm -rf Examples/.curry
+rm -f `find . -name "*~"`
+cd ..
+
+
+CURRY="icurry/*.curry json/*.curry backtrack/*.curry format/*.curry"
+
+FILES="$CURRY cmd notes"
+
+for file in $FILES; do
+    zip -q -r $archive $prefix/$file
+done
+
+cd $BASEDIR
+
+mkdir -p saves
+mv ../$archive.zip saves
+ls -lt saves/$archive.zip

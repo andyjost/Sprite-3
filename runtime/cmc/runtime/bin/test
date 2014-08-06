@@ -1,0 +1,15 @@
+#!/bin/sh
+
+THISDIR=`(cd \`dirname $0\` > /dev/null ; pwd)`
+BASEDIR=`(cd $THISDIR/.. > /dev/null ; pwd)`
+
+cd $BASEDIR/test
+
+rm -f main
+
+g++ -I $BASEDIR/runtime -I $BASEDIR/lib -I usr -o main main.cpp $BASEDIR/runtime/Engine.cpp $BASEDIR/lib/Prelude.cpp $BASEDIR/lib/External.cpp take5.cpp Tests.cpp -g -O0
+
+if [ -f main ]
+then
+  ./main
+fi

@@ -1,0 +1,24 @@
+Decider('timestamp-newer')
+
+root='/home/cmc/local/cmc/runtime'
+
+Repository(root+'/engine')
+Repository(root+'/lib')
+
+env = Environment(CPPPATH=['.'])
+
+env.Object('Litint.cpp')
+env.Object('Litchar.cpp')
+env.Object('External.cpp')
+env.Object('Modified.cpp')
+env.Object('Prelude.cpp')
+
+# Wed May 14 09:22:18 PDT 2014
+# 
+# To compile the Prelude with pakcs:
+# 
+# 0. Let runtime/lib be the current directory
+# 1. Place/copy both Prelude.curry and Prelude.prim_c2p in the current directory
+# 2. Execute: curry2cpp Prelude
+# 3. Move Prelude.cpp and Prelude.hpp from subdirectory .curry in the current directory
+# 4. Execute scons

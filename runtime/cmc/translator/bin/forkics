@@ -1,0 +1,17 @@
+#!/bin/sh
+
+KICS2=~/COMMON/local/kics2/bin/kics2
+# no curry suffix
+PROG=Compiler
+FILE=Test
+
+rm -f $FILE.trans
+$KICS2 :set v0 :l $PROG :set args $FILE :eval main :quit
+cat $FILE.trans
+
+# examples
+# $KICS2 :load $PROG :save :quit
+# $KICS2 :load $PROG :eval exp :quit
+
+# example (load, compile only)
+# ~/COMMON/local/kics2/bin/.local/kics2c -i ~/COMMON/local/kics2/lib -i ~/COMMON/local/kics2/lib/meta Compiler.curry 

@@ -13,9 +13,11 @@ install : $(STATICLIB)
 	@echo "Installing runtime at $(LIBINSTALL)"
 	mkdir -p $(LIBINSTALL)
 	cp $(STATICLIB) $(LIBINSTALL)
+	cp -r cmc/ $(LIBINSTALL)
 
 uninstall :
 	-rm -f $(LIBINSTALL)/$(STATICLIB)
+	-rm -rf $(LIBINSTALL)/cmc
 
 -include ../Make.include
 

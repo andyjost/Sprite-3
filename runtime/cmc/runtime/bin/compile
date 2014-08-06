@@ -1,0 +1,51 @@
+#!/bin/sh
+
+BASE=$(dirname $(dirname $(readlink -f $0)))
+# echo BASE $BASE
+
+EXEC=no
+if [ "xx$1" = "xx-e" ] ; then
+  EXEC=yes
+  shift
+fi
+
+if [ "$1" = "" ]
+then
+  echo Warning: no file given
+  exit
+fi
+
+FILE=$(dirname $1)/$(basename $1 ".curry")
+TARGET=$(dirname $1)/.curry/$(basename $1 ".curry")
+
+COMPILE="g++ -I $BASE/engine -I $BASE/lib -c -o $TARGET.o  $TARGET.cpp -g -O0"
+echo Executing $COMPILE
+$COMPILE
+
+ISMAIN=`egrep "^M$" $TARGET.make`
+
+if [ "$ISMAIN" = "M" ]
+then
+  LINK="g++ $BASE/engine/Engine.o $BASE/lib/Prelude.o $BASE/lib/External.o $BASE/lib/Modified.o $BASE/lib/Litint.o $BASE/lib/Litchar.o -o $FILE $TARGET.o -g -O0"
+  echo Executing $LINK
+  $LINK
+  if [ "$EXEC" = "yes" ]
+  then
+    ./$FILE
+  fi
+else
+  echo No main, no linking
+fi
+
+
+#g++ -I /home/antoy/COMMON/programs/cmc/runtime/lib \
+#    /home/antoy/COMMON/programs/cmc/runtime/engine/Engine.o \
+#    /home/antoy/COMMON/programs/cmc/runtime/lib/Prelude.o \
+#    /home/antoy/COMMON/programs/cmc/runtime/lib/External.o \
+#    /home/antoy/COMMON/programs/cmc/runtime/lib/Modified.o \
+#    /home/antoy/COMMON/programs/cmc/runtime/lib/Litint.o \
+#    /home/antoy/COMMON/programs/cmc/runtime/lib/Litchar.o \
+#    -o Examples/average \
+#    Examples/.curry/average.o \
+#    Examples/.curry/Some.o \
+#    -g -O0

@@ -1,0 +1,31 @@
+#!/bin/sh
+
+BASE=$(dirname $(dirname $(dirname $(readlink -f $0))))
+echo $BASE
+
+cd $BASE/runtime/lib
+
+# Only the pakcs Prelude can be compiled
+cp -f ~/COMMON/local/pakcs/lib/Prelude.* .
+
+if [ -f Prelude.curry ]
+then
+  if [ -f Prelude.prim_c2p ]
+  then
+    rm -rf .curry/Prelude.*
+    rm -rf Prelude.o Prelude.cpp Prelude.hpp
+    $BASE/translator/bin/curry2cpp Prelude
+    mv .curry/Prelude.cpp .curry/Prelude.hpp .
+    scons
+  else
+    echo File Prelude.prim_c2p is missing
+  fi
+else
+  echo File Prelude.curry is missing
+fi
+
+# 0. Let runtime/lib be the current directory
+# 1. Place/copy both Prelude.curry and Prelude.prim_c2p in the current directory
+# 2. Execute: curry2cpp Prelude
+# 3. Move Prelude.cpp and Prelude.hpp from subdirectory .curry in the current directory
+# 4. Execute scons

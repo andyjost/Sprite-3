@@ -1,0 +1,4 @@
+#!/bin/sh
+
+g++ -I runtime -I lib -c -o lib/External.o lib/External.cpp 
+
