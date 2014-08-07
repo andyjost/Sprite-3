@@ -3,34 +3,33 @@
 all : runtime examples tools
 
 clean :
-	cd src; $(MAKE) clean
-	cd examples; $(MAKE) clean
-	cd runtime; $(MAKE) clean
-	cd tools; $(MAKE) clean
+	$(MAKE) -C src clean
+	$(MAKE) -C examples clean
+	$(MAKE) -C runtime clean
+	$(MAKE) -C tools clean
 
 install : runtime tools
-	cd runtime; $(MAKE) install
-	cd tools; $(MAKE) install
+	$(MAKE) -C runtime install
+	$(MAKE) -C tools install
 
 uninstall :
-	cd runtime; $(MAKE) uninstall
-	cd tools; $(MAKE) uninstall
+	$(MAKE) -C runtime uninstall
+	$(MAKE) -C tools uninstall
 	-rmdir $(BININSTALL) 2>&1 > /dev/null
 	-rmdir $(LIBINSTALL) 2>&1 > /dev/null
 
 ###
 
 examples :
-	cd examples; $(MAKE)
+	$(MAKE) -C examples
 
 libs :
-	cd src; $(MAKE)
+	$(MAKE) -C src
 
 runtime :
-	cd runtime; $(MAKE)
+	$(MAKE) -C runtime
 
 tools :
-	cd tools; $(MAKE)
-
+	$(MAKE) -C tools
 
 -include Make.include
