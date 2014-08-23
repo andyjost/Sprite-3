@@ -12,11 +12,11 @@ ppImported imported_list
   = "\n  import" ++
        foldr ((++) . ("\n    " ++ )) "" imported_list
 
-ppData (qname, constr_list)
+ppData ({-qname-}_, constr_list)
   = "\n  data " ++ -- ppIName qname ++
       foldr ((++) . ppConstructor) "" (zip constr_list [0..])
 
-ppConstructor (IConstructor qname arity, index)
+ppConstructor (IConstructor qname arity, {-index-}_)
   = "\n    constructor " ++ ppIName qname ++ " " ++ show arity -- ++ " " ++ show index
 
 ppFunction (IFunction qname arity table stmt_list)
@@ -28,23 +28,38 @@ ppFunction (IFunction qname arity table stmt_list)
 
 ------------------------------------------------------------------
 
-ppVariable n string (index, counter, variant)
+ppVariable n string (index, {-counter-}_, ikind)
  = ppIndent n ++ string ++ " " ++
-       show index ++ " " ++ show counter ++ " " ++ show variant
+       show index ++ " " ++ ppIKind ikind
 
+ppIKind (IPath lhs)
+  = ppLHSvar lhs
+
+ppIKind IBind
+  = show IBind
+
+ppIKind IFree
+  = show IFree
+
+ppLHSvar (Arg i)
+  = show 0 ++ " " ++ show i
+
+ppLHSvar (Rel base _ i)
+  = show base ++ " " ++ show i
 ------------------------------------------------------------------
 
 ppStmt n (IExternal string)
   = ppIndent n ++ "external \"" ++ string ++ "\""
 
-ppStmt n (Comment string)
-  = ppIndent n ++ "comment \"" ++ string ++ "\""
+ppStmt {-n-}_ (Comment {-string-}_)
+  -- = ppIndent n ++ "comment \"" ++ string ++ "\""
+  = ""
 
 ppStmt n (Return expr)
   = ppIndent n ++ "return" ++ ppExpr (n+2) expr
 
 ppStmt n (DeclareLHSVar path)
-  = ppIndent n ++ "declare_lhs_var " ++ show path
+  = ppIndent n ++ "declare_lhs_var " ++ ppShowVariableRef path
 
 ppStmt n (DeclareFreeVar var)
   = ppIndent n ++ "declare_free_var " ++ show var
@@ -77,7 +92,10 @@ ppStmt n (BTable suffix flex expr branch_list)
       ppExpr (n+2) expr ++
       foldr ((++) . ppBBranch (n+2)) "" branch_list
 
-ppABranch n (IConstructor qname arity, stmt_list)
+ppShowVariableRef ((index,_,_):_)
+  = show index
+
+ppABranch n (IConstructor qname {-arity-}_, stmt_list)
   = ppIndent n ++ ppIName qname ++ " =>" ++
       foldr ((++) . ppStmt (n+2)) "" stmt_list
 
@@ -97,9 +115,9 @@ lit_show (Bfloat x) = "float " ++ show x
 ppExpr n Exempt
   = ppIndent n ++ "exempt"
 
-ppExpr n (Reference var_list)
+ppExpr n (Reference path)
   = ppIndent n ++
-       "var " ++ show var_list
+       "var " ++ ppShowVariableRef path
 
 ppExpr n (BuiltinVariant (Bint i))
   = ppIndent n ++ "int " ++ show i
