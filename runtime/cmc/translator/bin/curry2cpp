@@ -1,0 +1,71 @@
+#!/bin/bash
+
+# TODO: look in the compile script for a better way
+THISDIR=`(cd \`dirname $0\` > /dev/null ; pwd)`
+BASEDIR=`(cd $THISDIR/.. > /dev/null ; pwd)`
+
+if [ "$1" = "" ]
+then
+  echo Warning: no file given
+  exit
+fi
+
+
+
+CMCLIBPATH=$BASEDIR/icurry:$BASEDIR/format:$BASEDIR/backtrack
+PAKCSLIBPATH=$PAKCSHOME/lib:$PAKCSHOME/lib/meta
+# export PAKCSLIBPATH
+# echo PAKCSLIBPATH $PAKCSLIBPATH
+
+  FILE=$(dirname $1)/$(basename $1 ".curry")
+  if [ ! -f $FILE.curry ]
+  then
+    echo Error: \"$FILE.curry\" not found
+    exit
+  fi
+
+  CURRYPATH=`pwd`/$(dirname $1):$CMCLIBPATH
+  echo CURRYPATH $CURRYPATH
+  export CURRYPATH
+
+  # HARDWIRED !?
+  /home/cmc/local/pakcs/bin/parsecurry --flat $FILE
+  if [ $? = 0 ]
+     then echo parsed
+     else echo parse error ; exit
+  fi
+
+# create ICurry
+
+  TARGET=$(dirname $1)/.curry/$(basename $1 ".curry")
+
+  if [ -f $TARGET.icur -a $TARGET.icur -nt $FILE.curry ]
+  then
+    echo \"icur\" up to date
+  else
+    rm -f $FILE.icur 
+    command="pakcs -q -r $BASEDIR/icurry/Main.curry $FILE"
+    echo Running $command
+    $command
+    if [ -f $FILE.icur ]
+    then echo \"icur\" file created
+         mv -f $FILE.icur $TARGET.icur
+         mv -f $FILE.read $TARGET.read
+    else echo Fail to create  \"$FILE.icur\" file
+         exit 1
+    fi
+  fi
+
+  rm -f $FILE.*pp $TARGET.*pp
+
+  command="pakcs -q -r $BASEDIR/backtrack/Main.curry $TARGET"
+  echo Running $command
+  $command
+  if [ -f $TARGET.hpp -a -f $TARGET.cpp ]
+  then echo \"C++\" files created
+       exit 0
+  else echo Fail to create  \"C++\" files 
+       exit 1
+  fi
+
+

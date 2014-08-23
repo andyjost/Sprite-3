@@ -10,14 +10,16 @@ BAREWORDS = $(EXECUTABLES:.exe=)
 
 all : $(TESTS)
 
+clean :
+	rm -f $(EXECUTABLES) $(OBJECTS) $(TESTS) $(TESTS:=.failed) $(BITCODE) *.d *.result
+
 # Include default definitions and rules.
 include ../Make.include
 
+###
+
 # Import dependency info for extant .o files.
 -include $(OBJECTS:.o=.d)
-
-clean :
-	rm -f $(EXECUTABLES) $(OBJECTS) $(TESTS) $(TESTS:=.failed) $(BITCODE) *.d *.result
 
 .cpp.o :
 	$(CC) $(CFLAGS) -c $< -o $@

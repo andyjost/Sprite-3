@@ -3,6 +3,8 @@
  * @brief Contains examples and tests for the generic operators.
  */
 
+#undef NDEBUG // assert() is assumed to "use" a variable.
+
 #include "sprite/backend.hpp"
 #include <cassert>
 #include <limits>

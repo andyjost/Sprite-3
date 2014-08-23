@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# Create a zip archive of the "interesting" files
+# Sergio Antoy, Sun Apr  6 13:59:25 PDT 2014
+
+BASEDIR=`(cd \`dirname $0\`/.. > /dev/null ; pwd)`
+
+dir=`dirname $BASEDIR`
+date=`date +%y%m%d%H%M`
+prefix=$(basename $BASEDIR)
+archive=$date-BACKUP
+
+
+cd $BASEDIR
+rm -f `find . -name "*~"`
+cd ..
+
+FILES="*.hpp *.cpp runtime lib usr cmd"
+
+for file in $FILES; do
+    zip -q -r $archive $prefix/$file
+done
+
+cd $BASEDIR
+
+mkdir -p saves
+mv ../$archive.zip saves
+ls -lt saves/$archive.zip

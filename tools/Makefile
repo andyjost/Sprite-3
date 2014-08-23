@@ -7,14 +7,23 @@ EXECUTABLES = $(OBJECTS:.o=)
 
 all : $(EXECUTABLES)
 
-# Include default definitions and rules.
+clean :
+	rm -f $(EXECUTABLES) $(OBJECTS) *.d
+
+install :
+	@echo "Installing tools at $(BININSTALL)"
+	mkdir -p $(BININSTALL)
+	cp $(EXECUTABLES) $(BININSTALL)
+
+uninstall :
+	-cd $(BININSTALL); rm -f $(EXECUTABLES)
+
 include ../Make.include
+
+###
 
 # Import dependency info for extant .o files.
 -include $(OBJECTS:.o=.d)
-
-clean :
-	rm -f $(EXECUTABLES) $(OBJECTS) *.d
 
 .cpp.o :
 	$(CC) $(CFLAGS) -c $< -o $@

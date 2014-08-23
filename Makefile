@@ -1,15 +1,35 @@
-.PHONY : all clean examples
+.PHONY : all clean install examples libs runtime tools uninstall
 
-all : examples
-
-libs :
-	cd lib; $(MAKE)
-
-examples :
-	cd examples; $(MAKE)
+all : runtime examples tools
 
 clean :
-	cd lib; $(MAKE) clean
-	cd examples; $(MAKE) clean
-	cd runtime; $(MAKE) clean
-	cd tools; $(MAKE) clean
+	$(MAKE) -C src clean
+	$(MAKE) -C examples clean
+	$(MAKE) -C runtime clean
+	$(MAKE) -C tools clean
+
+install : runtime tools
+	$(MAKE) -C runtime install
+	$(MAKE) -C tools install
+
+uninstall :
+	$(MAKE) -C runtime uninstall
+	$(MAKE) -C tools uninstall
+	-rmdir $(BININSTALL) 2>&1 > /dev/null
+	-rmdir $(LIBINSTALL) 2>&1 > /dev/null
+
+###
+
+examples :
+	$(MAKE) -C examples
+
+libs :
+	$(MAKE) -C src
+
+runtime :
+	$(MAKE) -C runtime
+
+tools :
+	$(MAKE) -C tools
+
+-include Make.include

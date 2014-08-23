@@ -6,9 +6,13 @@
 *log
 *.bc
 *.ll
-sandbox/*
+bin/*
 dev/*
 doxygen-out/*
-tags
-setup.csh
 examples/*.result
+lib/*
+.curry/
+sandbox/*
+setup.csh
+tags
+tools/sprite

@@ -3,6 +3,8 @@
  * @brief Contains example code referenced throughout the documentation.
  */
 
+#undef NDEBUG // assert() is assumed to "use" a variable.
+
 // Note: no 80-column rule for this file.  Doxygen already uses a wide layout,
 // so there is no need to wrap these examples.
 

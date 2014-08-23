@@ -1,0 +1,15 @@
+#!/bin/sh
+
+THISDIR=`(cd \`dirname $0\` > /dev/null ; pwd)`
+
+if [ "$1" = "" ]
+then
+    echo Warning: no directory given
+    exit
+fi
+
+for i in `find $1 -name "*.curry"`
+do
+  echo compiling $i
+  $THISDIR/curry2cpp $i
+done

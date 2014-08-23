@@ -1,0 +1,19 @@
+#!/bin/sh
+
+# Simple edit all files in the source directory
+# Sergio Antoy, 
+
+ROOT=`(cd \`dirname $0\`/.. > /dev/null ; pwd)`
+cd $ROOT
+
+BACKUP=backup$$
+
+OLD="Floatc"
+NEW="Bfloat"
+TYPE=*.curry
+
+for i in `find . -name "$TYPE"`; do
+  echo Editing $i
+  zip $BACKUP $i
+  (echo "1,\$s/$OLD/$NEW/g";echo "w") | ed $i
+done

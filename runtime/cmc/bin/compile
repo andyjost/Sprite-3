@@ -1,0 +1,39 @@
+#!/bin/sh
+
+BASE=$(dirname $(dirname $(readlink -f $0)))
+# echo BASE $BASE
+
+if [ "$1" = "-e" ]
+then
+  EXEC="-e"
+  shift
+else
+  EXEC=""
+fi
+
+if [ "$1" = "" ]
+then
+  echo Warning: no file given
+  exit
+fi
+
+FILE=$(dirname $1)/$(basename $1 ".curry")
+TARGET=$(dirname $1)/.curry/$(basename $1 ".curry")
+
+if [ "$EXEC" = "true" ]
+then
+  rm -f $TARGET.* $FILE
+fi
+
+TRANSLATE="$BASE/translator/bin/curry2cpp $FILE"
+echo Executing $TRANSLATE
+$TRANSLATE
+
+if [ $? = 0 ]
+then
+  COMPILE="$BASE/runtime/bin/compile $EXEC $FILE"
+  echo Executing $COMPILE
+  $COMPILE
+else
+  exit 1
+fi

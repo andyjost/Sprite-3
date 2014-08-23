@@ -1,0 +1,73 @@
+#!/bin/bash
+
+THISDIR=`(cd \`dirname $0\` > /dev/null ; pwd)`
+BASEDIR=`(cd $THISDIR/.. > /dev/null ; pwd)`
+
+if [ "$*" = "" ]
+then
+  echo Warning: no file given
+  exit
+fi
+
+
+LOCALLIBPATH=$BASEDIR/icurry:$BASEDIR
+# export PAKCSLIBPATH
+# echo PAKCSLIBPATH $PAKCSLIBPATH
+
+for i in $*
+do
+  FILE=$(dirname $i)/$(basename $i ".curry")
+  if [ ! -f $FILE.curry ]
+  then
+    echo Error: \"$FILE.curry\" not found
+    exit
+  fi
+
+  CURRYPATH=`pwd`/$(dirname $i):$LOCALLIBPATH
+  echo CURRYPATH $CURRYPATH
+  export CURRYPATH
+
+  parsecurry --flat $FILE
+  if [ $?==0 ]
+     then echo parsed
+     else echo parse error ; exit
+  fi
+
+# create ICurry
+
+  TARGET=$(dirname $i)/.curry/$(basename $i ".curry")
+
+  if [ -f $TARGET.icur -a $TARGET.icur -nt $FILE.curry ]
+  then
+    echo \"icur\" up to date
+  else
+    rm -f $FILE.icur 
+    command="pakcs -q -r $BASEDIR/icurry/Main.curry $FILE"
+    echo Running $command
+    $command
+    if [ -f $FILE.icur ]
+    then echo \"icur\" file created
+         mv -f $FILE.icur $TARGET.icur
+         mv -f $FILE.read $TARGET.read
+    else echo Fail to create  \"icur\" file ; exit
+    fi
+    # cat $TARGET.read
+  fi
+
+  if [ -f $TARGET.json -a $TARGET.json -nt $TARGET.icur ]
+  then
+      echo \"json\" up to date
+  else
+      rm -f $FILE.json
+      command="pakcs -q -r $BASEDIR/json/Main.curry $TARGET"
+      echo Running $command
+      $command
+      if [ -f $TARGET.json ]
+      then echo \"json\" file created
+           # mv -f $FILE.json $TARGET.json
+      else echo Fail to create  \"json\" file ; exit
+      fi
+      cat $TARGET.json
+  fi
+
+done

@@ -1,0 +1,15 @@
+#!/bin/sh
+
+THISDIR=`(cd \`dirname $0\` > /dev/null ; pwd)`
+BASEDIR=`(cd $THISDIR/.. > /dev/null ; pwd)`
+
+cd $BASEDIR
+
+for FILE in $*
+do
+  printf "%30s" $FILE
+  # cat $FILE | egrep -v "^[[:space:]]*--" | egrep -v "^[[:space:]]*$" # | wc
+  cat $FILE | egrep -v "^[[:space:]]*(--|$)" | wc
+done
+
+exit

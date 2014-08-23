@@ -1,0 +1,21 @@
+#!/bin/sh
+
+THISDIR=`pwd`/`dirname $0`
+BASEDIR=`(cd $THISDIR/.. > /dev/null ; pwd)`
+
+if [ "$1" = "" ]
+then
+    echo Warning: no directory given
+else
+    cd $1
+    rm -f .curry/*.icur
+    rm -f .curry/*.read
+    rm -f .curry/*.json
+    rm -f .curry/*.hpp
+    rm -f .curry/*.cpp
+fi
+
+# Extra for now
+
+cd $BASEDIR
+rm -rf `find . -name ".curry"`

@@ -6,10 +6,12 @@ STATICLIB = sprite.a
 
 all : $(STATICLIB)
 
--include ../Make.include
-
 clean :
 	rm -f $(OBJECTS) $(STATICLIB) *.d
+
+-include ../Make.include
+
+###
 
 # Import dependency info for extant .o files.
 -include $(OBJECTS:.o=.d)
