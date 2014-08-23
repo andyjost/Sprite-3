@@ -3,9 +3,10 @@
  * @brief Contains data structures for representing Curry input programs.
  */
 #pragma once
+#include <limits>
 #include <string>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 namespace sprite { namespace curry
 {
@@ -243,14 +244,17 @@ namespace sprite { namespace curry
     union {Branch branch; Rule rule;};
   };
 
+  /// Used with Function::PathElem to indicate no base path (i.e., a terminus).
+  enum { nobase = std::numeric_limits<size_t>::max() };
+
   /// Represents a Curry function.
   // Note: maintain layout compatibility with Constructor!
   struct Function
   {
     std::string name;
     size_t arity;
-    struct PathElem { Qname qname; size_t idx; };
-    std::unordered_map<size_t, std::vector<PathElem>> paths;
+    struct PathElem { size_t base; size_t idx; };
+    std::vector<PathElem> paths;
     Definition def;
   };
 

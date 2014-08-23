@@ -54,21 +54,31 @@ namespace
     tgt::value resolve_path(size_t pathid) const
     {
       tgt::value p = this->root_p;
-      tgt::type node_pt = *this->compiler.ir.node_t;
-      for(auto const & pathelem : this->fundef->paths.at(pathid))
-      {
-        switch(pathelem.idx)
-        {
-          case 0:
-            p = bitcast(p.arrow(ND_SLOT0), node_pt);
-            break;
-          case 1:
-            p = bitcast(p.arrow(ND_SLOT1), node_pt);
-            break;
-          default: assert(0 && "Can't do arity>2 yet"); // FIXME
-        }
-      }
+      _resolve_path(p, this->fundef->paths.at(pathid));
       return bitcast(p, *tgt::types::char_());
+    }
+
+    // Helper for resolve_path.  Updates p.
+    void _resolve_path(
+        tgt::value & p, curry::Function::PathElem const & pathelem
+      ) const
+    {
+      // Walk the base path.
+      if(pathelem.base != curry::nobase)
+        _resolve_path(p, this->fundef->paths.at(pathelem.base));
+
+      // Add this index.
+      tgt::type node_pt = *this->compiler.ir.node_t;
+      switch(pathelem.idx)
+      {
+        case 0:
+          p = bitcast(p.arrow(ND_SLOT0), node_pt);
+          break;
+        case 1:
+          p = bitcast(p.arrow(ND_SLOT1), node_pt);
+          break;
+        default: assert(0 && "Can't do arity>2 yet"); // FIXME
+      }
     }
 
     result_type operator()(curry::Rule const & rule)
