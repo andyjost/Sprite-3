@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <limits>
 
 #define SPRITE_SKIPSPACE(rv)                                     \
     while(!ifs.eof() && std::isspace(ifs.peek())) { ifs.get(); } \
@@ -20,6 +21,13 @@ static std::string word;
 
 namespace sprite { namespace curry
 {
+  template<typename T> void base_one_to_zero(T & t)
+  {
+    if(t == 0)
+      throw ParseError();
+    --t;
+  }
+
   // Reads a double-quoted string.  Returns the ccontents without quotes.
   std::string read_quoted_string(std::istream & ifs)
   {
@@ -41,14 +49,33 @@ namespace sprite { namespace curry
   
   std::istream & operator>>(std::istream & ifs, Qname & qname)
   {
-    int c = ifs.get();
-    SPRITE_SKIPSPACE_EXPECTING('(')
-    qname.module = read_quoted_string(ifs);
-    c = ifs.get();
-    SPRITE_SKIPSPACE_EXPECTING(',')
-    qname.name = read_quoted_string(ifs);
-    c = ifs.get();
-    SPRITE_SKIPSPACE_EXPECTING(')')
+    SPRITE_SKIPSPACE(ifs);
+    switch(ifs.peek())
+    {
+      // Parse "module.name" form.
+      case '"':
+      {
+        std::string full = read_quoted_string(ifs);
+        size_t pos = full.find('.');
+        if(full.find('.', pos+1) != std::string::npos) throw ParseError();
+        qname.module = full.substr(0, pos);
+        qname.name = full.substr(pos+1);
+        break;
+      }
+      // Parse ("module", "name") form.
+      case '(':
+      {
+        int c = ifs.get();
+        qname.module = read_quoted_string(ifs);
+        c = ifs.get();
+        SPRITE_SKIPSPACE_EXPECTING(',')
+        qname.name = read_quoted_string(ifs);
+        c = ifs.get();
+        SPRITE_SKIPSPACE_EXPECTING(')')
+        break;
+      }
+      default: throw ParseError();
+    }
     return ifs;
   }
   
@@ -56,6 +83,8 @@ namespace sprite { namespace curry
   {
     // The "import" keyword has already been read.
     std::stringstream tmp;
+    // Read up to the newline.
+    ifs.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     int c = ifs.get();
     while(true)
     {
@@ -80,33 +109,12 @@ namespace sprite { namespace curry
     ifs >> constructor.arity;
   }
   
-  void read_path(std::istream & ifs, std::vector<Function::PathElem> & paths)
+  size_t read_variable_ref(std::istream & ifs)
   {
-    // The "path" keyword and path id have already been read.
-    int c = ifs.get();
-    SPRITE_SKIPSPACE_EXPECTING('[')
-    c = ifs.get();
-    Function::PathElem path;
-  
-    while(true)
-    {
-      SPRITE_SKIPSPACE_EXPECTING('(')
-      ifs >> path.qname;
-      c = ifs.get();
-      SPRITE_SKIPSPACE_EXPECTING(',')
-      ifs >> path.idx;
-      c = ifs.get();
-      SPRITE_SKIPSPACE_EXPECTING(')')
-  
-      paths.push_back(path);
-  
-      c = ifs.get();
-      while(std::isspace(c)) { c = ifs.get(); }
-  
-      if(c == ',') { c = ifs.get(); continue; }
-      else if(c == ']') break;
-      else throw ParseError();
-    }
+    size_t id;
+    ifs >> id;
+    base_one_to_zero(id);
+    return id;
   }
   
   Rule read_rule(std::istream & ifs)
@@ -145,55 +153,51 @@ namespace sprite { namespace curry
         else throw ParseError();
       }
     }
-    else if(word == "Var")
+    else if(word == "var")
     {
       Ref ref;
-      ifs >> ref.pathid;
+      ref.pathid = read_variable_ref(ifs);
       return ref;
     }
     throw ParseError();
   }
-  
+
   Definition read_definition(std::istream & ifs)
   {
     char c;
-    if(word == "JumpTable")
+  redo:
+    if(word == "ATable")
     {
       Branch branch;
   
       // Read the prefix.
-      while(std::isspace(ifs.peek())) { ifs.get(); }
-      if(ifs.peek() == '[')
-      {
-        ifs.get();
-        c = ifs.get();
-        if(c != ']') throw ParseError();
-        branch.prefix = "";
-      }
-      else
-        branch.prefix = read_quoted_string(ifs);
+      size_t unused;
+      ifs >> unused;
   
       // Read the isflex property.
       ifs >> word;
-      if(word == "True")
+      if(word == "flex")
         branch.isflex = true;
-      else if(word == "False")
+      else if(word == "rigid")
         branch.isflex = false;
       else throw ParseError();
   
       // Read the path id.
       ifs >> word;
-      if(word != "Var") throw ParseError();
-      ifs >> branch.pathid;
+      if(word != "var") throw ParseError();
+      branch.pathid = read_variable_ref(ifs);
   
       // Read the cases.
       while(true)
       {
         SPRITE_SKIPSPACE(branch)
-        if(ifs.peek() == '(')
+        c = ifs.peek();
+        if(c == '(' || c == '"')
         {
           Case case_;
           ifs >> case_.qname;
+          ifs >> word;
+          if(word != "=>") throw ParseError();
           ifs >> word;
           case_.action = read_definition(ifs);
           branch.cases.push_back(std::move(case_));
@@ -202,8 +206,18 @@ namespace sprite { namespace curry
       }
       return branch;
     }
-    else if(word == "Node" || word == "Var")
+    else if(word == "return")
+    {
+      ifs >> word;
       return read_rule(ifs);
+    }
+    else if(word == "declare_lhs_var" || word == "comment")
+    {
+      // Ignore the line.
+      ifs.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+      ifs >> word;
+      goto redo;
+    }
     else throw ParseError();
     ifs >> word;
   }
@@ -220,18 +234,47 @@ namespace sprite { namespace curry
     function.name = qname.name;
     ifs >> function.arity;
   
-    // Parse declare / [path ...]
+    // Parse table / [variable ...]
     ifs >> word;
-    if(word != "declare") throw ParseError();
+    if(word != "table") throw ParseError();
     while(true)
     {
       ifs >> word;
-      if(word == "path")
+      if(word == "variable")
       {
+        // Get the path index and resize the vector, if needed.
         size_t id;
         ifs >> id;
-        function.paths[id];
-        read_path(ifs, function.paths[id]);
+        base_one_to_zero(id);
+        if(id >= function.paths.size())
+          function.paths.resize(id+1);
+
+        // Get the base path.
+        Function::PathElem & path = function.paths[id];
+        ifs >> path.base;
+        if(path.base == 0)
+          path.base = curry::nobase;
+        else
+          base_one_to_zero(path.base);
+
+        // Get the next index.
+        ifs >> path.idx;
+        base_one_to_zero(path.idx);
+      }
+      else break;
+    }
+
+    // Parse literal 'code'.
+    if(word != "code") throw ParseError();
+
+    // Discard comment lines.
+    while(true)
+    {
+      ifs >> word;
+      if(word == "comment")
+      {
+        // Read up to the newline.
+        ifs.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
       }
       else break;
     }
@@ -247,16 +290,26 @@ namespace sprite { namespace curry
     while(true)
     {
       ifs >> word;
+
+    redo_no_input:
+
       if(word == "import")
         read_import_list(ifs, mod.imports);
-      else if(word == "constructor")
+      else if(word == "data")
       {
-        // FIXME: the constructors are not grouped into data types.
         mod.datatypes.emplace_back();
         static size_t i = 0;
         mod.datatypes.back().name = "_typename" + std::to_string(i++);
-        mod.datatypes.back().constructors.emplace_back();
-        read_constructor(ifs, mod.name, mod.datatypes.back().constructors.back());
+        while(ifs >> word)
+        {
+          if(word != "constructor") goto redo_no_input;
+          mod.datatypes.back().constructors.emplace_back();
+          read_constructor(ifs, mod.name, mod.datatypes.back().constructors.back());
+
+          // EOF OK here.
+          word.clear();
+          SPRITE_SKIPSPACE(ifs)
+        }
       }
       else if(word == "function")
       {
@@ -267,6 +320,7 @@ namespace sprite { namespace curry
         return ifs;
       else throw ParseError();
 
+      // EOF OK here.
       word.clear();
       SPRITE_SKIPSPACE(ifs)
     }

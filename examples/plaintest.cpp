@@ -39,49 +39,47 @@ sprite::curry::Library makeplain()
       "half"  /* name */
     , 1       /* arity */
     , {       /* paths */
-          {1, {{{"plain", "half"}, 0}}}
-        , {2, {{{"plain", "half"}, 0}, {{"plain", "Succ"}, 0}}}
-        , {3, {{{"plain", "half"}, 0}, {{"plain", "Succ"}, 0}, {{"plain", "Succ"}, 0}}}
+          {nobase, 0}, {0, 0}, {1, 0}
         }
     , Branch { /* def */
-          "", true, 1
+          "", true, 0
         , {
               {{"plain", "Zero"}, Expr{{"plain", "Zero"}}}
             , {{"plain", "Succ"}
                 , Branch {
-                      "_1", true, 2
+                      "_1", true, 1
                     , {
                           {{"plain", "Zero"}, Expr{{"plain", "Zero"}}}
-                        , {{"plain", "Succ"}, Expr{{"plain", "Succ"}, {Expr{{"plain", "half"}, {Ref{3}}}}} }
+                        , {{"plain", "Succ"}, Expr{{"plain", "Succ"}, {Expr{{"plain", "half"}, {Ref{2}}}}} }
                         }
                     }
                 }
             }
         }
     };
-  Function && myappend {
-      "myappend" /* name */
-    , 2          /* arity */
-    , {          /* paths */
-          {1, {{{"plain", "myappend"}, 0}}}
-        , {2, {{{"plain", "myappend"}, 1}}}
-        , {3, {{{"plain", "myappend"}, 0}, {{"plain", "MyCons"}, 0}}}
-        , {4, {{{"plain", "myappend"}, 0}, {{"plain", "MyCons"}, 1}}}
-        }
-    , Branch {   /* def */
-          "", true, 1
-        , {
-              {{"plain", "MyNil"}, Ref{2}}
-            , {{"plain", "MyCons"}, Expr{{"plain", "MyCons"}, {Ref{3}, Expr{{"plain", "myappend"}, {Ref{4}, Ref{2}}}}}}
-            }
-        }
-    };
+  // Function && myappend {
+  //     "myappend" /* name */
+  //   , 2          /* arity */
+  //   , {          /* paths */
+  //         {1, {{{"plain", "myappend"}, 0}}}
+  //       , {2, {{{"plain", "myappend"}, 1}}}
+  //       , {3, {{{"plain", "myappend"}, 0}, {{"plain", "MyCons"}, 0}}}
+  //       , {4, {{{"plain", "myappend"}, 0}, {{"plain", "MyCons"}, 1}}}
+  //       }
+  //   , Branch {   /* def */
+  //         "", true, 1
+  //       , {
+  //             {{"plain", "MyNil"}, Ref{2}}
+  //           , {{"plain", "MyCons"}, Expr{{"plain", "MyCons"}, {Ref{3}, Expr{{"plain", "myappend"}, {Ref{4}, Ref{2}}}}}}
+  //           }
+  //       }
+  //   };
 
   Module && plain {
       "plain"          /* name */
     , {"Prelude"}      /* imports */
     , {MyList, Nat}    /* datatypes */
-    , {half, myappend} /* functions */
+    , {half /*, myappend*/} /* functions */
     };
 
   Library const lib {{plain}};
@@ -119,15 +117,15 @@ int main()
         compiler.rt.normalize(root_p);
         compiler.rt.printexpr(root_p, "\n");
 
-        Qname const myappend{"plain", "myappend"};
-        Qname const MyCons{"plain", "MyCons"};
-        Qname const MyNil{"plain", "MyNil"};
-        root_p = construct(compiler, root_p
-          , {myappend, {{MyCons, {Zero, MyNil}}, MyNil}}
-          );
-        compiler.rt.printexpr(root_p, "\n");
-        compiler.rt.normalize(root_p);
-        compiler.rt.printexpr(root_p, "\n");
+        // Qname const myappend{"plain", "myappend"};
+        // Qname const MyCons{"plain", "MyCons"};
+        // Qname const MyNil{"plain", "MyNil"};
+        // root_p = construct(compiler, root_p
+        //   , {myappend, {{MyCons, {Zero, MyNil}}, MyNil}}
+        //   );
+        // compiler.rt.printexpr(root_p, "\n");
+        // compiler.rt.normalize(root_p);
+        // compiler.rt.printexpr(root_p, "\n");
 
         tgt::return_(0);
       }
