@@ -8,6 +8,7 @@ namespace sprite { namespace compiler
   using namespace sprite::backend;
 
   enum Tag { FAIL= -4, FWD= -3, CHOICE= -2, OPER= -1, CTOR=0 };
+  enum { TAGOFFSET = 4 };
 
   // =======================
   // ====== Sprite IR ======

@@ -8,6 +8,8 @@ namespace tgt = sprite::backend;
 
 namespace
 {
+  using namespace sprite::compiler;
+
   // Looks up a node symbol table from the library.
   inline compiler::NodeSTab const &
   lookup(compiler::LibrarySTab const & table, curry::Qname const & qname)
@@ -33,6 +35,7 @@ namespace
       , root_p(bitcast(root_p_, *compiler_.ir.node_t))
       , target_p(root_p)
       , fundef(fundef_)
+      , resolved_path_alloca(tgt::local(*compiler_.ir.node_t))
     {}
 
     compiler::ModuleCompiler const & compiler;
@@ -49,36 +52,62 @@ namespace
     // The definition of the function being compiled.
     curry::Function const * fundef;
 
-    // Looks up a node using the function paths and path reference.  Returns
-    // the result as an i8* in the target.
+    // A node_t* containing the most-recently-resolved path.  Requires alloca
+    // to skip over FWD nodes.
+    mutable tgt::ref resolved_path_alloca;
+
+    // Looks up a node using the function paths and path reference.  The result
+    // is a node_t* in the target.
     tgt::value resolve_path(size_t pathid) const
     {
-      tgt::value p = this->root_p;
-      _resolve_path(p, this->fundef->paths.at(pathid));
-      return bitcast(p, *tgt::types::char_());
+      this->resolved_path_alloca = this->root_p;
+      _resolve_path(this->fundef->paths.at(pathid));
+      return this->resolved_path_alloca;
     }
 
-    // Helper for resolve_path.  Updates p.
-    void _resolve_path(
-        tgt::value & p, curry::Function::PathElem const & pathelem
-      ) const
+    // Same as @p resolve_path but returns a char* in the target.
+    tgt::value resolve_path_char_p(size_t pathid) const
+      { return bitcast(resolve_path(pathid), *tgt::types::char_()); }
+
+    // Helper for @p resolve_path.  Updates @p resolved_path_alloca.
+    void _resolve_path(curry::Function::PathElem const & pathelem) const
     {
       // Walk the base path.
       if(pathelem.base != curry::nobase)
-        _resolve_path(p, this->fundef->paths.at(pathelem.base));
+        _resolve_path(this->fundef->paths.at(pathelem.base));
 
       // Add this index.
       tgt::type node_pt = *this->compiler.ir.node_t;
       switch(pathelem.idx)
       {
         case 0:
-          p = bitcast(p.arrow(ND_SLOT0), node_pt);
+          this->resolved_path_alloca = bitcast(
+              this->resolved_path_alloca.arrow(ND_SLOT0), node_pt
+            );
           break;
         case 1:
-          p = bitcast(p.arrow(ND_SLOT1), node_pt);
+          this->resolved_path_alloca = bitcast(
+              this->resolved_path_alloca.arrow(ND_SLOT1), node_pt
+            );
           break;
         default: assert(0 && "Can't do arity>2 yet"); // FIXME
       }
+
+      // Skip FWD nodes.
+      // TODO: this would be a good place to collapse chains of FWD nodes.
+      tgt::while_(
+          // FIXME: this should work without the cast to int.
+          // FIXME: no signed/unsigned flag is really required, here, is it?
+          [&]{
+              this->resolved_path_alloca.arrow(ND_TAG)
+                  ==(tgt::signed_) ((int)FWD);
+            }
+        , [&]{
+              this->resolved_path_alloca = bitcast(
+                  this->resolved_path_alloca.arrow(ND_SLOT0), node_pt
+                );
+            }
+        );
     }
 
     result_type operator()(curry::Rule const & rule)
@@ -94,7 +123,7 @@ namespace
     // Rewrites the root as a FWD node.
     result_type operator()(curry::Ref rule)
     {
-      tgt::value target = this->resolve_path(rule.pathid);
+      tgt::value target = this->resolve_path_char_p(rule.pathid);
       this->target_p.arrow(ND_VPTR) = tgt::scope::current_module().getglobal(".fwd.vt");
       this->target_p.arrow(ND_TAG) = compiler::FWD;
       this->target_p.arrow(ND_SLOT0) = target;
@@ -116,7 +145,7 @@ namespace
         if(curry::Ref const * varref = subexpr.getvar())
         {
           // Retrieve the pointer to an existing node.
-          tgt::value child = this->resolve_path(varref->pathid);
+          tgt::value child = this->resolve_path_char_p(varref->pathid);
           children.push_back(child);
         }
         // Allocate a new node and place its contents with a recursive call.
@@ -150,33 +179,44 @@ namespace
     using result_type = void;
     using Rewriter::Rewriter;
 
+    FunctionCompiler(
+        compiler::ModuleCompiler const & compiler_
+      , tgt::value const & root_p_
+      , curry::Function const * fundef_ = nullptr
+      )
+      : Rewriter(compiler_, root_p_, fundef_)
+      , inductive_alloca(tgt::local(*this->compiler.ir.node_t))
+    {}
+
   private:
 
-    // A pointer in the target to the current inductive position.
-    tgt::value inductive = nullptr;
+    // A static allocation holding a pointer in the target to the current
+    // inductive position.  The allocation is needed when a FWD node is
+    // encountered, so that it can communicate the new target to other sections
+    // of code.
+    tgt::ref inductive_alloca;
 
   public:
 
     result_type operator()(curry::Branch const & branch)
     {
-      std::vector<tgt::label> labels{
-          tgt::label([&]{
-              this->compiler.clib.printf("FAIL case hit.\n");
-              tgt::return_().set_metadata("case...FAIL");
-            })
-        , tgt::label([&]{
-              this->compiler.clib.printf("FWD case hit.\n");
-              tgt::return_().set_metadata("case...FWD");
-            })
-        , tgt::label([&]{
-              this->compiler.clib.printf("CHOICE case hit.\n");
-              tgt::return_().set_metadata("case...CHOICE");
-            })
-        , tgt::label([&]{
-              this->compiler.clib.printf("OPER case hit.\n");
-              tgt::return_().set_metadata("case...OPER");
-            })
-        };
+      // Look up the inductive node.
+      tgt::value const inductive = this->resolve_path(branch.pathid);
+
+      // Declare the jump table in the target program.
+      tgt::type char_p = *tgt::types::char_();
+      size_t const table_size = TAGOFFSET + branch.cases.size();
+      tgt::global jumptable_ =
+          tgt::static_(char_p[table_size], tgt::flexible(".jtable"));
+      // FIXME: The backend API should be improved to simplify these casts.
+      tgt::globalvar jumptable =
+          globalvaraddr(llvm::dyn_cast<llvm::GlobalVariable>(jumptable_.ptr()));
+
+      // Declare placeholders for the pre-defined special labels.  Definitions
+      // are provided below.
+      std::vector<tgt::label> labels(4);
+
+      // Add a label for each constructor at the branch position.
       for(auto const & case_: branch.cases)
       {
         // Allocate a label, then recursively generate the next step in its
@@ -186,24 +226,53 @@ namespace
         case_.action.visit(*this);
         labels.push_back(tmp);
       }
+
       std::vector<tgt::block_address> addresses;
       for(tgt::label const & l: labels)
         addresses.push_back(&l);
 
-      // Declare the jump table in the target program.
-      tgt::type char_p = *tgt::types::char_();
-      tgt::globalvar jumptable =
-          tgt::static_(char_p[labels.size()], tgt::flexible(".jtable"))
-              .set_initializer(addresses);
-      // tgt::ref jump = &jumptable[4];
+      // FAIL case
+      {
+        tgt::scope _ = labels[TAGOFFSET + FAIL];
+        this->compiler.clib.printf("FAIL case hit.\n");
+        tgt::return_().set_metadata("case...FAIL");
+      }
 
-      // Look up the inductive node.
-      this->inductive = bitcast(
-          this->resolve_path(branch.pathid), *this->compiler.ir.node_t
-        );
+      // FWD case
+      {
+        tgt::scope _ = labels[TAGOFFSET + FWD];
+        // Advance to the target of the FWD node and repeat the jump.
+        tgt::value const inductive = bitcast(
+            this->inductive_alloca.arrow(ND_SLOT0), *this->compiler.ir.node_t
+          );
+        this->inductive_alloca = inductive;
+        tgt::value const index = inductive.arrow(ND_TAG) + TAGOFFSET;
+        tgt::goto_(jumptable[index], labels);
+      }
 
-      // Use the tag of the inductive node to make a jump.
-      tgt::value index = this->inductive.arrow(ND_TAG) + 4;
+      // CHOICE case
+      {
+        tgt::scope _ = labels[TAGOFFSET + CHOICE];
+        this->compiler.clib.printf("CHOICE case hit.\n");
+        tgt::return_().set_metadata("case...CHOICE");
+      }
+
+      // OPER case
+      {
+        tgt::scope _ = labels[TAGOFFSET + OPER];
+        // Head-normalize the inductive node.
+        vinvoke(this->inductive_alloca, VT_H, tailcall);
+        tgt::return_();
+      }
+
+      // Add the label addresses to the jump table.
+      jumptable.set_initializer(addresses);
+      // tgt::ref jump = &jumptable[TAGOFFSET];
+
+      // Store the address of the inductive node in allocated space, then use
+      // its tag to make the first.
+      this->inductive_alloca = inductive;
+      tgt::value const index = inductive.arrow(ND_TAG) + TAGOFFSET;
       tgt::goto_(jumptable[index], labels);
     }
 
