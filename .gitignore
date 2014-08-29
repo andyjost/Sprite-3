@@ -16,3 +16,4 @@ sandbox/*
 setup.csh
 tags
 tools/sprite
+include/sprite/config.hpp

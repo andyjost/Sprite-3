@@ -1,7 +1,8 @@
 #pragma once
 #include "sprite/backend.hpp"
-#include <unordered_map>
 #include "sprite/backend/support/testing.hpp"
+#include "sprite/curryinput.hpp"
+#include <unordered_map>
 
 namespace sprite { namespace compiler
 {

@@ -1,12 +1,15 @@
 # Requires make >=3.81 for lastword.
 TOPDIR := $(dir $(lastword $(MAKEFILE_LIST)))
-LLVM_CFLAGS = $(shell $(LLVM-CONFIG) --cppflags --libs core jit native bitwriter)
-LLVM_LDFLAGS = $(shell $(LLVM-CONFIG) --libs core jit native bitwriter) $(shell $(LLVM-CONFIG) --ldflags)
+LLVM_CFLAGS = $(shell $(LLVM-CONFIG) --cppflags --libs core jit native bitreader bitwriter linker)
+LLVM_LDFLAGS = $(shell $(LLVM-CONFIG) --libs core jit native bitreader bitwriter linker) $(shell $(LLVM-CONFIG) --ldflags)
 CFLAGS = -O0 -ggdb -std=c++11 -Wall $(LLVM_CFLAGS) -I$(TOPDIR)include -Werror
 LDFLAGS = -Wall $(LLVM_LDFLAGS)
 
 # Get the tool configuration.
 -include $(TOPDIR)/Make.config
+
+# config.hpp contains information from Make.config.
+CONFIG_HPP = $(TOPDIR)include/sprite/config.hpp
 
 # Target programs can depend on this variable to get the Sprite runtime library
 # made, when needed.
@@ -19,8 +22,10 @@ SPRITE_LIB = $(TOPDIR)src/sprite.a
 .PHONY : $(SPRITE_RT_LIB) $(SPRITE_LIB)
 
 $(SPRITE_LIB) :
-	cd ../src; $(MAKE) sprite.a
+	cd $(TOPDIR)/src; $(MAKE) sprite.a
 
 $(SPRITE_RT_LIB) :
-	cd ../runtime; $(MAKE) sprite-rt.bc
+	cd $(TOPDIR)/runtime; $(MAKE) sprite-rt.bc
 
+$(CONFIG_HPP) :
+	cd $(TOPDIR)/include/sprite; $(MAKE) config.hpp

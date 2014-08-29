@@ -3,34 +3,41 @@
 THISDIR=`(cd \`dirname $0\` > /dev/null ; pwd)`
 BASEDIR=`(cd $THISDIR/.. > /dev/null ; pwd)`
 
-if [ "$*" = "" ]
+QUIET=''
+if [ "$1" == "-q" ]
 then
-  echo Warning: no file given
-  exit
+  QUIET='-q'
+  shift
 fi
 
+if [ "$*" = "" ]
+then
+  echo `basename $0`: no input file. 1>&2
+  exit 1
+fi
 
 LOCALLIBPATH=$BASEDIR/icurry:$BASEDIR
 # export PAKCSLIBPATH
-# echo PAKCSLIBPATH $PAKCSLIBPATH
+# echo PAKCSLIBPATH $PAKCSLIBPATH 1>&2
 
 for i in $*
 do
   FILE=$(dirname $i)/$(basename $i ".curry")
   if [ ! -f $FILE.curry ]
   then
-    echo Error: \"$FILE.curry\" not found
-    exit
+    echo `basename $0`: \"$FILE.curry\" not found. 1>&2
+    exit 1
   fi
 
   CURRYPATH=`pwd`/$(dirname $i):$LOCALLIBPATH
-  echo CURRYPATH $CURRYPATH
+  # echo CURRYPATH $CURRYPATH 1>&2
   export CURRYPATH
 
-  parsecurry --flat $FILE
-  if [ $?==0 ]
-     then echo parsed
-     else echo parse error ; exit
+  parsecurry --flat $QUIET $FILE
+  if [ $? -ne 0 ]
+  then
+    echo `basename $0`: error parsing \"$FILE.curry\". 1>&2
+    exit 1
   fi
 
 # create ICurry
@@ -38,19 +45,27 @@ do
   TARGET=$(dirname $i)/.curry/$(basename $i ".curry")
 
     rm -f $FILE.icur $FILE.read $TARGET.icur $TARGET.read
-    command="pakcs -q -r $BASEDIR/icurry/Main.curry $FILE"
-    echo Running $command
-    $command
-    if [ -f $FILE.icur ]
-    then echo \"icur\" file created
-         mv -f $FILE.icur $TARGET.icur
-         mv -f $FILE.read $TARGET.read
-    else echo Fail to create  \"icur\" file ; exit
+    command="pakcs $QUIET -r $BASEDIR/icurry/Main.curry $FILE"
+    # The -q option to pakcs is not completely effective.
+    if [ -n "$QUIET" ]
+    then
+      $command > /dev/null
+    else
+      $command
     fi
-    cat $TARGET.read
+    # echo Running $command
+    if [ -f $FILE.icur ]
+    then
+      mv -f $FILE.icur $TARGET.icur
+      mv -f $FILE.read $TARGET.read
+    else
+      echo `basename $0`: failed to create \"$FILE.icur\". 2>&1
+      exit 1
+    fi
+
+    # cat $TARGET.read
 
 done
-
 
 exit
 
