@@ -2,11 +2,15 @@
 #include <iostream>
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/ExecutionEngine/JIT.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/Linker.h"
+#include "llvm/PassManager.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/system_error.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/Scalar.h"
 #include "sprite/compiler.hpp"
 #include "sprite/config.hpp"
 #include "sprite/curryinput.hpp"
@@ -135,6 +139,21 @@ int main(int argc, char const *argv[])
     return EXIT_FAILURE;
   }
 
+  std::cout << "Linking done..." << std::endl;
+  rtlib->dump();
+
+  // Run optimization passes.
+  // std::vector<const char *> exportList;
+  // llvm::PassManager Passes;
+  // Passes.add(new llvm::DataLayout(rtlib));
+  // Passes.add(llvm::createDemoteRegisterToMemoryPass());
+  // Passes.add(llvm::createInternalizePass(exportList));
+  // Passes.add(llvm::createScalarReplAggregatesPass());
+  // Passes.add(llvm::createInstructionCombiningPass());
+  // Passes.add(llvm::createGlobalOptimizerPass());
+  // Passes.add(llvm::createFunctionInliningPass());
+  // Passes.run(*rtlib);
+
   // Create the JIT
   llvm::InitializeNativeTarget();
   llvm::ExecutionEngine * jit = llvm::EngineBuilder(rtlib)
@@ -148,8 +167,11 @@ int main(int argc, char const *argv[])
   }
 
   // Execute the program.
+  std::cout << "Begin Execution..." << std::endl;
+  // rtlib->dump();
   void * main_fp = jit->getPointerToFunction(rtlib->getFunction("main"));
   int32_t (*target_program)() = (int32_t(*)())(intptr_t)(main_fp);
+  std::cout << "Ready..." << std::endl;
   return target_program();
   #endif
 

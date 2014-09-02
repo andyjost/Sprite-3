@@ -2,6 +2,7 @@
 #include "sprite/backend.hpp"
 #include "sprite/backend/support/testing.hpp"
 #include "sprite/curryinput.hpp"
+#include "sprite/runtime.hpp"
 #include <unordered_map>
 
 namespace sprite { namespace compiler
@@ -87,6 +88,13 @@ namespace sprite { namespace compiler
         extern_(void_t(*node_t, *char_t), "sprite_printexpr");
 
     function const normalize = extern_(void_t(*node_t), "sprite_normalize");
+
+    // Built-in vtables.
+    global const fwd_vt;
+
+    rt_h(ir_h const & ir)
+      : fwd_vt(extern_(ir.vtable_t, SPRITE_FWD_VT_NAME))
+    {}
   };
 
   // ===========================
@@ -154,9 +162,6 @@ namespace sprite { namespace compiler
 
     // Everything needed to compile code in this module.
     std::shared_ptr<ModuleCompiler> compiler;
-
-    // The vtable for FWD nodes.
-    sprite::backend::globalvar vt_fwd_p = nullptr;
   };
 
   struct LibrarySTab
@@ -176,7 +181,7 @@ namespace sprite { namespace compiler
   struct ModuleCompiler
   {
     ModuleCompiler(compiler::LibrarySTab & lib_stab_)
-      : lib_stab(lib_stab_)
+      : lib_stab(lib_stab_), rt(ir)
     {}
 
     // ==================

@@ -1,6 +1,7 @@
 #include <iostream>
 #include "sprite/curryinput.hpp"
 #include "sprite/compiler.hpp"
+#include "sprite/runtime.hpp"
 
 using namespace sprite;
 using namespace sprite::compiler::member_labels; // for ND_* and VT_* enums.
@@ -124,7 +125,7 @@ namespace
     result_type operator()(curry::Ref rule)
     {
       tgt::value target = this->resolve_path_char_p(rule.pathid);
-      this->target_p.arrow(ND_VPTR) = tgt::scope::current_module().getglobal(".fwd.vt");
+      this->target_p.arrow(ND_VPTR) = compiler.rt.fwd_vt;
       this->target_p.arrow(ND_TAG) = compiler::FWD;
       this->target_p.arrow(ND_SLOT0) = target;
     }
@@ -459,68 +460,6 @@ namespace sprite { namespace compiler
       function nullstep(module_ir->getFunction(".nullstep"));
       if(!nullstep.ptr())
         nullstep = inline_(compiler.ir.stepfun_t, ".nullstep", {}, []{});
-
-      // Create the vtable for FWD nodes.
-      tgt::function fwd_name = tgt::inline_<tgt::function>(
-          compiler.ir.labelfun_t, ".fwd.name", {"node_p"}
-        , [&]
-          {
-            // REFACTOR
-            tgt::value node_p = arg("node_p");
-            node_p = bitcast(node_p.arrow(ND_SLOT0), *compiler.ir.node_t);
-            return_(
-                node_p.arrow(ND_VPTR).arrow(VT_LABEL)(node_p)
-                    .set_attribute(tailcall)
-              );
-          }
-        );
-      // FIXME
-      tgt::function fwd_arity = tgt::inline_<tgt::function>(
-          compiler.ir.arityfun_t, "fwd.arity", {"node_p"}
-        , [&]{
-            tgt::value node_p = arg("node_p");
-            node_p = bitcast(node_p.arrow(ND_SLOT0), *compiler.ir.node_t);
-            return_(
-                node_p.arrow(ND_VPTR).arrow(VT_ARITY)(node_p)
-                    .set_attribute(tailcall)
-              );
-          }
-        );
-      tgt::function fwd_succ = tgt::inline_<tgt::function>(
-          compiler.ir.rangefun_t, "fwd.succ"
-        , {"node_p", "begin_out_pp", "end_out_pp"}
-        , [&]{
-            tgt::value node_p = arg("node_p");
-            node_p = bitcast(node_p.arrow(ND_SLOT0), *compiler.ir.node_t);
-            node_p.arrow(ND_VPTR).arrow(VT_SUCC)(
-                node_p, arg("begin_out_pp"), arg("end_out_pp")
-              ).set_attribute(tailcall);
-            return_();
-          }
-        );
-      tgt::function fwd_N = inline_(
-          compiler.ir.stepfun_t, ".fwd.N", {"node_p"}
-        , [&]{
-            tgt::value node_p = arg("node_p");
-            node_p = bitcast(node_p.arrow(ND_SLOT0), *compiler.ir.node_t);
-            vinvoke(node_p, VT_N, tailcall);
-            return_();
-          }
-        );
-      tgt::function fwd_H = inline_(
-          compiler.ir.stepfun_t, ".fwd.H", {"node_p"}
-        , [&]{
-            tgt::value node_p = arg("node_p");
-            node_p = bitcast(node_p.arrow(ND_SLOT0), *compiler.ir.node_t);
-            vinvoke(node_p, VT_H, tailcall);
-            return_();
-          }
-        );
-
-      module_stab.vt_fwd_p.reset(
-          static_(compiler.ir.vtable_t, ".fwd.vt")
-              .set_initializer(_t(&fwd_name, &fwd_arity, &fwd_succ, &fwd_N, &fwd_H))
-        );
 
       // Add the static vtable for each constructor to the module.
       for(auto const & dtype: cymodule.datatypes)

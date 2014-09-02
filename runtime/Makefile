@@ -1,13 +1,15 @@
 STATICLIB = sprite-rt.bc
 STATICLLVM = sprite-rt.ll
 SOURCES = $(wildcard *.cpp)
+STATICLIB_PART_B = sprite-runtime-part-b/sprite-runtime-part-b.bc
 
-.PHONY : all clean install llvm uninstall
+.PHONY : all clean install llvm uninstall $(STATICLIB_PART_B)
 
 all : $(STATICLIB)
 
 clean :
-	rm -f $(STATICLIB) $(STATICLLVM)
+	rm -f $(STATICLIB) $(STATICLLVM) *.bc
+	$(MAKE) -C sprite-runtime-part-b clean
 
 install : $(STATICLIB)
 	@echo "Installing runtime at $(LIBINSTALL)"
@@ -23,8 +25,16 @@ uninstall :
 
 ###
 
-$(STATICLIB) : $(SOURCES)
-	$(CLANG) -S -emit-llvm $(SOURCES) -o - | $(LLVM-AS) > $@
+sprite-runtime-part-a.bc : sprite-runtime-part-a.cpp
+	# Runtime part A: C++ converted to bitcode using Clang.
+	$(CLANG) -S -emit-llvm sprite-runtime-part-a.cpp -o - | $(LLVM-AS) > sprite-runtime-part-a.bc
+
+$(STATICLIB_PART_B) :
+	# Runtime part B: bitcode generated directly using the C++ API.
+	$(MAKE) -C sprite-runtime-part-b
+
+$(STATICLIB) : sprite-runtime-part-a.bc $(STATICLIB_PART_B)
+	$(LLVM-LINK) $^ > $@
 
 $(STATICLLVM) : $(STATICLIB)
 	$(LLVM-DIS) $(STATICLIB)
