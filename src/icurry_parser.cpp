@@ -159,6 +159,8 @@ namespace sprite { namespace curry
       ref.pathid = read_variable_ref(ifs);
       return ref;
     }
+    else if(word == "exempt")
+      return curry::Fail();
     throw ParseError();
   }
 

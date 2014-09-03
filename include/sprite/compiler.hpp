@@ -89,11 +89,19 @@ namespace sprite { namespace compiler
 
     function const normalize = extern_(void_t(*node_t), "sprite_normalize");
 
+    // Exists only to simply the macro expansion below, in the constructor.
+    char unused;
+
     // Built-in vtables.
-    global const fwd_vt;
+    #define SPRITE_HANDLE_BUILTIN(name) global const name##_vt;
+    #include "sprite/builtins.def"
 
     rt_h(ir_h const & ir)
-      : fwd_vt(extern_(ir.vtable_t, SPRITE_FWD_VT_NAME))
+      : unused()
+      #define SPRITE_HANDLE_BUILTIN(name)                     \
+        , name##_vt(extern_(ir.vtable_t, get_vt_name(#name))) \
+        /**/
+      #include "sprite/builtins.def"
     {}
   };
 

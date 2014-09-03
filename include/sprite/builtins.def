@@ -1,0 +1,4 @@
+// No include guards desired.
+SPRITE_HANDLE_BUILTIN(fwd)
+SPRITE_HANDLE_BUILTIN(fail)
+#undef SPRITE_HANDLE_BUILTIN

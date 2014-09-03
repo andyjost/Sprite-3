@@ -13,11 +13,15 @@ namespace sprite { namespace curry
   struct Definition;
   struct Rule;
 
+  /// A placeholder used to represent a failure.
+  struct Fail {};
+
   /// Represents a qualified name.
   struct Qname
   {
     std::string module;
     std::string name;
+    std::string str() const { return module + "." + name; }
   };
 
   /// Represents a Curry constructor.
@@ -91,6 +95,7 @@ namespace sprite { namespace curry
    */
   struct Rule
   {
+    Rule(Fail arg) : tag(FAIL), fail() {}
     Rule(int arg) : tag(INT), int_(arg) {}
     Rule(double arg) : tag(DOUBLE), double_(arg) {}
     Rule(Ref arg) : tag(VAR), var(arg) {}
@@ -113,6 +118,7 @@ namespace sprite { namespace curry
     {
       switch(tag)
       {
+        case FAIL: new(&fail) int(); break;
         case INT: new(&int_) int(arg.int_); break;
         case DOUBLE: new(&double_) double(arg.double_); break;
         case VAR: new(&var) Ref(arg.var); break;
@@ -123,6 +129,7 @@ namespace sprite { namespace curry
     {
       switch(tag)
       {
+        case FAIL: new(&fail) Fail(); break;
         case INT: new(&int_) int(arg.int_); break;
         case DOUBLE: new(&double_) double(arg.double_); break;
         case VAR: new(&var) Ref(arg.var); break;
@@ -141,13 +148,19 @@ namespace sprite { namespace curry
       new(this) Rule(arg);
       return *this;
     }
-    ~Rule() { if(tag == NODE) expr.~Expr(); }
+    ~Rule()
+    {
+      if(tag == NODE) expr.~Expr();
+      else if(tag == FAIL) fail.~Fail();
+    }
     template<typename Visitor>
     typename std::remove_reference<Visitor>::type::result_type
     visit(Visitor && visitor) const
     {
       switch(tag)
       {
+        case FAIL:
+          return visitor(this->fail);
         case INT:
           return visitor(this->int_);
         case DOUBLE:
@@ -165,8 +178,8 @@ namespace sprite { namespace curry
       return nullptr;
     }
   private:
-    enum { INT, DOUBLE, VAR, NODE } tag;
-    union { int int_; double double_; Ref var; Expr expr; };
+    enum { FAIL, INT, DOUBLE, VAR, NODE } tag;
+    union { Fail fail; int int_; double double_; Ref var; Expr expr; };
   };
 
   /**

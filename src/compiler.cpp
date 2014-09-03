@@ -14,7 +14,12 @@ namespace
   // Looks up a node symbol table from the library.
   inline compiler::NodeSTab const &
   lookup(compiler::LibrarySTab const & table, curry::Qname const & qname)
-    { return table.modules.at(qname.module).nodes.at(qname.name); }
+  {
+    try
+      { return table.modules.at(qname.module).nodes.at(qname.name); }
+    catch(std::out_of_range const & e)
+      { throw compile_error("symbol '" + qname.str() + "' not found."); }
+  }
 
   /**
    * @brief Composes an expression by rewriting the given root.
@@ -120,6 +125,13 @@ namespace
 
     result_type operator()(double rule)
       {} // Not implemented.
+
+    // Rewrites the root as a FAIL node.
+    result_type operator()(curry::Fail const &)
+    {
+      this->target_p.arrow(ND_VPTR) = compiler.rt.fail_vt;
+      this->target_p.arrow(ND_TAG) = compiler::FAIL;
+    }
 
     // Rewrites the root as a FWD node.
     result_type operator()(curry::Ref rule)
@@ -235,8 +247,8 @@ namespace
       // FAIL case
       {
         tgt::scope _ = labels[TAGOFFSET + FAIL];
-        this->compiler.clib.printf("FAIL case hit.\n");
-        tgt::return_().set_metadata("case...FAIL");
+        (this->Rewriter::operator())(curry::Fail());
+        tgt::return_();
       }
 
       // FWD case

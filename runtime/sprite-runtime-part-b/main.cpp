@@ -2,7 +2,10 @@
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/Support/raw_ostream.h"
 
-void build_fwd_vt(sprite::compiler::ir_h const & ir);
+#define SPRITE_HANDLE_BUILTIN(name)                              \
+    void build_vt_for_##name(sprite::compiler::ir_h const & ir); \
+  /**/
+#include "sprite/builtins.def"
 
 int main()
 {
@@ -10,7 +13,8 @@ int main()
 	sprite::backend::scope _ = module_b;
 	sprite::compiler::ir_h ir;
 
-  build_fwd_vt(ir);
+  #define SPRITE_HANDLE_BUILTIN(name) build_vt_for_##name(ir);
+  #include "sprite/builtins.def"
 
   llvm::WriteBitcodeToFile(module_b.ptr(), llvm::outs());
 }

@@ -4,7 +4,7 @@
 using namespace sprite::backend;
 using namespace sprite::compiler::member_labels; // for ND_* and VT_* enums.
 
-void build_fwd_vt(sprite::compiler::ir_h const & ir)
+void build_vt_for_fwd(sprite::compiler::ir_h const & ir)
 {
   // Create the vtable for FWD nodes.
   function fwd_name = inline_<function>(
@@ -61,7 +61,7 @@ void build_fwd_vt(sprite::compiler::ir_h const & ir)
       }
     );
 
-  extern_(ir.vtable_t, SPRITE_FWD_VT_NAME)
+  extern_(ir.vtable_t, sprite::compiler::get_vt_name("fwd"))
       .set_initializer(_t(&fwd_name, &fwd_arity, &fwd_succ, &fwd_N, &fwd_H))
 	  ;
 }
