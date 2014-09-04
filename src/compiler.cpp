@@ -120,8 +120,14 @@ namespace
       { rule.visit(*this); }
 
     // Subcases of Rule.
-    result_type operator()(int rule)
-      {} // Not implemented.
+    result_type operator()(int64_t x)
+    {
+      this->target_p.arrow(ND_VPTR) = compiler.rt.int64_vt;
+      this->target_p.arrow(ND_TAG) = compiler::CTOR;
+      ref slot0(&this->target_p.arrow(ND_SLOT0));
+      // FIXME: get_constant should not really be needed.
+      slot0 = typecast(get_constant(x), *types::char_());
+    }
 
     result_type operator()(double rule)
       {} // Not implemented.

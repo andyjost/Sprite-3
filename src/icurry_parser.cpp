@@ -161,6 +161,12 @@ namespace sprite { namespace curry
     }
     else if(word == "exempt")
       return curry::Fail();
+    else if(word == "int")
+    {
+      int64_t x;
+      ifs >> x;
+      return x;
+    }
     throw ParseError();
   }
 

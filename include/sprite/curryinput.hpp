@@ -96,7 +96,7 @@ namespace sprite { namespace curry
   struct Rule
   {
     Rule(Fail arg) : tag(FAIL), fail() {}
-    Rule(int arg) : tag(INT), int_(arg) {}
+    Rule(int64_t const & arg) : tag(INT), int_(arg) {}
     Rule(double arg) : tag(DOUBLE), double_(arg) {}
     Rule(Ref arg) : tag(VAR), var(arg) {}
 
@@ -118,8 +118,8 @@ namespace sprite { namespace curry
     {
       switch(tag)
       {
-        case FAIL: new(&fail) int(); break;
-        case INT: new(&int_) int(arg.int_); break;
+        case FAIL: new(&fail) Fail(); break;
+        case INT: new(&int_) int64_t(arg.int_); break;
         case DOUBLE: new(&double_) double(arg.double_); break;
         case VAR: new(&var) Ref(arg.var); break;
         case NODE: new(&expr) Expr(std::move(arg.expr)); break;
@@ -130,7 +130,7 @@ namespace sprite { namespace curry
       switch(tag)
       {
         case FAIL: new(&fail) Fail(); break;
-        case INT: new(&int_) int(arg.int_); break;
+        case INT: new(&int_) int64_t(arg.int_); break;
         case DOUBLE: new(&double_) double(arg.double_); break;
         case VAR: new(&var) Ref(arg.var); break;
         case NODE: new(&expr) Expr(arg.expr); break;
@@ -179,7 +179,7 @@ namespace sprite { namespace curry
     }
   private:
     enum { FAIL, INT, DOUBLE, VAR, NODE } tag;
-    union { Fail fail; int int_; double double_; Ref var; Expr expr; };
+    union { Fail fail; int64_t int_; double double_; Ref var; Expr expr; };
   };
 
   /**
@@ -190,7 +190,7 @@ namespace sprite { namespace curry
    */
   struct Definition
   {
-    Definition() : tag(RULE), rule(0) {}
+    Definition() : tag(RULE), rule(static_cast<int64_t>(0)) {}
     Definition(Branch const & arg) : tag(BRANCH), branch(arg) {}
     Definition(Branch && arg) : tag(BRANCH), branch(std::move(arg)) {}
     Definition(Rule const & arg) : tag(RULE), rule(arg) {}

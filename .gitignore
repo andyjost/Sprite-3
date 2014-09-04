@@ -6,6 +6,7 @@
 *log
 *.bc
 *.ll
+*.swp
 bin/*
 dev/*
 doxygen-out/*
