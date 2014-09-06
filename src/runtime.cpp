@@ -17,9 +17,7 @@ namespace sprite { namespace compiler
     if(f.ptr()) return f;
 
     // Make a new function.
-    // TODO: use weak linkage to try and merge these symbols across compilation
-    // units.
-    return static_<function>(ty, name, {}, [&] { return_(arity); });
+    return inline_<function>(ty, name, {}, [&] { return_(arity); });
   }
 
   function get_label_function(ir_h const & ir, std::string const & label)
@@ -93,11 +91,8 @@ namespace sprite { namespace compiler
     }
 
     // Make a new function.
-    // TODO: use weak linkage to try and merge these symbols across compilation
-    // units.
-    function f = static_<function>(
-        ir.rangefun_t, flexible(name)
-      , {"node_p", "begin_out_pp", "end_out_pp"}
+    function f = inline_<function>(
+        ty, name, {"node_p", "begin_out_pp", "end_out_pp"}
       );
     return make_succ_function(f, ir, arity);
   }
