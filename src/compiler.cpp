@@ -420,8 +420,8 @@ namespace sprite { namespace compiler
           function N(module_ir->getFunction(n_name.c_str()));
           if(!N.ptr())
           {
-            N = inline_(
-                compiler.ir.stepfun_t, n_name, {"root_p"}
+            N = static_<function>(
+                compiler.ir.stepfun_t, flexible(n_name), {"root_p"}
               , [&]{
                   tgt::value root_p = arg("root_p");
                   tgt::value child;
@@ -463,7 +463,7 @@ namespace sprite { namespace compiler
   
           // Create the vtable.
           tgt::globalvar vt = static_(
-              compiler.ir.vtable_t, ".vt.CTOR." + ctor.name
+              compiler.ir.vtable_t, flexible(".vt.CTOR." + ctor.name)
             )
               .set_initializer(_t(
                   &get_label_function(compiler.ir, ctor.name)
@@ -483,11 +483,11 @@ namespace sprite { namespace compiler
       for(auto const & fun: cymodule.functions)
       {
         // Forward declaration.
-        function step = inline_(
-            compiler.ir.stepfun_t, ".step." + fun.name, {"root_p"}
+        function step = static_<function>(
+            compiler.ir.stepfun_t, flexible(".step." + fun.name), {"root_p"}
           );
-        function N = inline_(
-            compiler.ir.stepfun_t, ".N." + fun.name, {"root_p"}
+        function N = static_<function>(
+            compiler.ir.stepfun_t, flexible(".N." + fun.name), {"root_p"}
           , [&]{
               tgt::value root_p = arg("root_p");
               step(root_p);
@@ -495,8 +495,8 @@ namespace sprite { namespace compiler
               return_();
             }
           );
-        function H = inline_(
-            compiler.ir.stepfun_t, ".H." + fun.name, {"root_p"}
+        function H = static_<function>(
+            compiler.ir.stepfun_t, flexible(".H." + fun.name), {"root_p"}
           , [&]{
               tgt::value root_p = arg("root_p");
               step(root_p);
@@ -505,7 +505,7 @@ namespace sprite { namespace compiler
           );
   
         tgt::globalvar vt =
-            static_(compiler.ir.vtable_t, ".vt.OPER." + fun.name)
+            static_(compiler.ir.vtable_t, flexible(".vt.OPER." + fun.name))
             .set_initializer(_t(
                 &get_label_function(compiler.ir, fun.name)
               , &get_arity_function(compiler.ir, fun.arity)
