@@ -8,7 +8,7 @@ STATICLIB = sprite-runtime-part-b.bc
 all : $(STATICLIB)
 
 clean :
-	rm -f *.bc $(OBJECTS) $(EXECUTABLE)
+	rm -f *.bc $(OBJECTS) $(EXECUTABLE) *.ll
 
 -include ../../Make.include
 

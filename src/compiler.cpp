@@ -323,71 +323,6 @@ namespace
     ::FunctionCompiler c(compiler, root_p, &fun);
     return fun.def.visit(c);
   }
-
-  // Makes a function that returns the given static C-string.  Returns a
-  // pointer to that function.
-  tgt::constant make_name_func(
-      compiler::ModuleCompiler const & compiler, std::string const & name
-    )
-  {
-    tgt::function f = tgt::static_<tgt::function>(
-        compiler.ir.labelfun_t, tgt::flexible(".name"), {}
-      , [&] { tgt::return_(name); }
-      );
-    return &f;
-  }
-
-  // Makes a function that returns the given integer.  Returns a
-  // pointer to that function.
-  tgt::constant make_arity_func(
-      compiler::ModuleCompiler const & compiler, int64_t arity
-    )
-  {
-    tgt::function f = tgt::static_<tgt::function>(
-        compiler.ir.arityfun_t, tgt::flexible(".arity"), {}
-      , [&] { tgt::return_(arity); }
-      );
-    return &f;
-  }
-  // Makes a function that returns the successor range of a node.  Returns a
-  // pointer to that function.
-  tgt::constant make_succ_func(
-      compiler::ModuleCompiler const & compiler, int64_t arity
-    )
-  {
-    tgt::function f = tgt::static_<tgt::function>(
-        compiler.ir.rangefun_t, tgt::flexible(".succ")
-      , {"node_p", "begin_out_pp", "end_out_pp"}
-      );
-
-    if(arity < 3)
-    {
-      tgt::scope _ = f;
-      // Compute the size of pointers and get an integer type with the same
-      // bitwidth.
-      size_t sizeof_ptr = sizeof_(*compiler.ir.node_t);
-      tgt::type size_t_ = tgt::types::int_(sizeof_ptr * 8);
-
-      // Get the function paramters.
-      tgt::value node_p = tgt::arg("node_p");
-      tgt::ref begin_out_pp = tgt::arg("begin_out_pp");
-      tgt::ref end_out_pp = tgt::arg("end_out_pp");
-
-      // Compute the begining address.
-      tgt::value begin_cp = &node_p.arrow(ND_SLOT0);
-      tgt::value begin = begin_cp;
-      tgt::value end = typecast(begin_cp, size_t_) + arity * sizeof_ptr;
-
-      // Assign the outputs.
-      begin_out_pp = begin;
-      end_out_pp = end;
-      tgt::return_();
-    }
-    else
-      assert(0 && "arity > 2 not supported");
-
-    return &f;
-  }
 }
 
 namespace sprite { namespace compiler
@@ -474,11 +409,6 @@ namespace sprite { namespace compiler
       // functions, type definitions, and data to this module.
       tgt::scope _ = module_ir;
   
-      // Create the null step function.
-      function nullstep(module_ir->getFunction(".nullstep"));
-      if(!nullstep.ptr())
-        nullstep = inline_(compiler.ir.stepfun_t, ".nullstep", {}, []{});
-
       // Add the static vtable for each constructor to the module.
       for(auto const & dtype: cymodule.datatypes)
       {
@@ -536,10 +466,10 @@ namespace sprite { namespace compiler
               compiler.ir.vtable_t, ".vt.CTOR." + ctor.name
             )
               .set_initializer(_t(
-                  make_name_func(compiler, ctor.name)
-                , make_arity_func(compiler, ctor.arity) // FIXME
-                , make_succ_func(compiler, ctor.arity)
-                , &N, &nullstep
+                  &get_label_function(compiler.ir, ctor.name)
+                , &get_arity_function(compiler.ir, ctor.arity)
+                , &get_succ_function(compiler.ir, ctor.arity)
+                , &N, &get_null_step_function(compiler.ir)
                 ));
   
           // Update the symbol tables.
@@ -575,11 +505,11 @@ namespace sprite { namespace compiler
           );
   
         tgt::globalvar vt =
-            static_(compiler.ir.vtable_t, ".vtable.for." + fun.name)
+            static_(compiler.ir.vtable_t, ".vt.OPER." + fun.name)
             .set_initializer(_t(
-                make_name_func(compiler, fun.name)
-              , make_arity_func(compiler, fun.arity) // FIXME
-              , make_succ_func(compiler, fun.arity)
+                &get_label_function(compiler.ir, fun.name)
+              , &get_arity_function(compiler.ir, fun.arity)
+              , &get_succ_function(compiler.ir, fun.arity)
               , &N, &H
               ));
 

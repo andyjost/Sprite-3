@@ -1,9 +1,9 @@
 # Requires make >=3.81 for lastword.
 TOPDIR := $(dir $(lastword $(MAKEFILE_LIST)))
-# LLVM_CFLAGS = $(shell $(LLVM-CONFIG) --cppflags --libs core jit native bitreader bitwriter linker)
-# LLVM_LDFLAGS = $(shell $(LLVM-CONFIG) --libs core jit native bitreader bitwriter linker) $(shell $(LLVM-CONFIG) --ldflags)
-LLVM_CFLAGS = $(shell $(LLVM-CONFIG) --cppflags --libs all)
-LLVM_LDFLAGS = $(shell $(LLVM-CONFIG) --libs all) $(shell $(LLVM-CONFIG) --ldflags)
+LLVM_CFLAGS = $(shell $(LLVM-CONFIG) --cppflags --libs core jit native bitreader bitwriter linker)
+LLVM_LDFLAGS = $(shell $(LLVM-CONFIG) --libs core jit native bitreader bitwriter linker) $(shell $(LLVM-CONFIG) --ldflags)
+# LLVM_CFLAGS = $(shell $(LLVM-CONFIG) --cppflags --libs all)
+# LLVM_LDFLAGS = $(shell $(LLVM-CONFIG) --libs all) $(shell $(LLVM-CONFIG) --ldflags)
 CFLAGS = -O0 -ggdb -std=c++11 -Wall $(LLVM_CFLAGS) -I$(TOPDIR)include -Werror
 LDFLAGS = -Wall $(LLVM_LDFLAGS)
 
