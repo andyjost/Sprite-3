@@ -7,6 +7,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <iterator>
 
 namespace sprite { namespace curry
 {
@@ -291,5 +292,22 @@ namespace sprite { namespace curry
   struct Library
   {
     std::vector<Module> modules;
+
+    /// Move the contents of another Library into this one.
+    Library & merge_from(Library & arg)
+    {
+      if(modules.empty())
+        modules = std::move(arg.modules);
+      else
+      {
+        modules.reserve(modules.size() + arg.modules.size());
+        std::move(
+            std::begin(arg.modules), std::end(arg.modules)
+          , std::back_inserter(modules)
+          );
+        arg.modules.clear();
+      }
+      return *this;
+    }
   };
 }}

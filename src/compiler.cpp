@@ -225,11 +225,9 @@ namespace
       // Declare the jump table in the target program.
       tgt::type char_p = *tgt::types::char_();
       size_t const table_size = TAGOFFSET + branch.cases.size();
-      tgt::global jumptable_ =
-          tgt::static_(char_p[table_size], tgt::flexible(".jtable"));
-      // FIXME: The backend API should be improved to simplify these casts.
       tgt::globalvar jumptable =
-          globalvaraddr(llvm::dyn_cast<llvm::GlobalVariable>(jumptable_.ptr()));
+          tgt::static_(char_p[table_size], tgt::flexible(".jtable"))
+              .as_globalvar();
 
       // Declare placeholders for the pre-defined special labels.  Definitions
       // are provided below.
@@ -336,9 +334,21 @@ namespace sprite { namespace compiler
   { return vinvoke(node_p, member).set_attribute(attr); }
 
   ModuleSTab::ModuleSTab(
-      LibrarySTab & lib_stab_, curry::Module const & src
+      LibrarySTab const & lib_stab_, curry::Module const & src
+    , llvm::LLVMContext & context
     )
-    : source(&src), module_ir(src.name), nodes()
+    : source(&src), module_ir(src.name, context), nodes()
+  {
+    // Load the compiler data (e.g., headers) with the module in scope.
+    scope _ = module_ir;
+    this->compiler.reset(new ModuleCompiler(lib_stab_));
+  }
+
+  ModuleSTab::ModuleSTab(
+      LibrarySTab const & lib_stab_, curry::Module const & src
+    , sprite::backend::module const & M
+    )
+    : source(&src), module_ir(M), nodes()
   {
     // Load the compiler data (e.g., headers) with the module in scope.
     scope _ = module_ir;
@@ -391,14 +401,17 @@ namespace sprite { namespace compiler
   void compile(
       curry::Library const & lib
     , compiler::LibrarySTab & stab
+    , llvm::LLVMContext & context
     )
   {
     for(auto const & cymodule: lib.modules)
     {
       // Create a new LLVM module and symbol table entry.
       auto rv = stab.modules.emplace(
-          cymodule.name, ModuleSTab{stab, cymodule}
+          cymodule.name, ModuleSTab{stab, cymodule, context}
         );
+      // OK if the module symbol table already exists.  The IR may have been
+      // loaded from a file.
       compiler::ModuleSTab & module_stab = rv.first->second;
 
       // Helpful aliases.
@@ -461,16 +474,23 @@ namespace sprite { namespace compiler
               );
           }
   
-          // Create the vtable.
-          tgt::globalvar vt = static_(
-              compiler.ir.vtable_t, flexible(".vt.CTOR." + ctor.name)
-            )
-              .set_initializer(_t(
-                  &get_label_function(compiler.ir, ctor.name)
-                , &get_arity_function(compiler.ir, ctor.arity)
-                , &get_succ_function(compiler.ir, ctor.arity)
-                , &N, &get_null_step_function(compiler.ir)
-                ));
+          // Create or find the vtable.
+          tgt::globalvar vt = nullptr;
+          std::string const vtname = ".vt.CTOR." + ctor.name;
+          if(module_ir.hasglobal(vtname))
+            vt.reset(module_ir.getglobal(vtname).as_globalvar());
+          else
+          {
+            vt.reset(
+                static_(compiler.ir.vtable_t, vtname)
+                  .set_initializer(_t(
+                      &get_label_function(compiler.ir, ctor.name)
+                    , &get_arity_function(compiler.ir, ctor.arity)
+                    , &get_succ_function(compiler.ir, ctor.arity)
+                    , &N, &get_null_step_function(compiler.ir)
+                    ))
+              );
+           }
   
           // Update the symbol tables.
           module_stab.nodes.emplace(
@@ -483,39 +503,60 @@ namespace sprite { namespace compiler
       for(auto const & fun: cymodule.functions)
       {
         // Forward declaration.
-        function step = static_<function>(
-            compiler.ir.stepfun_t, flexible(".step." + fun.name), {"root_p"}
-          );
-        function N = static_<function>(
-            compiler.ir.stepfun_t, flexible(".N." + fun.name), {"root_p"}
-          , [&]{
-              tgt::value root_p = arg("root_p");
-              step(root_p);
-              vinvoke(root_p, VT_N, tailcall);
-              return_();
-            }
-          );
-        function H = static_<function>(
-            compiler.ir.stepfun_t, flexible(".H." + fun.name), {"root_p"}
-          , [&]{
-              tgt::value root_p = arg("root_p");
-              step(root_p);
-              vinvoke(root_p, VT_H, tailcall);
-            }
-          );
-  
-        tgt::globalvar vt =
-            static_(compiler.ir.vtable_t, flexible(".vt.OPER." + fun.name))
-            .set_initializer(_t(
-                &get_label_function(compiler.ir, fun.name)
-              , &get_arity_function(compiler.ir, fun.arity)
-              , &get_succ_function(compiler.ir, fun.arity)
-              , &N, &H
-              ));
+        std::string const stepname = ".step." + fun.name;
+        function step(module_ir->getFunction(stepname.c_str()));
+        if(!step.ptr())
+          step = static_<function>(compiler.ir.stepfun_t, stepname, {"root_p"});
 
+        std::string const nname = ".N." + fun.name;
+        function N(module_ir->getFunction(nname.c_str()));
+        if(!N.ptr())
+        {
+          N = static_<function>(
+              compiler.ir.stepfun_t, nname, {"root_p"}
+            , [&]{
+                tgt::value root_p = arg("root_p");
+                step(root_p);
+                vinvoke(root_p, VT_N, tailcall);
+                return_();
+              }
+            );
+        }
+
+        std::string const hname = ".H." + fun.name;
+        function H(module_ir->getFunction(hname.c_str()));
+        if(!H.ptr())
+        {
+          H = static_<function>(
+              compiler.ir.stepfun_t, flexible(".H." + fun.name), {"root_p"}
+            , [&]{
+                tgt::value root_p = arg("root_p");
+                step(root_p);
+                vinvoke(root_p, VT_H, tailcall);
+              }
+            );
+        }
+  
+        tgt::globalvar vt = nullptr;
+        std::string const vtname = ".vt.OPER." + fun.name;
+        if(module_ir.hasglobal(vtname))
+          vt.reset(module_ir.getglobal(vtname).as_globalvar());
+        else
+        {
+          vt.reset(
+              static_(compiler.ir.vtable_t, vtname)
+                .set_initializer(_t(
+                    &get_label_function(compiler.ir, fun.name)
+                  , &get_arity_function(compiler.ir, fun.arity)
+                  , &get_succ_function(compiler.ir, fun.arity)
+                  , &N, &H
+                  ))
+            );
+        }
+
+        // Update the symbol tables.
         module_stab.nodes.emplace(
-            fun.name
-          , compiler::NodeSTab(fun, vt, compiler::OPER)
+            fun.name, compiler::NodeSTab(fun, vt, compiler::OPER)
           );
       }
   
@@ -523,8 +564,12 @@ namespace sprite { namespace compiler
       for(auto const & fun: cymodule.functions)
       {
         auto step = module_ir.getglobal(".step." + fun.name);
-        tgt::scope _ = dyn_cast<function>(step);
-        ::compile_function(compiler, arg("root_p"), fun);
+        function stepf = dyn_cast<function>(step);
+        if(stepf->size() == 0) // function has no body
+        {
+          tgt::scope _ = dyn_cast<function>(step);
+          ::compile_function(compiler, arg("root_p"), fun);
+        }
       }
     }
   }

@@ -30,6 +30,9 @@ namespace sprite { namespace backend
     /// Sets the initializer for a global array variable.
     globalvar set_initializer(any_array_ref const & value);
 
+    // FIXME: support/casting.hpp probably needs to understand basic_reference.
+    globalvar as_globalvar() const;
+
     /**
      * @brief Takes the address of a global value.
      *
@@ -56,6 +59,9 @@ namespace sprite { namespace backend
 
     /// Sets the initializer for a global array variable.
     globalvar & set_initializer(any_array_ref const & value);
+
+    // FIXME: temporary until dyn_cast is fixed.
+    globalvar as_globalvar() const { return *this; }
   };
 
   // API: function

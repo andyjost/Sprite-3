@@ -36,9 +36,9 @@ namespace sprite { namespace backend
   };
 
   /// Declares a new exception type.
-  #define SPRITE_DECLARE_ERROR_TYPE(name)                              \
-      struct name : error                                              \
-        { name(twine const & msg = "") : error(#name, msg.str()) {} }; \
+  #define SPRITE_DECLARE_ERROR_TYPE(name)                                    \
+      struct name : error                                                    \
+        { name(llvm::Twine const & msg = "") : error(#name, msg.str()) {} }; \
     /**/
 
   /// Indicates an incorrect object type was used.

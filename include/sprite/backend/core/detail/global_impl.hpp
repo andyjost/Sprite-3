@@ -26,28 +26,30 @@ namespace sprite { namespace backend
   }
 
   template<typename T>
+  globalvar globalobj<T>::as_globalvar() const
+  {
+    if(auto * g = dyn_cast<GlobalVariable>(this->ptr()))
+      return globalvar(globalvaraddr(g));
+    throw type_error("Expected GlobalVariable.");
+  }
+
+  template<typename T>
   template<typename U, typename>
   globalvar globalobj<T>::set_initializer(U const & value)
   {
-    // TODO support/casting.hpp probably needs to understand basic_reference.
-    if(auto * g = dyn_cast<GlobalVariable>(this->ptr()))
-      return globalvar(globalvaraddr(g)).set_initializer(value);
+    return this->as_globalvar().set_initializer(value);
     // auto g = dyn_cast<globalvar>(*this);
     // if(g.ptr())
     //   return g.set_initializer(value);
-    throw type_error("Expected GlobalVariable.");
   }
 
   template<typename T>
   globalvar globalobj<T>::set_initializer(any_array_ref const & value)
   {
-    // TODO support/casting.hpp probably needs to understand basic_reference.
-    if(auto * g = dyn_cast<GlobalVariable>(this->ptr()))
-      return globalvar(globalvaraddr(g)).set_initializer(value);
-  //   auto g = dyn_cast<globalvar>(*this);
-  //   if(g.ptr())
-  //     return g.set_initializer(value);
-    throw type_error("Expected GlobalVariable.");
+    return this->as_globalvar().set_initializer(value);
+    //   auto g = dyn_cast<globalvar>(*this);
+    //   if(g.ptr())
+    //     return g.set_initializer(value);
   }
 
   template<typename T>

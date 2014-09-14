@@ -4,6 +4,7 @@
 #include "sprite/curryinput.hpp"
 #include "sprite/runtime.hpp"
 #include <unordered_map>
+#include <iterator>
 
 namespace sprite { namespace compiler
 {
@@ -61,7 +62,14 @@ namespace sprite { namespace compiler
   /// Module symbol table.
   struct ModuleSTab
   {
-    ModuleSTab(LibrarySTab &, curry::Module const &);
+    // Initialize while creating a new LLVM module for holding the IR.
+    ModuleSTab(LibrarySTab const &, curry::Module const &, llvm::LLVMContext &);
+
+    // Initialize from an existing LLVM module.
+    ModuleSTab(
+        LibrarySTab const &, curry::Module const &
+      , sprite::backend::module const & M
+      );
 
     // Disabled because globalvar is a reference (see NodeSTab).
     ModuleSTab & operator=(ModuleSTab const &) = delete;
@@ -83,6 +91,20 @@ namespace sprite { namespace compiler
   {
     // The module information.
     std::unordered_map<std::string, ModuleSTab> modules;
+
+    /// Move the contents of another LibrarySTab into this one.
+    LibrarySTab & merge_from(LibrarySTab & arg)
+    {
+      if(modules.empty())
+        modules = std::move(arg.modules);
+      else
+      {
+        for(auto && item: arg.modules)
+          modules.emplace(std::move(item));
+        arg.modules.clear();
+      }
+      return *this;
+    }
   };
 
   /**
@@ -95,7 +117,7 @@ namespace sprite { namespace compiler
    */
   struct ModuleCompiler
   {
-    ModuleCompiler(compiler::LibrarySTab & lib_stab_)
+    ModuleCompiler(compiler::LibrarySTab const & lib_stab_)
       : lib_stab(lib_stab_), rt(ir)
     {}
 
@@ -103,8 +125,8 @@ namespace sprite { namespace compiler
     // ====== Data ======
     // ==================
 
-    // The symbol table to be updated.
-    compiler::LibrarySTab & lib_stab;
+    // The symbol table to use for looking up symbols.
+    compiler::LibrarySTab const & lib_stab;
 
     // The C library, in the target program.
     sprite::backend::testing::clib_h clib;
@@ -141,10 +163,18 @@ namespace sprite { namespace compiler
   /// Prints a module.
   void prettyprint(sprite::curry::Library const & lib);
 
-  /// Compiles the source for a Curry library.  Updates the symbol table.
+  /**
+   * @brief Updates the symbol table with the result of compiling the given
+   * Curry library.
+   *
+   * If the symbol table already contains IR for any given module (e.g.,
+   * because it was previously loaded from a .bc file), then the symbol tables
+   * are updated without actually compiling any code.
+   */
   void compile(
       sprite::curry::Library const & lib
     , sprite::compiler::LibrarySTab & stab
+    , llvm::LLVMContext & context
     );
 
   /// Constructs an expression at the given node address.
