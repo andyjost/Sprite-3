@@ -16,10 +16,16 @@ install : $(STATICLIB)
 	mkdir -p $(LIBINSTALL)
 	cp $(STATICLIB) $(LIBINSTALL)
 	cp -r cmc/ $(LIBINSTALL)
+	rm -f $(LIBINSTALL)/cc 2> /dev/null
+	ln -s `which $(LIB-CC)` $(LIBINSTALL)/cc
+	rm -f $(LIBINSTALL)/llc 2> /dev/null
+	ln -s `which $(LIB-LLC)` $(LIBINSTALL)/llc
 
 uninstall :
 	-rm -f $(LIBINSTALL)/$(STATICLIB)
 	-rm -rf $(LIBINSTALL)/cmc
+	-rm -rf $(LIBINSTALL)/cc
+	-rm -rf $(LIBINSTALL)/llc
 
 -include ../Make.include
 

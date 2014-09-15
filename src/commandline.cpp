@@ -13,6 +13,8 @@
 #include <unistd.h>
 #include <fstream>
 #include <cstdio>
+#include <sstream>
+#include <cstring>
 
 namespace sprite
 {
@@ -79,7 +81,7 @@ namespace sprite
 
       if(!errmsg.empty())
       {
-        try { std::remove(bitcodefile.c_str()); } catch(...) {}
+        std::remove(bitcodefile.c_str());
         throw sprite::backend::compile_error(
             "Error while writing bitcode file \"" + bitcodefile + "\": "
           + errmsg
@@ -170,9 +172,22 @@ namespace sprite
 
   std::string const & get_curry2read()
   {
-    static std::string curry2read =
-        std::string(SPRITE_LIBINSTALL) + "/cmc/translator/bin/curry2read";
+    static std::string curry2read = join_path(
+        SPRITE_LIBINSTALL "/", "cmc/translator/bin/curry2read"
+      );
     return curry2read;
+  }
+
+  std::string const & get_llc()
+  {
+    static std::string llc = join_path(SPRITE_LIBINSTALL, "llc");
+    return llc;
+  }
+
+  std::string const & get_cc()
+  {
+    static std::string cc = join_path(SPRITE_LIBINSTALL, "cc");
+    return cc;
   }
 
   void make_readable_file(std::string const & inputfile)
@@ -181,10 +196,48 @@ namespace sprite
     std::string const readablefile = sprite::get_readablefile(curryfile);
     if(!is_up_to_date(readablefile, curryfile))
     {
-      std::string const & curry2read = sprite::get_curry2read();
-      int ok = std::system((curry2read + " -q " + curryfile).c_str());
+      std::stringstream cmd;
+      cmd << sprite::get_curry2read() << " -q " << curryfile;
+      int ok = std::system(cmd.str().c_str());
       if(ok != 0)
         throw backend::compile_error("curry2read failed");
+    }
+  }
+
+  void make_assembly_file(
+      std::string const & bitcodefile, std::string const & assemblyfile
+    , bool remove_source
+    )
+  {
+    std::stringstream cmd;
+    cmd << sprite::get_llc() << " " << bitcodefile << " -o " << assemblyfile;
+    int ok = std::system(cmd.str().c_str());
+    if(ok != 0)
+      throw backend::compile_error("llc failed");
+    if(remove_source && std::remove(bitcodefile.c_str()) != 0)
+    {
+      cmd.str("");
+      cmd << "Error removing \"" << bitcodefile << "\": " << strerror(errno);
+      throw backend::compile_error(cmd.str());
+    }
+  }
+
+  /// Uses the platform-specific compiler to convert assembly to an executable.
+  void make_executable_file(
+      std::string const & assemblyfile, std::string const & executablefile
+    , bool remove_source
+    )
+  {
+    std::stringstream cmd;
+    cmd << sprite::get_cc() << " " << assemblyfile << " -o " << executablefile;
+    int ok = std::system(cmd.str().c_str());
+    if(ok != 0)
+      throw backend::compile_error("cc failed");
+    if(remove_source && std::remove(assemblyfile.c_str()) != 0)
+    {
+      cmd.str("");
+      cmd << "Error removing \"" << assemblyfile << "\": " << strerror(errno);
+      throw backend::compile_error(cmd.str());
     }
   }
 }

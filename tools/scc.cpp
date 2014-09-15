@@ -9,15 +9,20 @@
 #include <getopt.h>
 #include <set>
 #include <vector>
+#include <cstdio>
 
 namespace
 {
   llvm::LLVMContext & context = llvm::getGlobalContext();
   bool compile_only = false;
+  int save_temps = 0;
   std::string mainmodule;
   std::string outputfile = "a.out";
   std::vector<std::string> files;
   std::vector<llvm::Module*> modules;
+
+  enum OutputType { OUTPUT_BITCODE=0, OUTPUT_ASSEMBLY=1, OUTPUT_EXECUTABLE=2 };
+  OutputType output_type = OUTPUT_EXECUTABLE;
 
   template<typename Vector>
   void remove_duplicates(Vector & v)
@@ -41,6 +46,8 @@ namespace
     out
       << "Usage: scc [options] [curryfiles...]\n"
       << "Options:\n"
+      << "   -b, --output-bitcode\n"
+      << "       Write out the final program as LLVM bitcode.\n"
       << "   -c, --compile\n"
       << "       Compile only (do not link).\n"
       << "   -h, --help\n"
@@ -49,6 +56,10 @@ namespace
       << "       Start the program using the 'main' function in FILE.\n"
       << "   -o FILE, --output=FILE\n"
       << "       Write the final program to FILE.\n"
+      << "   --save-temps\n"
+      << "       Save temporary files.\n"
+      << "   -S, --output-assembly\n"
+      << "       Write out the final program as assembly.\n"
       ;
   }
 
@@ -72,24 +83,31 @@ namespace
     {
       static option long_options[] =
       {
+        {"output-bitcode", no_argument,  0, 'b'},
         {"compile", no_argument,  0, 'c'},
         {"help",    no_argument,  0, 'h'},
         {"main",    no_argument,  0, 'm'},
         {"output",  no_argument,  0, 'o'},
+        {"output-assembly", no_argument,  0, 'S'},
+        {"save-temps", no_argument, &save_temps, 1},
         {0, 0, 0, 0}
       };
 
       if(optind == argc)
         break;
 
-      int const i = getopt_long(argc, argv, "chm:o:", long_options, 0);
+      int const i = getopt_long(argc, argv, "bchm:o:S", long_options, 0);
 
       switch(i)
       {
+        case 0: break;
         case -1:
           files.push_back(argv[optind]);
           argv++;
           argc--;
+          break;
+        case 'b':
+          output_type = OUTPUT_BITCODE;
           break;
         case 'c':
           compile_only = true;
@@ -103,6 +121,9 @@ namespace
           break;
         case 'o':
           outputfile = optarg;
+          break;
+        case 'S':
+          output_type = OUTPUT_ASSEMBLY;
           break;
         default:
           std::exit(EXIT_FAILURE);
@@ -153,6 +174,17 @@ namespace
     return M;
   }
 
+  void write_bitcode_to_file(llvm::Module * M, std::string const & filename)
+  {
+    std::string errstr;
+    llvm::raw_fd_ostream fout(
+        filename.c_str(), errstr, llvm::raw_fd_ostream::F_Binary
+      );
+    llvm::WriteBitcodeToFile(M, fout);
+    if(!errstr.empty())
+      throw sprite::backend::compile_error(errstr);
+  }
+
   int main_(int argc, char *argv[])
   {
     parse_args(argc, argv);
@@ -161,7 +193,9 @@ namespace
     sprite::curry::Library lib;
     sprite::compiler::LibrarySTab stab;
     for(auto const & file: files)
+    {
       sprite::compile_file(file, lib, stab, context, compile_only);
+    }
 
     // Link the program, if requested.  By default, add a main symbol to any
     // module that has a Curry function named main.  The linker will take care
@@ -202,17 +236,39 @@ namespace
         }
       }
 
-      // Write out the final program.
-      std::string errstr;
-      llvm::raw_fd_ostream fout(
-          outputfile.c_str(), errstr, llvm::raw_fd_ostream::F_Binary
-        );
-      llvm::WriteBitcodeToFile(pgm, fout);
-      if(!errstr.empty())
-        throw sprite::backend::compile_error(errstr);
+      // Determine the names used the final output and any temporary files.
+      std::string final_bitcode;
+      std::string final_assembly;
+      std::string final_executable;
+      std::string const final_base = sprite::remove_extension(outputfile);
+
+      switch(output_type)
+      {
+        case OUTPUT_BITCODE:
+          final_bitcode = outputfile;
+          break;
+        case OUTPUT_ASSEMBLY:
+          final_bitcode = final_base + ".bc";
+          final_assembly = outputfile;
+          break;
+        case OUTPUT_EXECUTABLE:
+          final_bitcode = final_base + ".bc";
+          final_assembly = final_base + ".s";
+          final_executable = outputfile;
+          break;
+      }
+
+      // Write out the program file(s).
+      write_bitcode_to_file(pgm, final_bitcode);
+
+      if(output_type > OUTPUT_BITCODE)
+        sprite::make_assembly_file(final_bitcode, final_assembly, !save_temps);
+      
+      if(output_type > OUTPUT_ASSEMBLY)
+        sprite::make_executable_file(final_assembly, final_executable, !save_temps);
     }
 
-    return 0;
+    return EXIT_SUCCESS;
   }
 }
 

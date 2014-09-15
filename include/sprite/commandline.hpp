@@ -21,6 +21,18 @@ namespace sprite
    */
   void make_readable_file(std::string const & curryfile);
 
+  /// Uses llc to compile bitcode to assembly.
+  void make_assembly_file(
+      std::string const & bitcodefile, std::string const & assemblyfile
+    , bool remove_source
+    );
+
+  /// Uses the platform-specific compiler to convert assembly to an executable.
+  void make_executable_file(
+      std::string const & assemblyfile, std::string const & executablefile
+    , bool remove_source
+    );
+
   /**
    * @brief Compiles a Curry file to Sprite IR.
    *
@@ -127,4 +139,10 @@ namespace sprite
 
   /// Gets the path to the curry2read program.
   std::string const & get_curry2read();
+
+  /// Gets the path to the llc program.
+  std::string const & get_llc();
+
+  /// Gets the path to a C compiler.
+  std::string const & get_cc();
 }
