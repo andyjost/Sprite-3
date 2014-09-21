@@ -29,13 +29,13 @@ namespace sprite
     std::string const modulename = sprite::get_modulename(curryfile);
     std::string const readablefile = sprite::get_readablefile(curryfile);
     std::string const bitcodefile = sprite::get_bitcodefile(curryfile);
-  
+
     // Generate the readable Curry file.
     sprite::make_readable_file(curryfile);
     std::ifstream input(readablefile);
     if(!input)
       throw backend::compile_error("Could not open \"" + readablefile + "\"");
-  
+
     // Parse the input program.
     input >> lib;
     if(modulename != lib.modules.back().name)
@@ -123,11 +123,11 @@ namespace sprite
           // Construct the root expression (just the "main" symbol).
           backend::value root_p = compiler.node_alloc();
           root_p = construct(compiler, root_p, {start, {}});
-  
+
           // Evaluate and then print the root expression.
           compiler.rt.normalize(root_p);
           compiler.rt.printexpr(root_p, "\n");
-          
+
           backend::return_(0);
         }
       );
@@ -141,7 +141,7 @@ namespace sprite
     auto & compiler = *module_stab.compiler;
     backend::scope _ = module_stab.module_ir;
     _create_main_function(compiler, start);
-    
+
   }
 
   bool is_up_to_date(
