@@ -191,6 +191,14 @@ namespace
       for(size_t i=0; i<children.size(); ++i)
         this->target_p.arrow(ND_SLOT0+i) = children[i];
     }
+
+    result_type operator()(curry::ExternalCall const & expr)
+    {
+      tgt::function fun = extern_<tgt::function>(
+          this->compiler.ir.stepfun_t, expr.qname.name
+        );
+      fun(this->target_p);
+    }
   };
 
   struct FunctionCompiler : Rewriter

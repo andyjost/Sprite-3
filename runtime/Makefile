@@ -31,9 +31,11 @@ uninstall :
 
 ###
 
+.DELETE_ON_ERROR :
 sprite-runtime-part-a.bc : sprite-runtime-part-a.cpp
 	# Runtime part A: C++ converted to bitcode using Clang.
-	$(CLANG) -S -emit-llvm sprite-runtime-part-a.cpp -o - | $(LLVM-AS) > sprite-runtime-part-a.bc
+	# Note: pipefail is used because llvm-as returns non-error even if clang fails.
+	bash -o pipefail -c '$(CLANG) -S -emit-llvm sprite-runtime-part-a.cpp -o - | $(LLVM-AS) > sprite-runtime-part-a.bc'
 
 $(STATICLIB_PART_B) :
 	# Runtime part B: bitcode generated directly using the C++ API.

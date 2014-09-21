@@ -4,6 +4,7 @@
 namespace sprite { namespace compiler
 {
   struct node;
+  enum Tag { FAIL= -4, FWD= -3, CHOICE= -2, OPER= -1, CTOR=0 };
 
   typedef char * labelfun_t(node *);
   typedef uint64_t arityfun_t(node *);
@@ -54,4 +55,19 @@ extern "C"
 
   void sprite_normalize(sprite::compiler::node * root)
     { root->vptr->N(root); }
+
+  #define SUCC_0(root) reinterpret_cast<sprite::compiler::node*&>(root->slot0)
+  #define SUCC_1(root) reinterpret_cast<sprite::compiler::node*&>(root->slot1)
+  #define DATA(root, type) (*reinterpret_cast<type *>(&root->slot0))
+
+  void prim_Int_plus(sprite::compiler::node * root)
+  {
+    sprite::compiler::node * lhs = SUCC_0(root);
+    sprite::compiler::node * rhs = SUCC_1(root);
+    int64_t const x = DATA(lhs, int64_t);
+    int64_t const y = DATA(rhs, int64_t);
+    root->vptr = lhs->vptr;
+    root->tag = sprite::compiler::CTOR;
+    DATA(root, int64_t) = x + y;
+  }
 }

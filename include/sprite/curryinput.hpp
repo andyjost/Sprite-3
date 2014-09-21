@@ -88,11 +88,18 @@ namespace sprite { namespace curry
   /// Represents a variable reference.
   struct Ref { size_t pathid; };
 
+  /// Represents a call to an external function.
+  struct ExternalCall
+  {
+    Qname qname;
+  };
+
   /**
    * @brief Represents a RHS rule expression.
    *
-   * This is a union type where each node may be a literal int or double, a
-   * variable reference, or an expression describing a node to be constructed.
+   * This is a union type where each node may be a literal value, a variable
+   * reference, an expression describing a node to be constructed, or a call to
+   * an external function.
    */
   struct Rule
   {
@@ -100,6 +107,7 @@ namespace sprite { namespace curry
     Rule(int64_t const & arg) : tag(INT), int_(arg) {}
     Rule(double arg) : tag(DOUBLE), double_(arg) {}
     Rule(Ref arg) : tag(VAR), var(arg) {}
+    Rule(ExternalCall const & arg) : tag(EXTERNAL), external(arg) {}
 
     template<
         typename...Args
@@ -124,6 +132,7 @@ namespace sprite { namespace curry
         case DOUBLE: new(&double_) double(arg.double_); break;
         case VAR: new(&var) Ref(arg.var); break;
         case NODE: new(&expr) Expr(std::move(arg.expr)); break;
+        case EXTERNAL: new(&external) ExternalCall(std::move(arg.external)); break;
       }
     }
     Rule(Rule const & arg) : tag(arg.tag)
@@ -135,6 +144,7 @@ namespace sprite { namespace curry
         case DOUBLE: new(&double_) double(arg.double_); break;
         case VAR: new(&var) Ref(arg.var); break;
         case NODE: new(&expr) Expr(arg.expr); break;
+        case EXTERNAL: new(&external) ExternalCall(arg.external); break;
       }
     }
     Rule & operator=(Rule && arg)
@@ -153,6 +163,7 @@ namespace sprite { namespace curry
     {
       if(tag == NODE) expr.~Expr();
       else if(tag == FAIL) fail.~Fail();
+      else if(tag == EXTERNAL) external.~ExternalCall();
     }
     template<typename Visitor>
     typename std::remove_reference<Visitor>::type::result_type
@@ -170,6 +181,8 @@ namespace sprite { namespace curry
           return visitor(this->var);
         case NODE:
           return visitor(this->expr);
+        case EXTERNAL:
+          return visitor(this->external);
       }
     }
     Ref const * getvar() const
@@ -179,8 +192,11 @@ namespace sprite { namespace curry
       return nullptr;
     }
   private:
-    enum { FAIL, INT, DOUBLE, VAR, NODE } tag;
-    union { Fail fail; int64_t int_; double double_; Ref var; Expr expr; };
+    enum { FAIL, INT, DOUBLE, VAR, NODE, EXTERNAL } tag;
+    union {
+      Fail fail; int64_t int_; double double_; Ref var; Expr expr;
+      ExternalCall external;
+    };
   };
 
   /**

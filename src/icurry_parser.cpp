@@ -226,6 +226,12 @@ namespace sprite { namespace curry
       ifs >> word;
       goto redo;
     }
+    else if(word == "external")
+    {
+      ExternalCall external;
+      ifs >> external.qname;
+      return Rule(external);
+    }
     else throw ParseError();
     ifs >> word;
   }

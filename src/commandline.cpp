@@ -212,14 +212,14 @@ namespace sprite
     std::stringstream cmd;
     cmd << sprite::get_llc() << " " << bitcodefile << " -o " << assemblyfile;
     int ok = std::system(cmd.str().c_str());
-    if(ok != 0)
-      throw backend::compile_error("llc failed");
-    if(remove_source && std::remove(bitcodefile.c_str()) != 0)
+    if(remove_source && std::remove(bitcodefile.c_str()) != 0 && ok != 0)
     {
       cmd.str("");
       cmd << "Error removing \"" << bitcodefile << "\": " << strerror(errno);
       throw backend::compile_error(cmd.str());
     }
+    if(ok != 0)
+      throw backend::compile_error("llc failed");
   }
 
   /// Uses the platform-specific compiler to convert assembly to an executable.
@@ -231,13 +231,13 @@ namespace sprite
     std::stringstream cmd;
     cmd << sprite::get_cc() << " " << assemblyfile << " -o " << executablefile;
     int ok = std::system(cmd.str().c_str());
-    if(ok != 0)
-      throw backend::compile_error("cc failed");
-    if(remove_source && std::remove(assemblyfile.c_str()) != 0)
+    if(remove_source && std::remove(assemblyfile.c_str()) != 0 && ok != 0)
     {
       cmd.str("");
       cmd << "Error removing \"" << assemblyfile << "\": " << strerror(errno);
       throw backend::compile_error(cmd.str());
     }
+    if(ok != 0)
+      throw backend::compile_error("cc failed");
   }
 }

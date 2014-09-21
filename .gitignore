@@ -17,5 +17,6 @@ sandbox/*
 setup.csh
 tags
 tools/sprite
+tools/scc
 include/sprite/config.hpp
 runtime/sprite-runtime-part-b/generate-sprite-runtime-part-b
