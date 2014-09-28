@@ -64,6 +64,10 @@ int main()
   using namespace llvm;
   verifyModule(*sb_module.ptr(), PrintMessageAction);
 
+  // Disable the next line to actually run the example.  It expects input, so it
+  // is not run by default.
+  return 0;
+
   InitializeNativeTarget();
   std::string err;
   ExecutionEngine * jit = EngineBuilder(sb_module.ptr())

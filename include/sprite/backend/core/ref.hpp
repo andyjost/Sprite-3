@@ -119,6 +119,17 @@ namespace sprite { namespace backend
     }
   }
 
+  template<typename T, typename>
+  ref valueobj<llvm::Value>::operator[](T const & arg) const
+  {
+    Value * tmp[1] {get_value(arg).ptr()};
+    auto & bldr = current_builder();
+    value v(
+        SPRITE_APICALL(bldr.CreateGEP(ptr(), array_ref<Value*>(tmp)))
+      );
+    return ref(v);
+  }
+
   template<typename ValueType>
   template<typename T, typename>
   inline ref & basic_reference<ValueType>::operator=(T const & arg)

@@ -60,6 +60,10 @@ namespace sprite { namespace backend
       >
     value operator()(Args &&... args) const;
 
+    /// See ref::operator[].
+    template<typename T, SPRITE_ENABLE_FOR_ALL_VALUE_INITIALIZERS(T)>
+    ref operator[](T const & arg) const;
+
     /// Performs pointer dereference followed by member access into a struct.
     ref arrow(uint32_t i) const;
 

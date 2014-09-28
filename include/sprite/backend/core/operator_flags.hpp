@@ -50,13 +50,17 @@ namespace sprite { namespace backend
         { return std::make_tuple(arg, *this); }
 
       template<typename T>
+      arg_with_flags<basic_reference<T>> operator()(basic_reference<T> const & arg) const
+        { return std::make_tuple(arg, *this); }
+
+      template<typename T>
       arg_with_flags<typeobj<T>> operator()(typeobj<T> const & arg) const
         { return std::make_tuple(arg, *this); }
     };
 
     template<typename Arg
       , bool = is_typeobj<Arg>::value
-      , bool = is_raw_initializer<Arg>::value
+      , bool = is_raw_initializer<Arg>::value || is_basic_reference<Arg>::value
       >
     struct decorated_arg;
 
@@ -130,9 +134,9 @@ namespace sprite { namespace backend
      * When using <tt>operator()</tt> to initialize constants, the flags must
      * be kept.  This is because constant creation sometimes triggers an
      * implicit typecast.  The flags may provide information, such as how to
-     * extend an integer value. 
+     * extend an integer value.
      */
-    // Arg is a raw initializer.
+    // Arg is a raw initializer or basic_reference object.
     template<typename Arg> struct decorated_arg<Arg, false, true>
       : std::reference_wrapper<typename std::add_const<Arg>::type>
     {
