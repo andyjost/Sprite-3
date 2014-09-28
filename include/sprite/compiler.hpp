@@ -145,6 +145,10 @@ namespace sprite { namespace compiler
     value node_alloc() const
       { return this->clib.malloc(sizeof_(this->ir.node_t)); }
 
+    /// Allocates storage for @p n pointers.
+    value array_alloc(size_t n) const
+      { return this->clib.malloc(sizeof_(this->ir.node_t) * n); }
+
     /// Initializes a node.
     void node_init(
         value node_p, compiler::NodeSTab const & node_stab

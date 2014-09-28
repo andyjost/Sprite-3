@@ -46,15 +46,11 @@ int main()
       , [&] { return_(i); }
       );
 
-    // FIXME: this test is only needed until arity > 2 is supported.
-    if(i<3)
-    {
-      function f = extern_<function>(
-          ir.rangefun_t, ".succ." + std::to_string(i)
-        , {"node_p", "begin_out_pp", "end_out_pp"}
-        );
-      make_succ_function(f, ir, i);
-    }
+    function f = extern_<function>(
+        ir.rangefun_t, ".succ." + std::to_string(i)
+      , {"node_p", "begin_out_pp", "end_out_pp"}
+      );
+    make_succ_function(f, ir, i);
   }
 
   #define SPRITE_HANDLE_BUILTIN(name) build_vt_for_##name(ir);

@@ -35,41 +35,30 @@ namespace sprite { namespace compiler
   // library.
   function make_succ_function(function fun, ir_h const & ir, int64_t arity)
   {
+    scope _ = fun;
+    ref begin_out_pp = arg("begin_out_pp");
+    ref end_out_pp = arg("end_out_pp");
+
     if(arity == 0)
     {
-      scope _ = fun;
-      ref begin_out_pp = arg("begin_out_pp");
-      ref end_out_pp = arg("end_out_pp");
       begin_out_pp = nullptr;
       end_out_pp = nullptr;
       return_();
+      return fun;
     }
-    else if(arity < 3)
-    {
-      scope _ = fun;
-      // Compute the size of pointers and get an integer type with the same
-      // bitwidth.
-      size_t sizeof_ptr = sizeof_(*ir.node_t);
-      type size_t_ = types::int_(sizeof_ptr * 8);
 
-      // Get the function paramters.
-      value node_p = arg("node_p");
-      ref begin_out_pp = arg("begin_out_pp");
-      ref end_out_pp = arg("end_out_pp");
+    value node_p = arg("node_p");
+    value begin_cp = arity < 3
+      ? static_cast<value>(&node_p.arrow(ND_SLOT0))
+      : static_cast<value>(*bitcast(&node_p.arrow(ND_SLOT0), ***types::char_()))
+      ;
+    begin_out_pp = begin_cp;
 
-      // Compute the begining address.
-      value begin_cp = &node_p.arrow(ND_SLOT0);
-      value begin = begin_cp;
-      value end = typecast(begin_cp, size_t_) + arity * sizeof_ptr;
+    size_t sizeof_ptr = sizeof_(*ir.node_t);
+    type size_t_ = types::int_(sizeof_ptr * 8);
+    end_out_pp = typecast(begin_cp, size_t_) + arity * sizeof_ptr;
 
-      // Assign the outputs.
-      begin_out_pp = begin;
-      end_out_pp = end;
-      return_();
-    }
-    else
-      assert(0 && "arity > 2 not supported");
-
+    return_();
     return fun;
   }
 

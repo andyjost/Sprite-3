@@ -96,7 +96,13 @@ namespace
               this->resolved_path_alloca.arrow(ND_SLOT1), node_pt
             );
           break;
-        default: assert(0 && "Can't do arity>2 yet"); // FIXME
+        default:
+        {
+          value children = bitcast(
+              this->resolved_path_alloca.arrow(ND_SLOT0), **node_pt
+            );
+          this->resolved_path_alloca = children[pathelem.idx];
+        }
       }
 
       // Skip FWD nodes.
@@ -156,8 +162,8 @@ namespace
 
       // Each child needs to be allocated and initialized.  This children are
       // stored as i8* pointers.
-      std::vector<tgt::value> children;
-      children.reserve(expr.args.size());
+      std::vector<tgt::value> child_data;
+      child_data.reserve(expr.args.size());
       for(auto const & subexpr: expr.args)
       {
         // Avoid creating FWD nodes for subexpressions.
@@ -165,13 +171,13 @@ namespace
         {
           // Retrieve the pointer to an existing node.
           tgt::value child = this->resolve_path_char_p(varref->pathid);
-          children.push_back(child);
+          child_data.push_back(child);
         }
         // Allocate a new node and place its contents with a recursive call.
         else
         {
           tgt::value child = this->compiler.node_alloc();
-          children.push_back(child);
+          child_data.push_back(child);
           // Clobber the root so the recursive call works.
           this->target_p = bitcast(child, *this->compiler.ir.node_t);
           (*this)(subexpr);
@@ -187,9 +193,21 @@ namespace
         );
 
       // Set the child pointers.
-      assert(children.size() <= 2 && "n>2 Not implemented");
-      for(size_t i=0; i<children.size(); ++i)
-        this->target_p.arrow(ND_SLOT0+i) = children[i];
+      if(child_data.size() < 3)
+        for(size_t i=0; i<child_data.size(); ++i)
+          this->target_p.arrow(ND_SLOT0+i) = child_data[i];
+      else
+      {
+        // Note: pseudo-C-code shown in comments for clarity.
+        // char *& aux = node->slot0;
+        ref aux = this->target_p.arrow(ND_SLOT0);
+        // aux = array_alloc(n);
+        aux = this->compiler.array_alloc(child_data.size());
+        // char ** children = (char **)aux;
+        value children = bitcast(aux, **types::char_());
+        for(size_t i=0; i<child_data.size(); ++i)
+          children[i] = child_data[i];
+      }
     }
 
     result_type operator()(curry::ExternalCall const & expr)
@@ -464,13 +482,13 @@ namespace sprite { namespace compiler
                       break;
                     default:
                     {
-                      ref chldrn = bitcast(
-                          root_p.arrow(ND_SLOT0), *compiler.ir.node_t
+                      tgt::value children = bitcast(
+                          root_p.arrow(ND_SLOT0), **compiler.ir.node_t
                         );
                       tgt::value last_call;
                       for(size_t i=0; i<ctor.arity; ++i)
                       {
-                        child = chldrn[i];
+                        child = children[i];
                         last_call = child.arrow(ND_VPTR).arrow(VT_N)(child);
                       }
                       last_call.set_attribute(tailcall);
