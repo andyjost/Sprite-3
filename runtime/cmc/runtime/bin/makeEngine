@@ -1,4 +1,8 @@
 #!/bin/sh
 
+echo "This script is obsolete"
+echo "run scons in the engine directory"
+exit
+
 g++ -I runtime -I lib -c -o runtime/Engine.o runtime/Engine.cpp 
 
