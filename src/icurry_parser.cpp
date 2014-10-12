@@ -6,6 +6,10 @@
 #include <sstream>
 #include <limits>
 
+// Enable to add debug output statements.
+#define DEBUGSTMT(stmt)
+// #define DEBUGSTMT(stmt) stmt
+
 #define SPRITE_SKIPSPACE(rv)                                     \
     while(!ifs.eof() && std::isspace(ifs.peek())) { ifs.get(); } \
     if(ifs.eof()) return rv;                                     \
@@ -57,7 +61,6 @@ namespace sprite { namespace curry
       {
         std::string full = read_quoted_string(ifs);
         size_t pos = full.find('.');
-        if(full.find('.', pos+1) != std::string::npos) throw ParseError();
         qname.module = full.substr(0, pos);
         qname.name = full.substr(pos+1);
         break;
@@ -79,7 +82,7 @@ namespace sprite { namespace curry
     return ifs;
   }
   
-  void read_import_list(std::istream & ifs, std::vector<std::string> & imports)
+  bool read_import_list(std::istream & ifs, std::vector<std::string> & imports)
   {
     // The "import" keyword has already been read.
     std::stringstream tmp;
@@ -91,9 +94,15 @@ namespace sprite { namespace curry
       while(std::isspace(c) && c != '\n') { c = ifs.get(); }
       if(!c || c == '\n') break;
       while(c && !std::isspace(c)) { tmp.put(c); c = ifs.get(); }
-      imports.push_back(tmp.str());
+      word = tmp.str();
+      // Note: "data", being a reserved keyword, is not a valid module name.
+      // It indicates an empty import list, here.
+      if(word == "data")
+        return false;
+      imports.push_back(word);
       tmp.str("");
     }
+    return true;
   }
   
   void read_constructor(
@@ -107,6 +116,9 @@ namespace sprite { namespace curry
     if(qname.module != module_name) throw ParseError();
     constructor.name = qname.name;
     ifs >> constructor.arity;
+    DEBUGSTMT(
+        std::cout << "Read constructor \"" << qname.str() << "\"" << std::endl;
+      )
   }
   
   size_t read_variable_ref(std::istream & ifs)
@@ -247,6 +259,9 @@ namespace sprite { namespace curry
     if(qname.module != module_name) throw ParseError();
     function.name = qname.name;
     ifs >> function.arity;
+    DEBUGSTMT(
+        std::cout << "Read function \"" << qname.str() << "\"" << std::endl;
+      )
   
     // Parse table / [variable ...]
     ifs >> word;
@@ -308,25 +323,37 @@ namespace sprite { namespace curry
     redo_no_input:
 
       if(word == "import")
-        read_import_list(ifs, mod.imports);
+      {
+        DEBUGSTMT(std::cout << "Reading imports" << std::endl;)
+        if(!read_import_list(ifs, mod.imports))
+          goto redo_no_input;
+      }
       else if(word == "data")
       {
-        mod.datatypes.emplace_back();
-        static size_t i = 0;
-        mod.datatypes.back().name = "_typename" + std::to_string(i++);
-        while(ifs >> word)
+        DEBUGSTMT(std::cout << "Reading data" << std::endl;)
+        // Skip over empty "data" declarations.  If the next token is not
+        // "constructor", then go back to matching.
+        if(ifs >> word)
         {
           if(word != "constructor") goto redo_no_input;
-          mod.datatypes.back().constructors.emplace_back();
-          read_constructor(ifs, mod.name, mod.datatypes.back().constructors.back());
+          mod.datatypes.emplace_back();
+          static size_t i = 0;
+          mod.datatypes.back().name = "_typename" + std::to_string(i++);
+          do
+          {
+            if(word != "constructor") goto redo_no_input;
+            mod.datatypes.back().constructors.emplace_back();
+            read_constructor(ifs, mod.name, mod.datatypes.back().constructors.back());
 
-          // EOF OK here.
-          word.clear();
-          SPRITE_SKIPSPACE(ifs)
+            // EOF OK here.
+            word.clear();
+            SPRITE_SKIPSPACE(ifs)
+          } while(ifs >> word);
         }
       }
       else if(word == "function")
       {
+        DEBUGSTMT(std::cout << "Reading function" << std::endl;)
         mod.functions.emplace_back();
         read_function(ifs, mod.name, mod.functions.back());
       }
