@@ -45,6 +45,8 @@ namespace sprite { namespace backend { namespace testing
     function const malloc = extern_((*char_)(size_t_), "malloc");
     // void free(void *ptr);
     function const free = extern_(void_(*char_), "free");
+    // void exit(int);
+    function const exit = extern_(void_(int_), "exit");
   };
   
   /**

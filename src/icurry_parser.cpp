@@ -128,14 +128,22 @@ namespace sprite { namespace curry
     base_one_to_zero(id);
     return id;
   }
-  
+
   Rule read_rule(std::istream & ifs)
   {
     char c;
-    if(word == "Node")
+    bool const is_partial = (word == "partial");
+    if(word == "Node" || is_partial)
     {
       Expr expr;
-      ifs >> expr.qname;
+      if(is_partial)
+      {
+        // Discard the effective arity.
+        int64_t x;
+        ifs >> x;
+      }
+      else
+        ifs >> expr.qname;
   
       // Search until the end of the current line (or commoa or close paren) for
       // an open paren.
@@ -147,10 +155,20 @@ namespace sprite { namespace curry
         if(c == '(') { ifs.get(); break; }
         throw ParseError();
       }
-  
+
       // Parse the first subexpression.
       ifs >> word;
       expr.args.push_back(read_rule(ifs));
+
+      // For partial applications, move the first argument (the function) into
+      // the qname slot.
+      if(is_partial)
+      {
+        Expr const * head = expr.args.back().getexpr();
+        if(!head) throw ParseError();
+        expr.qname = head->qname;
+        expr.args.pop_back();
+      }
   
       // Parse more subexpressions.
       for(c = ifs.get(); c; c = ifs.get())
@@ -202,10 +220,11 @@ namespace sprite { namespace curry
         branch.isflex = false;
       else throw ParseError();
   
-      // Read the path id.
+      // Read the branch condition.
       ifs >> word;
-      if(word != "var") throw ParseError();
-      branch.pathid = read_variable_ref(ifs);
+      branch.condition = read_rule(ifs);
+      if(!branch.condition.getvar() && !branch.condition.getexpr())
+        throw ParseError();
   
       // Read the cases.
       while(true)

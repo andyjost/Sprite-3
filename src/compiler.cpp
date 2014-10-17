@@ -243,10 +243,34 @@ namespace
 
   public:
 
+    size_t eval_condition(curry::Rule const & condition)
+    {
+      if(curry::Ref const * cond = condition.getvar())
+        return cond->pathid;
+      else if(curry::Expr const * expr = condition.getexpr())
+      {
+        (void) expr;
+        std::cerr
+            << "Warning: expressions in branch conditions are not implemented "
+               "and will cause the program to terminate at runtime."
+            << std::endl;
+        this->compiler.clib.printf(
+            "Exiting now because an expression in a branch condition was "
+            "encountered."
+          );
+        this->compiler.clib.exit(1);
+        return 0;
+      }
+      else
+        throw compile_error("Invalid branch condition");
+    }
+
     result_type operator()(curry::Branch const & branch)
     {
       // Look up the inductive node.
-      tgt::value const inductive = this->resolve_path(branch.pathid);
+      tgt::value const inductive = this->resolve_path(
+          eval_condition(branch.condition)
+        );
 
       // Declare the jump table in the target program.
       tgt::type char_p = *tgt::types::char_();
@@ -313,7 +337,7 @@ namespace
       // tgt::ref jump = &jumptable[TAGOFFSET];
 
       // Store the address of the inductive node in allocated space, then use
-      // its tag to make the first.
+      // its tag to make the first jump.
       this->inductive_alloca = inductive;
       tgt::value const index = inductive.arrow(ND_TAG) + TAGOFFSET;
       tgt::goto_(jumptable[index], labels);

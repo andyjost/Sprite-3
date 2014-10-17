@@ -55,16 +55,7 @@ namespace sprite { namespace curry
     Definition_ action;
   };
   using Case = Case_<>;
-
-  /// Represents a branch (decision) of a function definition.
-  struct Branch
-  {
-    std::string prefix;
-    bool isflex;
-    size_t pathid;
-    std::vector<Case> cases;
-  };
-
+  
   /**
    * @brief Represents expression construction in a RHS rule expression.
    *
@@ -94,6 +85,12 @@ namespace sprite { namespace curry
     Qname qname;
   };
 
+  /// Represents a partial application.
+  struct Partial : Expr
+  {
+    using Expr::Expr;
+  };
+
   /**
    * @brief Represents a RHS rule expression.
    *
@@ -108,6 +105,7 @@ namespace sprite { namespace curry
     Rule(double arg) : tag(DOUBLE), double_(arg) {}
     Rule(Ref arg) : tag(VAR), var(arg) {}
     Rule(ExternalCall const & arg) : tag(EXTERNAL), external(arg) {}
+    Rule(Partial const & arg) : tag(PARTIAL), partial(arg) {}
 
     template<
         typename...Args
@@ -133,6 +131,7 @@ namespace sprite { namespace curry
         case VAR: new(&var) Ref(arg.var); break;
         case NODE: new(&expr) Expr(std::move(arg.expr)); break;
         case EXTERNAL: new(&external) ExternalCall(std::move(arg.external)); break;
+        case PARTIAL: new(&partial) Partial(std::move(arg.partial)); break;
       }
     }
     Rule(Rule const & arg) : tag(arg.tag)
@@ -145,6 +144,7 @@ namespace sprite { namespace curry
         case VAR: new(&var) Ref(arg.var); break;
         case NODE: new(&expr) Expr(arg.expr); break;
         case EXTERNAL: new(&external) ExternalCall(arg.external); break;
+        case PARTIAL: new(&partial) Partial(arg.partial); break;
       }
     }
     Rule & operator=(Rule && arg)
@@ -161,9 +161,14 @@ namespace sprite { namespace curry
     }
     ~Rule()
     {
-      if(tag == NODE) expr.~Expr();
-      else if(tag == FAIL) fail.~Fail();
-      else if(tag == EXTERNAL) external.~ExternalCall();
+      switch(tag)
+      {
+        case NODE: expr.~Expr(); break;
+        case FAIL: fail.~Fail(); break;
+        case EXTERNAL: external.~ExternalCall(); break;
+        case PARTIAL: partial.~Partial(); break;
+        default:;
+      }
     }
     template<typename Visitor>
     typename std::remove_reference<Visitor>::type::result_type
@@ -183,6 +188,8 @@ namespace sprite { namespace curry
           return visitor(this->expr);
         case EXTERNAL:
           return visitor(this->external);
+        case PARTIAL:
+          return visitor(this->partial);
       }
     }
     Ref const * getvar() const
@@ -191,13 +198,29 @@ namespace sprite { namespace curry
         return &var;
       return nullptr;
     }
+    Expr const * getexpr() const
+    {
+      if(tag==NODE)
+        return &expr;
+      return nullptr;
+    }
   private:
-    enum { FAIL, INT, DOUBLE, VAR, NODE, EXTERNAL } tag;
+    enum { FAIL, INT, DOUBLE, VAR, NODE, EXTERNAL, PARTIAL } tag;
     union {
       Fail fail; int64_t int_; double double_; Ref var; Expr expr;
-      ExternalCall external;
+      ExternalCall external; Partial partial;
     };
   };
+
+  /// Represents a branch (decision) of a function definition.
+  struct Branch
+  {
+    std::string prefix;
+    bool isflex;
+    Rule condition;
+    std::vector<Case> cases;
+  };
+
 
   /**
    * @brief Represents a function definition.
