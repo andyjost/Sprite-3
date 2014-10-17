@@ -6,7 +6,8 @@ echo $BASE
 cd $BASE/runtime/lib
 
 # Only the pakcs Prelude can be compiled
-cp -f ~/COMMON/local/pakcs/lib/Prelude.* .
+# TODO:  the path should not be hardwired
+cp -f ~cmc/local/pakcs/lib/Prelude.* .
 
 if [ -f Prelude.curry ]
 then
@@ -27,5 +28,10 @@ fi
 # 0. Let runtime/lib be the current directory
 # 1. Place/copy both Prelude.curry and Prelude.prim_c2p in the current directory
 # 2. Execute: curry2cpp Prelude
-# 3. Move Prelude.cpp and Prelude.hpp from subdirectory .curry in the current directory
-# 4. Execute scons
+#    --- For Sprite: this generates Prelude.read 
+#    --- For cmd: execute the fiollowing steps
+# 3. Move Prelude.cpp and Prelude.hpp from subdirectory .curry in the parent directory
+# 4. Edit Prelude.cpp
+#    lines in the previously generated Prelude.cpp that are commented out //hm
+#    must equally be commented out in the newly compiled Prelude.cpp
+# 5. Execute scons to generate the Prelude.o file

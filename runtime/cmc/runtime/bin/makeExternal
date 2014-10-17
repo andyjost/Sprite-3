@@ -1,4 +1,8 @@
 #!/bin/sh
 
+echo "This script is obsolete"
+echo "run scons in the lib directory"
+exit
+
 g++ -I runtime -I lib -c -o lib/External.o lib/External.cpp 
 
