@@ -7,8 +7,8 @@
 #include <limits>
 
 // Enable to add debug output statements.
-#define DEBUGSTMT(stmt)
-// #define DEBUGSTMT(stmt) stmt
+// #define DEBUGSTMT(stmt)
+#define DEBUGSTMT(stmt) stmt
 
 #define SPRITE_SKIPSPACE(rv)                                     \
     while(!ifs.eof() && std::isspace(ifs.peek())) { ifs.get(); } \
@@ -32,15 +32,16 @@ namespace sprite { namespace curry
     --t;
   }
 
-  // Reads a double-quoted string.  Returns the ccontents without quotes.
-  std::string read_quoted_string(std::istream & ifs)
+  // Reads a string quoted with delim.  Returns the contents without
+  // quotes.
+  std::string read_quoted_string(std::istream & ifs, char delim = '"')
   {
     int c = ifs.get();
-    SPRITE_SKIPSPACE_EXPECTING('"')
+    SPRITE_SKIPSPACE_EXPECTING(delim)
   
     std::stringstream tmp;
     c = ifs.get();
-    while(c && c != '"')
+    while(c && c != delim)
     {
       if(c == '\\')
         tmp.put(ifs.get());
@@ -133,24 +134,33 @@ namespace sprite { namespace curry
   {
     char c;
     bool const is_partial = (word == "partial");
-    if(word == "Node" || is_partial)
+    bool const is_choice = (word == "Or");
+    if(word == "Node" || is_partial || is_choice)
     {
-      Expr expr;
+      Term term;
       if(is_partial)
       {
         // Discard the effective arity.
         int64_t x;
         ifs >> x;
       }
+      else if(is_choice)
+      {
+        // Treat the literal Or as if it were a node called "Prelude.Choice".
+        term.qname = Qname{"Prelude", "Choice"};
+      }
       else
-        ifs >> expr.qname;
+      {
+        // Otherwise read the node label.
+        ifs >> term.qname;
+      }
   
-      // Search until the end of the current line (or commoa or close paren) for
+      // Search until the end of the current line (or comma or close paren) for
       // an open paren.
       for(c = ifs.peek(); c; c = ifs.peek())
       {
-        if(c == '\n') { ifs.get(); return expr; }
-        if(c == ')' || c == ',') return expr;
+        if(c == '\n') { ifs.get(); return term; }
+        if(c == ')' || c == ',') return term;
         if(std::isspace(c)) { ifs.get(); continue; }
         if(c == '(') { ifs.get(); break; }
         throw ParseError();
@@ -158,16 +168,16 @@ namespace sprite { namespace curry
 
       // Parse the first subexpression.
       ifs >> word;
-      expr.args.push_back(read_rule(ifs));
+      term.args.push_back(read_rule(ifs));
 
       // For partial applications, move the first argument (the function) into
       // the qname slot.
       if(is_partial)
       {
-        Expr const * head = expr.args.back().getexpr();
+        Term const * head = term.args.back().getterm();
         if(!head) throw ParseError();
-        expr.qname = head->qname;
-        expr.args.pop_back();
+        term.qname = head->qname;
+        term.args.pop_back();
       }
   
       // Parse more subexpressions.
@@ -177,9 +187,9 @@ namespace sprite { namespace curry
         if(c == ',')
         {
           ifs >> word;
-          expr.args.push_back(read_rule(ifs));
+          term.args.push_back(read_rule(ifs));
         }
-        else if(c == ')') return expr;
+        else if(c == ')') return term;
         else throw ParseError();
       }
     }
@@ -191,12 +201,33 @@ namespace sprite { namespace curry
     }
     else if(word == "exempt")
       return curry::Fail();
+    else if(word == "char")
+    {
+      std::stringstream ss(read_quoted_string(ifs, '\''));
+      if(ss.str().size() != 1)
+        throw ParseError();
+      return ss.str()[0];
+    }
     else if(word == "int")
     {
       int64_t x;
       ifs >> x;
       return x;
     }
+    else if(word == "double")
+    {
+      double x;
+      ifs >> x;
+      return x;
+    }
+    throw ParseError();
+  }
+
+  Term read_term(std::istream & ifs)
+  {
+    Rule rule = read_rule(ifs);
+    if(Term const * term = rule.getterm())
+      return *term;
     throw ParseError();
   }
 
@@ -223,7 +254,7 @@ namespace sprite { namespace curry
       // Read the branch condition.
       ifs >> word;
       branch.condition = read_rule(ifs);
-      if(!branch.condition.getvar() && !branch.condition.getexpr())
+      if(!branch.condition.getvar() && !branch.condition.getterm())
         throw ParseError();
   
       // Read the cases.
@@ -250,7 +281,46 @@ namespace sprite { namespace curry
       ifs >> word;
       return read_rule(ifs);
     }
-    else if(word == "declare_lhs_var" || word == "comment")
+    else if(word == "initialize")
+    {
+      NLTerm nlterm;
+      while(word == "initialize")
+      {
+        NLTerm::Step step;
+        // Parse (varid,_,'IBind').
+        int c = ifs.get();
+        SPRITE_SKIPSPACE_EXPECTING('(')
+        ifs >> step.varid;
+        c = ifs.get();
+        SPRITE_SKIPSPACE_EXPECTING(',')
+        size_t unused;
+        ifs >> unused;
+        c = ifs.get();
+        SPRITE_SKIPSPACE_EXPECTING(',')
+        char cword[6];
+        ifs.get(cword, sizeof(cword));
+        if(std::string(cword) != "IBind") throw ParseError();
+        c = ifs.get();
+        SPRITE_SKIPSPACE_EXPECTING(')')
+
+        ifs >> word;
+        if(word != "Node") throw ParseError();
+        step.term = read_term(ifs);
+        nlterm.steps.push_back(step);
+
+        ifs >> word;
+      }
+
+      // Parse the result term.
+      if(word != "return") throw ParseError();
+      ifs >> word;
+      nlterm.result = read_term(ifs);
+      return Rule(nlterm);
+    }
+    else if(
+        word == "declare_lhs_var" || word == "declare_free_var"
+     || word == "comment"
+     )
     {
       // Ignore the line.
       ifs.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -299,15 +369,31 @@ namespace sprite { namespace curry
 
         // Get the base path.
         Function::PathElem & path = function.paths[id];
-        ifs >> path.base;
-        if(path.base == 0)
-          path.base = curry::nobase;
+        ifs >> word;
+        if(word == "IFree")
+        {
+          path.base = curry::freevar;
+          path.idx = 0; // unused
+        }
+        else if(word == "IBind")
+        {
+          path.base = curry::bind;
+          path.idx = 0; // unused
+        }
         else
-          base_one_to_zero(path.base);
+        {
+          std::stringstream ss(word);
+          ss.exceptions(ifs.exceptions());
+          ss >> path.base;
+          if(path.base == 0)
+            path.base = curry::nobase;
+          else
+            base_one_to_zero(path.base);
 
-        // Get the next index.
-        ifs >> path.idx;
-        base_one_to_zero(path.idx);
+          // Get the next index.
+          ifs >> path.idx;
+          base_one_to_zero(path.idx);
+        }
       }
       else break;
     }

@@ -125,23 +125,35 @@ namespace
     result_type operator()(curry::Rule const & rule)
       { rule.visit(*this); }
 
-    // Subcases of Rule.
-    result_type operator()(int64_t x)
+  private:
+
+    /// Rewrites the target to a simple constructor with built-in data.
+    template<typename Data>
+    void rewrite_data_ctor(Data data, tgt::value const & vt)
     {
-      this->target_p.arrow(ND_VPTR) = compiler.rt.int64_vt;
+      this->target_p.arrow(ND_VPTR) = vt;
       this->target_p.arrow(ND_TAG) = compiler::CTOR;
       ref slot0(&this->target_p.arrow(ND_SLOT0));
       // FIXME: get_constant should not really be needed.
-      slot0 = typecast(get_constant(x), *types::char_());
+      slot0 = typecast(get_constant(data), *types::char_());
     }
 
-    result_type operator()(double rule)
-      {} // Not implemented.
+  public:
+
+    // Subcases of Rule.
+    result_type operator()(char data)
+      { rewrite_data_ctor(data, compiler.rt.Char_vt); }
+
+    result_type operator()(int64_t data)
+      { rewrite_data_ctor(data, compiler.rt.Int_vt); }
+
+    result_type operator()(double data)
+      { rewrite_data_ctor(data, compiler.rt.Double_vt); }
 
     // Rewrites the root as a FAIL node.
     result_type operator()(curry::Fail const &)
     {
-      this->target_p.arrow(ND_VPTR) = compiler.rt.fail_vt;
+      this->target_p.arrow(ND_VPTR) = compiler.rt.failed_vt;
       this->target_p.arrow(ND_TAG) = compiler::FAIL;
     }
 
@@ -154,7 +166,7 @@ namespace
       this->target_p.arrow(ND_SLOT0) = target;
     }
 
-    result_type operator()(curry::Expr const & expr)
+    result_type operator()(curry::Term const & term)
     {
       // The target node pointer is clobbered so that recursion can be used.
       // Save it for below.
@@ -163,8 +175,8 @@ namespace
       // Each child needs to be allocated and initialized.  This children are
       // stored as i8* pointers.
       std::vector<tgt::value> child_data;
-      child_data.reserve(expr.args.size());
-      for(auto const & subexpr: expr.args)
+      child_data.reserve(term.args.size());
+      for(auto const & subexpr: term.args)
       {
         // Avoid creating FWD nodes for subexpressions.
         if(curry::Ref const * varref = subexpr.getvar())
@@ -189,7 +201,7 @@ namespace
 
       // Set the vtable and tag.
       this->compiler.node_init(
-          this->target_p, lookup(compiler.lib_stab, expr.qname)
+          this->target_p, lookup(compiler.lib_stab, term.qname)
         );
 
       // Set the child pointers.
@@ -210,10 +222,10 @@ namespace
       }
     }
 
-    result_type operator()(curry::ExternalCall const & expr)
+    result_type operator()(curry::ExternalCall const & term)
     {
       tgt::function fun = extern_<tgt::function>(
-          this->compiler.ir.stepfun_t, expr.qname.name
+          this->compiler.ir.stepfun_t, term.qname.name
         );
       fun(this->target_p);
     }
@@ -243,13 +255,19 @@ namespace
 
   public:
 
-    size_t eval_condition(curry::Rule const & condition)
+    // Evaluates the condition to get a path index.  Returns false if the
+    // condition cannot be evaluated (in which case, the function cannot be
+    // compiled).
+    bool eval_condition(curry::Rule const & condition, size_t & pathid)
     {
       if(curry::Ref const * cond = condition.getvar())
-        return cond->pathid;
-      else if(curry::Expr const * expr = condition.getexpr())
       {
-        (void) expr;
+        pathid = cond->pathid;
+        return true;
+      }
+      else if(curry::Term const * term = condition.getterm())
+      {
+        (void) term;
         std::cerr
             << "Warning: expressions in branch conditions are not implemented "
                "and will cause the program to terminate at runtime."
@@ -259,7 +277,7 @@ namespace
             "encountered."
           );
         this->compiler.clib.exit(1);
-        return 0;
+        return false;
       }
       else
         throw compile_error("Invalid branch condition");
@@ -268,9 +286,13 @@ namespace
     result_type operator()(curry::Branch const & branch)
     {
       // Look up the inductive node.
-      tgt::value const inductive = this->resolve_path(
-          eval_condition(branch.condition)
-        );
+      size_t pathid;
+      if(!eval_condition(branch.condition, pathid))
+      {
+        // Stop compiling.  Something is not implemented for this function.
+        return;
+      }
+      tgt::value const inductive = this->resolve_path(pathid);
 
       // Declare the jump table in the target program.
       tgt::type char_p = *tgt::types::char_();
@@ -409,11 +431,11 @@ namespace sprite { namespace compiler
   value construct(
       compiler::ModuleCompiler const & compiler
     , tgt::value const & root_p
-    , curry::Rule const & expr
+    , curry::Rule const & term
     )
   {
     ::Rewriter c(compiler, root_p);
-    expr.visit(c);
+    term.visit(c);
     return c.target_p;
   }
 

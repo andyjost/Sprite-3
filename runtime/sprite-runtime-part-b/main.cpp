@@ -5,24 +5,23 @@
 
 using namespace sprite::backend;
 
-#define SPRITE_HANDLE_BUILTIN(name)                              \
-    void build_vt_for_##name(sprite::compiler::ir_h const & ir); \
-  /**/
-#include "sprite/builtins.def"
-
 namespace sprite { namespace compiler
 {
   function make_succ_function(function fun, ir_h const & ir, int64_t arity);
 }}
 
-// Create the vtable for FAIL nodes.
-void build_vt_for_fail(sprite::compiler::ir_h const & ir)
+// Builds a vtable for a constructor.
+void build_vt_for_constructor(
+    sprite::compiler::ir_h const & ir, std::string const & name, size_t arity
+  )
 {
-  extern_(ir.vtable_t, sprite::compiler::get_vt_name("fail"))
+  // Note: this would need to be improved if built-in constructors with arity>0
+  // are added.  This code assumes the N function never needs to do anything.
+  extern_(ir.vtable_t, sprite::compiler::get_vt_name(name))
       .set_initializer(_t(
-          &get_label_function(ir, "failed")
-        , &get_arity_function(ir, 0)
-        , &get_succ_function(ir, 0)
+          &get_label_function(ir, name)
+        , &get_arity_function(ir, arity)
+        , &get_succ_function(ir, arity)
         , &get_null_step_function(ir)
         , &get_null_step_function(ir)
         ))
@@ -53,7 +52,10 @@ int main()
     make_succ_function(f, ir, i);
   }
 
-  #define SPRITE_HANDLE_BUILTIN(name) build_vt_for_##name(ir);
+  // Build the vtables for built-in constructors.
+  #define SPRITE_HANDLE_BUILTIN(name, arity)      \
+      build_vt_for_constructor(ir, #name, arity); \
+    /**/
   #include "sprite/builtins.def"
 
   llvm::WriteBitcodeToFile(module_b.ptr(), llvm::outs());

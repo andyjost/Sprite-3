@@ -3,11 +3,12 @@
  * @brief Contains data structures for representing Curry input programs.
  */
 #pragma once
+#include <iterator>
 #include <limits>
+#include <list>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <iterator>
 
 namespace sprite { namespace curry
 {
@@ -57,24 +58,40 @@ namespace sprite { namespace curry
   using Case = Case_<>;
   
   /**
-   * @brief Represents expression construction in a RHS rule expression.
+   * @brief Represents a linear term appearing in a RHS rule.
    *
    * The template parameter is needed to break a cyclic dependency.
    */
   template<typename Rule_ = Rule>
-  struct Expr_
+  struct Term_
   {
     Qname qname;
     std::vector<Rule_> args;
 
-    Expr_(
+    Term_(
         Qname const & qname_ = Qname()
       , std::vector<Rule_> const & args_ = std::vector<Rule_>()
       )
       : qname(qname_), args(args_)
     {}
   };
-  using Expr = Expr_<>;
+  using Term = Term_<>;
+
+  /**
+   * @brief Represents a non-linear term appearing in a RHS rule.
+   *
+   * This is associated with IBind variables in ICurry.  Non-linear terms are
+   * specified as a series of steps that define intermediate values, and a
+   * final step that produces the result.
+   */
+  struct NLTerm
+  {
+    // Each step creates a new variable binding associated with varid.
+    struct Step { size_t varid; Term term; };
+    std::list<Step> steps;
+    // The result is the value of the term.
+    Term result;
+  };
 
   /// Represents a variable reference.
   struct Ref { size_t pathid; };
@@ -86,9 +103,9 @@ namespace sprite { namespace curry
   };
 
   /// Represents a partial application.
-  struct Partial : Expr
+  struct Partial : Term
   {
-    using Expr::Expr;
+    using Term::Term;
   };
 
   /**
@@ -101,24 +118,25 @@ namespace sprite { namespace curry
   struct Rule
   {
     Rule(Fail arg) : tag(FAIL), fail() {}
-    Rule(int64_t const & arg) : tag(INT), int_(arg) {}
+    Rule(char arg) : tag(CHAR), char_(arg) {}
+    Rule(int64_t arg) : tag(INT), int_(arg) {}
     Rule(double arg) : tag(DOUBLE), double_(arg) {}
     Rule(Ref arg) : tag(VAR), var(arg) {}
     Rule(ExternalCall const & arg) : tag(EXTERNAL), external(arg) {}
     Rule(Partial const & arg) : tag(PARTIAL), partial(arg) {}
-
+    Rule(NLTerm const & arg) : tag(NLTERM), nlterm(arg) {} 
     template<
         typename...Args
       , typename = typename std::enable_if<
-            std::is_constructible<Expr, Args...>::value
+            std::is_constructible<Term, Args...>::value
           >::type
       >
     Rule(Args &&...args)
-      : tag(NODE), expr(std::forward<Args>(args)...)
+      : tag(TERM), term(std::forward<Args>(args)...)
     {}
 
     Rule(Qname const & qname, std::vector<Rule> && args)
-      : tag(NODE), expr(qname, std::move(args))
+      : tag(TERM), term(qname, std::move(args))
     {}
 
     Rule(Rule && arg) : tag(arg.tag)
@@ -126,12 +144,14 @@ namespace sprite { namespace curry
       switch(tag)
       {
         case FAIL: new(&fail) Fail(); break;
+        case CHAR: new(&char_) char(arg.char_); break;
         case INT: new(&int_) int64_t(arg.int_); break;
         case DOUBLE: new(&double_) double(arg.double_); break;
         case VAR: new(&var) Ref(arg.var); break;
-        case NODE: new(&expr) Expr(std::move(arg.expr)); break;
+        case TERM: new(&term) Term(std::move(arg.term)); break;
         case EXTERNAL: new(&external) ExternalCall(std::move(arg.external)); break;
         case PARTIAL: new(&partial) Partial(std::move(arg.partial)); break;
+        case NLTERM: new(&nlterm) NLTerm(std::move(arg.nlterm)); break;
       }
     }
     Rule(Rule const & arg) : tag(arg.tag)
@@ -139,12 +159,14 @@ namespace sprite { namespace curry
       switch(tag)
       {
         case FAIL: new(&fail) Fail(); break;
+        case CHAR: new(&char_) char(arg.char_); break;
         case INT: new(&int_) int64_t(arg.int_); break;
         case DOUBLE: new(&double_) double(arg.double_); break;
         case VAR: new(&var) Ref(arg.var); break;
-        case NODE: new(&expr) Expr(arg.expr); break;
+        case TERM: new(&term) Term(arg.term); break;
         case EXTERNAL: new(&external) ExternalCall(arg.external); break;
         case PARTIAL: new(&partial) Partial(arg.partial); break;
+        case NLTERM: new(&nlterm) NLTerm(arg.nlterm); break;
       }
     }
     Rule & operator=(Rule && arg)
@@ -163,10 +185,11 @@ namespace sprite { namespace curry
     {
       switch(tag)
       {
-        case NODE: expr.~Expr(); break;
+        case TERM: term.~Term(); break;
         case FAIL: fail.~Fail(); break;
         case EXTERNAL: external.~ExternalCall(); break;
         case PARTIAL: partial.~Partial(); break;
+        case NLTERM: nlterm.~NLTerm(); break;
         default:;
       }
     }
@@ -178,18 +201,22 @@ namespace sprite { namespace curry
       {
         case FAIL:
           return visitor(this->fail);
+        case CHAR:
+          return visitor(this->char_);
         case INT:
           return visitor(this->int_);
         case DOUBLE:
           return visitor(this->double_);
         case VAR:
           return visitor(this->var);
-        case NODE:
-          return visitor(this->expr);
+        case TERM:
+          return visitor(this->term);
         case EXTERNAL:
           return visitor(this->external);
         case PARTIAL:
           return visitor(this->partial);
+        case NLTERM:
+          return visitor(this->nlterm);
       }
     }
     Ref const * getvar() const
@@ -198,17 +225,17 @@ namespace sprite { namespace curry
         return &var;
       return nullptr;
     }
-    Expr const * getexpr() const
+    Term const * getterm() const
     {
-      if(tag==NODE)
-        return &expr;
+      if(tag==TERM)
+        return &term;
       return nullptr;
     }
   private:
-    enum { FAIL, INT, DOUBLE, VAR, NODE, EXTERNAL, PARTIAL } tag;
+    enum { FAIL, CHAR, INT, DOUBLE, VAR, TERM, EXTERNAL, PARTIAL, NLTERM } tag;
     union {
-      Fail fail; int64_t int_; double double_; Ref var; Expr expr;
-      ExternalCall external; Partial partial;
+      Fail fail; char char_; int64_t int_; double double_; Ref var; Term term;
+      ExternalCall external; Partial partial; NLTerm nlterm;
     };
   };
 
@@ -220,7 +247,6 @@ namespace sprite { namespace curry
     Rule condition;
     std::vector<Case> cases;
   };
-
 
   /**
    * @brief Represents a function definition.
@@ -235,8 +261,8 @@ namespace sprite { namespace curry
     Definition(Branch && arg) : tag(BRANCH), branch(std::move(arg)) {}
     Definition(Rule const & arg) : tag(RULE), rule(arg) {}
     Definition(Rule && arg) : tag(RULE), rule(std::move(arg)) {}
-    Definition(Expr const & arg) : tag(RULE), rule(arg) {}
-    Definition(Expr && arg) : tag(RULE), rule(std::move(arg)) {}
+    Definition(Term const & arg) : tag(RULE), rule(arg) {}
+    Definition(Term && arg) : tag(RULE), rule(std::move(arg)) {}
     // template<typename ConvertsToRule
     //   , typename = typename std::enable_if<
     //         std::is_constructible<Rule, ConvertsToRule>::value
@@ -297,8 +323,18 @@ namespace sprite { namespace curry
     union {Branch branch; Rule rule;};
   };
 
-  /// Used with Function::PathElem to indicate no base path (i.e., a terminus).
-  enum { nobase = std::numeric_limits<size_t>::max() };
+  /**
+   * @brief Special values used with Function::PathElem.
+   *
+   * nobase indicates there is no base path (i.e., a terminus).
+   * freevar indicates the path is to a free variable.
+   * bind is used for bound variables, used when building non-linear terms.
+   */
+  enum {
+      nobase = std::numeric_limits<size_t>::max()
+    , freevar = nobase - 1
+    , bind = freevar - 1
+    };
 
   /// Represents a Curry function.
   // Note: maintain layout compatibility with Constructor!

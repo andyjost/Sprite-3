@@ -106,12 +106,12 @@ namespace sprite { namespace compiler
     char unused;
 
     // Built-in vtables.
-    #define SPRITE_HANDLE_BUILTIN(name) global const name##_vt;
+    #define SPRITE_HANDLE_BUILTIN(name, _) global const name##_vt;
     #include "sprite/builtins.def"
 
     rt_h(ir_h const & ir)
       : unused()
-      #define SPRITE_HANDLE_BUILTIN(name)                     \
+      #define SPRITE_HANDLE_BUILTIN(name, _)                  \
         , name##_vt(extern_(ir.vtable_t, get_vt_name(#name))) \
         /**/
       #include "sprite/builtins.def"
