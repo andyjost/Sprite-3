@@ -7,8 +7,8 @@
 #include <limits>
 
 // Enable to add debug output statements.
-// #define DEBUGSTMT(stmt)
-#define DEBUGSTMT(stmt) stmt
+#define DEBUGSTMT(stmt)
+// #define DEBUGSTMT(stmt) stmt
 
 #define SPRITE_SKIPSPACE(rv)                                     \
     while(!ifs.eof() && std::isspace(ifs.peek())) { ifs.get(); } \
@@ -146,8 +146,11 @@ namespace sprite { namespace curry
       }
       else if(is_choice)
       {
-        // Treat the literal Or as if it were a node called "Prelude.Choice".
-        term.qname = Qname{"Prelude", "Choice"};
+        // Treat the literal Or as if it were a node called "Prelude.?".  That
+        // node will not fail symbol lookup, but it creates an infinite cycle.
+        // That will be fixed by modifying the symbol table for Prelude.? to
+        // refer to the built-in choice node.
+        term.qname = Qname{"Prelude", "?"};
       }
       else
       {
@@ -214,7 +217,7 @@ namespace sprite { namespace curry
       ifs >> x;
       return x;
     }
-    else if(word == "double")
+    else if(word == "float")
     {
       double x;
       ifs >> x;
@@ -458,7 +461,6 @@ namespace sprite { namespace curry
       }
       else if(word == "function")
       {
-        DEBUGSTMT(std::cout << "Reading function" << std::endl;)
         mod.functions.emplace_back();
         read_function(ifs, mod.name, mod.functions.back());
       }

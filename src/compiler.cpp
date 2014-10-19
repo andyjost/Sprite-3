@@ -2,6 +2,7 @@
 #include "sprite/curryinput.hpp"
 #include "sprite/compiler.hpp"
 #include "sprite/runtime.hpp"
+#include <algorithm>
 
 using namespace sprite;
 using namespace sprite::compiler::member_labels; // for ND_* and VT_* enums.
@@ -62,12 +63,41 @@ namespace
     // to skip over FWD nodes.
     mutable tgt::ref resolved_path_alloca;
 
+    // A mapping that contains free variables.  Free variables are not
+    // reachable from the root node.
+    mutable std::map<size_t, tgt::ref> freevar_alloca;
+
     // Looks up a node using the function paths and path reference.  The result
-    // is a node_t* in the target.
+    // is a node_t* in the target.  If the variable referenced is a free
+    // variable, then it will be allocated (if necessary).
     tgt::value resolve_path(size_t pathid) const
     {
-      this->resolved_path_alloca = this->root_p;
-      _resolve_path(this->fundef->paths.at(pathid));
+      auto const & pathelem = this->fundef->paths.at(pathid);
+
+      switch(pathelem.base)
+      {
+        // Handle allocated variables.
+        case curry::freevar:
+        case curry::bind:
+        {
+          auto it = freevar_alloca.find(pathid);
+          if(it == freevar_alloca.end())
+          {
+            auto pair = freevar_alloca.emplace(
+                pathid, tgt::local(*this->compiler.ir.node_t)
+              );
+            this->resolved_path_alloca = pair.first->second;
+          }
+          else
+            this->resolved_path_alloca = it->second;
+          break;
+        }
+        // Handle regular variables.
+        default:
+          this->resolved_path_alloca = this->root_p;
+          _resolve_path(pathelem);
+          break;
+      }
       return this->resolved_path_alloca;
     }
 
@@ -78,6 +108,7 @@ namespace
     // Helper for @p resolve_path.  Updates @p resolved_path_alloca.
     void _resolve_path(curry::Function::PathElem const & pathelem) const
     {
+      assert(pathelem.base != curry::freevar);
       // Walk the base path.
       if(pathelem.base != curry::nobase)
         _resolve_path(this->fundef->paths.at(pathelem.base));
@@ -129,26 +160,26 @@ namespace
 
     /// Rewrites the target to a simple constructor with built-in data.
     template<typename Data>
-    void rewrite_data_ctor(Data data, tgt::value const & vt)
+    void rewrite_integer_data_ctor(Data data, tgt::value const & vt)
     {
       this->target_p.arrow(ND_VPTR) = vt;
       this->target_p.arrow(ND_TAG) = compiler::CTOR;
-      ref slot0(&this->target_p.arrow(ND_SLOT0));
-      // FIXME: get_constant should not really be needed.
-      slot0 = typecast(get_constant(data), *types::char_());
+      auto slot0 = this->target_p.arrow(ND_SLOT0);
+      ref slot0_typed(bitcast(&slot0, *get_type<Data>()));
+      slot0_typed = data;
     }
 
   public:
-
+  
     // Subcases of Rule.
     result_type operator()(char data)
-      { rewrite_data_ctor(data, compiler.rt.Char_vt); }
+      { return rewrite_integer_data_ctor(data, compiler.rt.Char_vt); }
 
     result_type operator()(int64_t data)
-      { rewrite_data_ctor(data, compiler.rt.Int_vt); }
+      { return rewrite_integer_data_ctor(data, compiler.rt.Int64_vt); }
 
     result_type operator()(double data)
-      { rewrite_data_ctor(data, compiler.rt.Double_vt); }
+      { return rewrite_integer_data_ctor(data, compiler.rt.Float_vt); }
 
     // Rewrites the root as a FAIL node.
     result_type operator()(curry::Fail const &)
@@ -222,6 +253,11 @@ namespace
       }
     }
 
+    result_type operator()(curry::NLTerm const & term)
+    {
+      assert(0);
+    }
+
     result_type operator()(curry::ExternalCall const & term)
     {
       tgt::function fun = extern_<tgt::function>(
@@ -269,7 +305,8 @@ namespace
       {
         (void) term;
         std::cerr
-            << "Warning: expressions in branch conditions are not implemented "
+            << "Warning: while compiling function \"" << fundef->name
+            << "\": expressions in branch conditions are not implemented "
                "and will cause the program to terminate at runtime."
             << std::endl;
         this->compiler.clib.printf(
@@ -642,6 +679,17 @@ namespace sprite { namespace compiler
           tgt::scope _ = dyn_cast<function>(step);
           ::compile_function(compiler, arg("root_p"), fun);
         }
+      }
+
+      // Special case: update symbol table entries for Prelude.? with the
+      // built-in choice implementation.
+      if(cymodule.name == "Prelude")
+      {
+        auto ichoice = module_stab.nodes.find("?");
+        if(ichoice == module_stab.nodes.end())
+          throw compile_error("Prelude.? was not found");
+        ichoice->second.vtable.reset(compiler.rt.choice_vt.as_globalvar());
+        ichoice->second.tag = CHOICE;
       }
     }
   }

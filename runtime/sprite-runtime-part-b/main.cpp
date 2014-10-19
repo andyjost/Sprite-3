@@ -5,18 +5,23 @@
 
 using namespace sprite::backend;
 
+void build_vt_for_Char(sprite::compiler::ir_h const & ir);
+void build_vt_for_choice(sprite::compiler::ir_h const & ir);
+void build_vt_for_Float(sprite::compiler::ir_h const & ir);
+void build_vt_for_fwd(sprite::compiler::ir_h const & ir);
+void build_vt_for_Int64(sprite::compiler::ir_h const & ir);
+
 namespace sprite { namespace compiler
 {
   function make_succ_function(function fun, ir_h const & ir, int64_t arity);
 }}
 
-// Builds a vtable for a constructor.
-void build_vt_for_constructor(
+// A trivial node is one with label and arity, but no meaningful action for H
+// or N.
+void build_vt_for_trivial_node(
     sprite::compiler::ir_h const & ir, std::string const & name, size_t arity
   )
 {
-  // Note: this would need to be improved if built-in constructors with arity>0
-  // are added.  This code assumes the N function never needs to do anything.
   extern_(ir.vtable_t, sprite::compiler::get_vt_name(name))
       .set_initializer(_t(
           &get_label_function(ir, name)
@@ -27,6 +32,15 @@ void build_vt_for_constructor(
         ))
 	  ;
 }
+
+// Note: choice is trivial because H and N are never called.  The pull-tab
+// steps are applied by a parent when it observes its child is a choice.
+void build_vt_for_choice(sprite::compiler::ir_h const & ir)
+  { build_vt_for_trivial_node(ir, "choice", 2); }
+void build_vt_for_failed(sprite::compiler::ir_h const & ir)
+  { build_vt_for_trivial_node(ir, "failed", 0); }
+void build_vt_for_freevar(sprite::compiler::ir_h const & ir)
+  { build_vt_for_trivial_node(ir, "freevar", 0); }
 
 int main()
 {
@@ -53,9 +67,7 @@ int main()
   }
 
   // Build the vtables for built-in constructors.
-  #define SPRITE_HANDLE_BUILTIN(name, arity)      \
-      build_vt_for_constructor(ir, #name, arity); \
-    /**/
+  #define SPRITE_HANDLE_BUILTIN(name, arity) build_vt_for_##name(ir);
   #include "sprite/builtins.def"
 
   llvm::WriteBitcodeToFile(module_b.ptr(), llvm::outs());
