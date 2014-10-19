@@ -45,7 +45,8 @@ do
   TARGET=$(dirname $i)/.curry/$(basename $i ".curry")
 
     rm -f $FILE.icur $FILE.read $TARGET.icur $TARGET.read
-    command="pakcs $QUIET -r $BASEDIR/icurry/Main.curry $FILE"
+    # command="pakcs $QUIET -r $BASEDIR/icurry/Main.curry $FILE"
+    command="pakcs $QUIET :set args $FILE :load $BASEDIR/icurry/Main.curry :eval Main.main :quit"
     # The -q option to pakcs is not completely effective.
     if [ -n "$QUIET" ]
     then

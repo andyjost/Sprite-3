@@ -1,5 +1,6 @@
 
 #include "Prelude.hpp"
+#include "Compare.hpp"
 
 namespace _Prelude {
 
@@ -2942,6 +2943,7 @@ namespace _Prelude {
     // VAR (2,1,(IPath (Arg 2)))
     // LHS variable (1,1,(IPath (Arg 1))) is argument 1
     // LHS variable (2,1,(IPath (Arg 2))) is argument 2
+//hr    return new ::_Prelude::__0x3F(arg1, arg2);
     return new Engine::Choice(arg1, arg2);
   }
 
@@ -3571,12 +3573,7 @@ namespace _Prelude {
     Engine::hfun(right);
     goto *table[(*right)->get_kind()];
   __0x28_0x29:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_EQ();
   }
 
   Node* __0x5B_0x5D::boolequal(Node** right) { // [] 
@@ -3609,19 +3606,9 @@ namespace _Prelude {
     Engine::hfun(right);
     goto *table[(*right)->get_kind()];
   __0x5B_0x5D:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_EQ();
   __0x3A:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_LT();
   }
 
   Node* __0x3A::boolequal(Node** right) { // : 
@@ -3654,19 +3641,9 @@ namespace _Prelude {
     Engine::hfun(right);
     goto *table[(*right)->get_kind()];
   __0x5B_0x5D:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_GT();
   __0x3A:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_descend_compare(::_Prelude::_compare::make(arg1,((::_Prelude::__0x3A*) (*right))->arg1),::_Prelude::_compare::make(arg2,((::_Prelude::__0x3A*) (*right))->arg2));
   }
 
   Node* __0x28_0x2C_0x29::boolequal(Node** right) { // (,) 
@@ -3697,12 +3674,7 @@ namespace _Prelude {
     Engine::hfun(right);
     goto *table[(*right)->get_kind()];
   __0x28_0x2C_0x29:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_descend_compare(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x29*) (*right))->arg1),::_Prelude::_compare::make(arg2,((::_Prelude::__0x28_0x2C_0x29*) (*right))->arg2));
   }
 
   Node* __0x28_0x2C_0x2C_0x29::boolequal(Node** right) { // (,,) 
@@ -3733,12 +3705,7 @@ namespace _Prelude {
     Engine::hfun(right);
     goto *table[(*right)->get_kind()];
   __0x28_0x2C_0x2C_0x29:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_descend_compare(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_compare::make(arg3,((::_Prelude::__0x28_0x2C_0x2C_0x29*) (*right))->arg3)));
   }
 
   Node* __0x28_0x2C_0x2C_0x2C_0x29::boolequal(Node** right) { // (,,,) 
@@ -3769,12 +3736,7 @@ namespace _Prelude {
     Engine::hfun(right);
     goto *table[(*right)->get_kind()];
   __0x28_0x2C_0x2C_0x2C_0x29:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_descend_compare(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_compare::make(arg4,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x29*) (*right))->arg4))));
   }
 
   Node* __0x28_0x2C_0x2C_0x2C_0x2C_0x29::boolequal(Node** right) { // (,,,,) 
@@ -3805,12 +3767,7 @@ namespace _Prelude {
     Engine::hfun(right);
     goto *table[(*right)->get_kind()];
   __0x28_0x2C_0x2C_0x2C_0x2C_0x29:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_descend_compare(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_compare::make(arg5,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg5)))));
   }
 
   Node* __0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x29::boolequal(Node** right) { // (,,,,,) 
@@ -3841,12 +3798,7 @@ namespace _Prelude {
     Engine::hfun(right);
     goto *table[(*right)->get_kind()];
   __0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x29:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_descend_compare(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_compare::make(arg6,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg6))))));
   }
 
   Node* __0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29::boolequal(Node** right) { // (,,,,,,) 
@@ -3877,12 +3829,7 @@ namespace _Prelude {
     Engine::hfun(right);
     goto *table[(*right)->get_kind()];
   __0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_descend_compare(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_compare::make(arg7,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg7)))))));
   }
 
   Node* __0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29::boolequal(Node** right) { // (,,,,,,,) 
@@ -3913,12 +3860,7 @@ namespace _Prelude {
     Engine::hfun(right);
     goto *table[(*right)->get_kind()];
   __0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_descend_compare(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_compare::make(arg8,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg8))))))));
   }
 
   Node* __0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29::boolequal(Node** right) { // (,,,,,,,,) 
@@ -3949,12 +3891,7 @@ namespace _Prelude {
     Engine::hfun(right);
     goto *table[(*right)->get_kind()];
   __0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_descend_compare(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_compare::make(arg9,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg9)))))))));
   }
 
   Node* __0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29::boolequal(Node** right) { // (,,,,,,,,,) 
@@ -3985,12 +3922,7 @@ namespace _Prelude {
     Engine::hfun(right);
     goto *table[(*right)->get_kind()];
   __0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_descend_compare(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_compare::make(arg10,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg10))))))))));
   }
 
   Node* __0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29::boolequal(Node** right) { // (,,,,,,,,,,) 
@@ -4021,12 +3953,7 @@ namespace _Prelude {
     Engine::hfun(right);
     goto *table[(*right)->get_kind()];
   __0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_descend_compare(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_compare::make(arg11,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg11)))))))))));
   }
 
   Node* __0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29::boolequal(Node** right) { // (,,,,,,,,,,,) 
@@ -4057,12 +3984,7 @@ namespace _Prelude {
     Engine::hfun(right);
     goto *table[(*right)->get_kind()];
   __0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_descend_compare(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_compare::make(arg12,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg12))))))))))));
   }
 
   Node* __0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29::boolequal(Node** right) { // (,,,,,,,,,,,,) 
@@ -4093,12 +4015,7 @@ namespace _Prelude {
     Engine::hfun(right);
     goto *table[(*right)->get_kind()];
   __0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_descend_compare(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_compare::make(arg13,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg13)))))))))))));
   }
 
   Node* __0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29::boolequal(Node** right) { // (,,,,,,,,,,,,,) 
@@ -4129,12 +4046,7 @@ namespace _Prelude {
     Engine::hfun(right);
     goto *table[(*right)->get_kind()];
   __0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_descend_compare(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_compare::make(arg14,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg14))))))))))))));
   }
 
   Node* __0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29::boolequal(Node** right) { // (,,,,,,,,,,,,,,) 
@@ -4165,12 +4077,7 @@ namespace _Prelude {
     Engine::hfun(right);
     goto *table[(*right)->get_kind()];
   __0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_descend_compare(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_descend_compare::make(::_Prelude::_compare::make(arg1,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg1),::_Prelude::_compare::make(arg15,((::_Prelude::__0x28_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x2C_0x29*) (*right))->arg15)))))))))))))));
   }
 
   Node* _False::boolequal(Node** right) { // False 
@@ -4203,19 +4110,9 @@ namespace _Prelude {
     Engine::hfun(right);
     goto *table[(*right)->get_kind()];
   _False:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_EQ();
   _True:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_LT();
   }
 
   Node* _True::boolequal(Node** right) { // True 
@@ -4248,19 +4145,9 @@ namespace _Prelude {
     Engine::hfun(right);
     goto *table[(*right)->get_kind()];
   _False:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_GT();
   _True:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_EQ();
   }
 
   Node* _LT::boolequal(Node** right) { // LT 
@@ -4295,26 +4182,11 @@ namespace _Prelude {
     Engine::hfun(right);
     goto *table[(*right)->get_kind()];
   _LT:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_EQ();
   _EQ:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_LT();
   _GT:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_LT();
   }
 
   Node* _EQ::boolequal(Node** right) { // EQ 
@@ -4349,26 +4221,11 @@ namespace _Prelude {
     Engine::hfun(right);
     goto *table[(*right)->get_kind()];
   _LT:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_GT();
   _EQ:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_EQ();
   _GT:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_LT();
   }
 
   Node* _GT::boolequal(Node** right) { // GT 
@@ -4403,26 +4260,11 @@ namespace _Prelude {
     Engine::hfun(right);
     goto *table[(*right)->get_kind()];
   _LT:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_GT();
   _EQ:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_GT();
   _GT:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_EQ();
   }
 
   Node* _Nothing::boolequal(Node** right) { // Nothing 
@@ -4455,19 +4297,9 @@ namespace _Prelude {
     Engine::hfun(right);
     goto *table[(*right)->get_kind()];
   _Nothing:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_EQ();
   _Just:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_LT();
   }
 
   Node* _Just::boolequal(Node** right) { // Just 
@@ -4500,19 +4332,9 @@ namespace _Prelude {
     Engine::hfun(right);
     goto *table[(*right)->get_kind()];
   _Nothing:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_GT();
   _Just:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_compare(arg1,((::_Prelude::_Just*) (*right))->arg1);
   }
 
   Node* _Left::boolequal(Node** right) { // Left 
@@ -4545,19 +4367,9 @@ namespace _Prelude {
     Engine::hfun(right);
     goto *table[(*right)->get_kind()];
   _Left:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_compare(arg1,((::_Prelude::_Left*) (*right))->arg1);
   _Right:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_LT();
   }
 
   Node* _Right::boolequal(Node** right) { // Right 
@@ -4590,19 +4402,9 @@ namespace _Prelude {
     Engine::hfun(right);
     goto *table[(*right)->get_kind()];
   _Left:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_GT();
   _Right:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_compare(arg1,((::_Prelude::_Right*) (*right))->arg1);
   }
 
   Node* _IOError::boolequal(Node** right) { // IOError 
@@ -4633,11 +4435,6 @@ namespace _Prelude {
     Engine::hfun(right);
     goto *table[(*right)->get_kind()];
   _IOError:
-    if (get_kind() < (*right)->get_kind())
-      return new _Prelude::_LT();
-    if (get_kind() > (*right)->get_kind())
-      return new _Prelude::_GT();
-    // NEXT IS PRELIMINARY
-    return new _Prelude::_EQ();
+    return new ::_Prelude::_compare(arg1,((::_Prelude::_IOError*) (*right))->arg1);
   }
 }

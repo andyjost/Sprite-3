@@ -10,10 +10,7 @@ then
   exit
 fi
 
-
-
-CMCLIBPATH=$BASEDIR/icurry:$BASEDIR/format:$BASEDIR/backtrack
-PAKCSLIBPATH=$PAKCSHOME/lib:$PAKCSHOME/lib/meta
+# PAKCSLIBPATH=$PAKCSHOME/lib:$PAKCSHOME/lib/meta
 # export PAKCSLIBPATH
 # echo PAKCSLIBPATH $PAKCSLIBPATH
 
@@ -24,12 +21,7 @@ PAKCSLIBPATH=$PAKCSHOME/lib:$PAKCSHOME/lib/meta
     exit
   fi
 
-  CURRYPATH=`pwd`/$(dirname $1):$CMCLIBPATH
-  echo CURRYPATH $CURRYPATH
-  export CURRYPATH
-
-  # HARDWIRED !?
-  /home/cmc/local/pakcs/bin/parsecurry --flat $FILE
+  parsecurry --flat $FILE
   if [ $? = 0 ]
      then echo parsed
      else echo parse error ; exit
@@ -44,7 +36,12 @@ PAKCSLIBPATH=$PAKCSHOME/lib:$PAKCSHOME/lib/meta
     echo \"icur\" up to date
   else
     rm -f $FILE.icur 
-    command="pakcs -q -r $BASEDIR/icurry/Main.curry $FILE"
+    CMCLIBPATH=$BASEDIR/icurry:$BASEDIR/format
+    CURRYPATH=`pwd`/$(dirname $1):$CMCLIBPATH
+    export CURRYPATH
+    echo CURRYPATH $CURRYPATH
+    # command="pakcs $FILE :load Main.curry :eval Main.main :quit"
+    command="pakcs $FILE :load $BASEDIR/icurry/Main.curry :eval Main.main :quit"
     echo Running $command
     $command
     if [ -f $FILE.icur ]
@@ -57,8 +54,11 @@ PAKCSLIBPATH=$PAKCSHOME/lib:$PAKCSHOME/lib/meta
   fi
 
   rm -f $FILE.*pp $TARGET.*pp
-
-  command="pakcs -q -r $BASEDIR/backtrack/Main.curry $TARGET"
+  CMCLIBPATH=$BASEDIR/backtrack:$BASEDIR/format:$BASEDIR/icurry
+  CURRYPATH=`pwd`/$(dirname $1):$CMCLIBPATH
+  export CURRYPATH
+  echo CURRYPATH $CURRYPATH
+  command="pakcs $TARGET :load $BASEDIR/backtrack/Main.curry :eval main :quit"
   echo Running $command
   $command
   if [ -f $TARGET.hpp -a -f $TARGET.cpp ]
