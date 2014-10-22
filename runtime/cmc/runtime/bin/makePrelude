@@ -1,39 +1,18 @@
 #!/bin/sh
 
 BASE=$(dirname $(dirname $(dirname $(readlink -f $0))))
-echo $BASE
+# echo $BASE
 
 cd $BASE/runtime/lib
 
-# Only the pakcs Prelude can be compiled
-echo fetching $PAKCSHOME/lib/Prelude.*
-cp -f $PAKCSHOME/lib/Prelude.* .
-
 if [ -f Prelude.curry ]
 then
-  if [ -f Prelude.prim_c2p ]
-  then
     rm -rf .curry/Prelude.*
     rm -rf Prelude.o Prelude.cpp Prelude.hpp
     $BASE/translator/bin/curry2cpp Prelude
     mv .curry/Prelude.cpp .curry/Prelude.hpp .
+    rm -f .curry/Prelude.fcy .curry/Prelude.fint .curry/Prelude.icurry
     scons
-  else
-    echo File Prelude.prim_c2p is missing
-  fi
 else
   echo File Prelude.curry is missing
 fi
-
-# 0. Let runtime/lib be the current directory
-# 1. Place/copy both Prelude.curry and Prelude.prim_c2p in the current directory
-# 2. Execute: curry2cpp Prelude
-# 3. Move Prelude.cpp and Prelude.hpp from subdirectory .curry in the current directory
-# 4. Edit Prelude.cpp
-#    -- lines that in the previously generated Prelude.cpp are commented //hm
-#       must be commented out the same in the newly compiled Prelude.cpp
-#    -- a line that in the previously generated Prelude.cpp is commented //hr
-#       must be replace by the following line in the new Prelude.cpp
-# 5. Execute scons to generate the Prelude.o file
-
-

@@ -1,4 +1,4 @@
-import Format
+import XFormat
 
 main = do
   putStr (format "Number 3 %d \n" [FI 3])

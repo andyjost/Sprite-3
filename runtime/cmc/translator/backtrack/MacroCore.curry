@@ -3,7 +3,7 @@ module MacroCore where
 import List
 import ICurry
 import Block
-import Format
+import XFormat
 import Utils
 
 -- This module defines function to produce core members of a struct

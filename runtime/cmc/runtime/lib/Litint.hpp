@@ -6,7 +6,7 @@
 #include "Engine.hpp"
 #include "Prelude.hpp"
 
-namespace Litint {
+namespace _Prelude {
   using namespace Engine;
 
   struct Litint : Constructor {
@@ -26,17 +26,5 @@ namespace Litint {
     /*inline*/ Node* boolequal(Node**);
     /*inline*/ Node* compare(Node**);
   };
-
-#define DECL(INTNAME,EXTNAME) \
-  struct INTNAME : Operation { \
-    SYMBOL2(INTNAME,EXTNAME) \
-    /*inline*/ Node* hfun(); \
-  }; // end 
-
-  DECL(__0x2B, "Litint::+")
-  DECL(__0x2D, "Litint::-")
-  DECL(__0x2A, "Litint::*")
-  DECL(_div, "Litint::div")
-  DECL(_mod, "Litint::mod")
 
 }

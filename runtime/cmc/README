@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# Install cmc
+
+# start with root directory, cmc
+
+# build engine and prelude
+pushd runtime/engine; scons; popd
+pushd runtime/bin; makePrelude; popd
+
+# minimal test 
+bin/compile ./Examples/letrec; ./Examples/letrec
+# look for a line: "V :(1,:(2,:(4,:(8,:(16,[])))))"

@@ -1,7 +1,8 @@
+#include "Prelude.hpp"
 #include "Litchar.hpp"
 #include "Litint.hpp"
 
-namespace Litchar {
+namespace _Prelude {
   using namespace Engine;
 
   inline Node*  Litchar::boolequal(Node** right) { 
@@ -43,7 +44,7 @@ namespace Litchar {
       return new _Prelude::_EQ();
   };
 
-  inline Node* _ord::hfun() {
+  Node* _ord::hfun() {
     static void* table[] = {&&fail, &&var, &&choice, &&oper, &&ctor};
     goto *table[(*arg1)->get_kind()];
   fail:
@@ -56,10 +57,10 @@ namespace Litchar {
     goto *table[(*arg1)->get_kind()];
   ctor: 
     char x = ((Litchar*) (*arg1))->arg1;
-    return new Litint::Litint((int) x);
+    return new Litint((int) x);
   };
 
-  inline Node* _chr::hfun() {
+  Node* _chr::hfun() {
     static void* table[] = {&&fail, &&var, &&choice, &&oper, &&ctor};
     goto *table[(*arg1)->get_kind()];
   fail:
@@ -71,7 +72,7 @@ namespace Litchar {
     Engine::hfun(arg1);
     goto *table[(*arg1)->get_kind()];
   ctor: 
-    int x = ((Litint::Litint*) (*arg1))->arg1;
+    int x = ((Litint*) (*arg1))->arg1;
     return new Litchar((char) x);
   };
 

@@ -4,7 +4,7 @@ import List
 
 import ICurry
 import Block
-import Format
+import XFormat
 import Utils
 
 
@@ -106,10 +106,10 @@ makeStmt vtable (BTable suffix flex expr branch_list) -- [(BuiltinVariant,[State
                           (Reference _)      -> False
                           _                  -> True
         selector = if introduce_var then pvar_id suffix else makeArg vtable expr
-        convert_to_prim (Bint _) = format "((Litint::Litint*) (*%s))->arg1"
-                                          [FS selector]
-        convert_to_prim (Bchar _) = format "((Litchar::Litchar*) (*%s))->arg1"
-                                          [FS selector]
+        convert_to_prim (Bint _) = format "((%s*) (*%s))->arg1"
+                                          [FS qualified_int, FS selector]
+        convert_to_prim (Bchar _) = format "((%s*) (*%s))->arg1"
+                                          [FS qualified_char, FS selector]
         convert_to_prim (Bfloat _) = error "BuiltinTable indexed by float"
         
 makeBEntry table (label, stmt_list) 
@@ -125,18 +125,21 @@ makeBEntry table (label, stmt_list)
 ------------------------------------------------------------------
 
 choice_qname = ("Prelude","?")
+qualified_int = "_Prelude::Litint"
+qualified_char = "_Prelude::Litchar"
+
 
 makeExpr _ Exempt
   = "DO_FAIL"
 makeExpr table (Reference path) 
   = format "*(%s)" [FS (refVar table path)]
 makeExpr _ (BuiltinVariant (Bint i))
-  = format "new Litint::Litint(%d)" [FI i]
+  = format "new %s(%d)" [FS qualified_int, FI i]
 -- TODO: Float is not yet implemented
 makeExpr _ (BuiltinVariant (Bfloat f))
   = error ("no literal floats yet \"" ++ show f ++ "\"")
 makeExpr _ (BuiltinVariant (Bchar c))
-  = format "new Litchar::Litchar('%c')" [FC c]
+  = format "new %s('%c')" [FS qualified_char, FC c]
 makeExpr table (Applic _ qname expr_list)
   = format "new %s(%s)" [FS (qualify qname), FS (makeArgList table expr_list)]
 makeExpr table (PartApplic missing expr)
@@ -191,12 +194,12 @@ makeArg _ Exempt
 makeArg table (Reference path) 
   = refVar table path
 makeArg _ (BuiltinVariant (Bint i))
-  = format "Litint::Litint::make(%d)" [FI i]
+  = format "%s::make(%d)" [FS qualified_int, FI i]
 -- TODO: Float is not yet implemented
 makeArg _ (BuiltinVariant (Bfloat f))
   = error ("no literal floats yet \"" ++ show f ++ "\"")
 makeArg _ (BuiltinVariant (Bchar c))
-  = format "Litchar::Litchar::make('%c')" [FC c]
+  = format "%s::make('%c')" [FS qualified_char, FC c]
 makeArg table (Applic _ qname expr_list)
   = format "%s::make(%s)" [FS (qualify qname), FS (makeArgList table expr_list)]
 makeArg table (PartApplic missing expr)

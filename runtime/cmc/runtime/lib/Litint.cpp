@@ -1,6 +1,6 @@
 #include "Litint.hpp"
 
-namespace Litint {
+namespace _Prelude {
   using namespace Engine;
 
   inline Node* Litint::boolequal(Node** right) { 

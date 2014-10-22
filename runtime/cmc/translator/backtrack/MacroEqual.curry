@@ -1,7 +1,7 @@
 import ICurry
 import Utils
 import Block
-import Format
+import XFormat
 
 -- This module produces the equality method of a constructor
 -- This method is the same for all constructors of the same arity,

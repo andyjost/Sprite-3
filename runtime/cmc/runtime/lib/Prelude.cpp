@@ -109,17 +109,23 @@ namespace _Prelude {
       return *(arg3);
   }
 
-  // external Node* _seq::hfun() { throw "External \"Prelude.seq\" not implemented"; }
+  Node* _seq::hfun() { // seq
+    // VAR (1,1,(IPath (Arg 1)))
+    // VAR (2,1,(IPath (Arg 2)))
+    // LHS variable (1,1,(IPath (Arg 1))) is argument 1
+    // LHS variable (2,1,(IPath (Arg 2))) is argument 2
+    return new ::_Prelude::__0x24_0x21(Engine::Partial::make(::_Prelude::_const::make(arg2), 1), arg1);
+  }
 
   // external Node* _ensureNotFree::hfun() { throw "External \"Prelude.ensureNotFree\" not implemented"; }
 
   Node* _ensureSpine::hfun() { // ensureSpine
     // VAR (1,1,(IPath (Arg 1)))
     // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-    return new ::_Prelude::_ensureSpine_0x2EensureList_0x2E18(::_Prelude::_ensureNotFree::make(arg1));
+    return new ::_Prelude::_ensureSpine_0x2EensureList_0x2E20(::_Prelude::_ensureNotFree::make(arg1));
   }
 
-  Node* _ensureSpine_0x2EensureList_0x2E18::hfun() { // ensureSpine.ensureList.18
+  Node* _ensureSpine_0x2EensureList_0x2E20::hfun() { // ensureSpine.ensureList.20
     // VAR (1,5,(IPath (Arg 1)))
     // VAR (2,1,(IPath (Rel 1 ("Prelude",":") 1)))
     // VAR (3,1,(IPath (Rel 1 ("Prelude",":") 2)))
@@ -153,23 +159,9 @@ namespace _Prelude {
     return new ::_Prelude::_apply(arg1, arg2);
   }
 
-  Node* __0x24_0x21::hfun() { // $!
-    // VAR (1,1,(IPath (Arg 1)))
-    // VAR (2,2,(IPath (Arg 2)))
-    // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-    // LHS variable (2,2,(IPath (Arg 2))) is argument 2
-    return new ::_Prelude::_seq(arg2, ::_Prelude::_apply::make(arg1, arg2));
-  }
+  // external Node* __0x24_0x21::hfun() { throw "External \"Prelude.$!\" not implemented"; }
 
-  Node* __0x24_0x21_0x21::hfun() { // $!!
-    // VAR (1,1,(IPath (Arg 1)))
-    // VAR (2,1,(IPath (Arg 2)))
-    // VAR (3,2,IFree)
-    // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-    // LHS variable (2,1,(IPath (Arg 2))) is argument 2
-    Node** var_3 = ::Engine::Variable::make();
-    return new ::_Prelude::_cond(::_Prelude::__0x3D_0x3A_0x3D::make(arg2, var_3), ::_Prelude::_apply::make(arg1, var_3));
-  }
+  // external Node* __0x24_0x21_0x21::hfun() { throw "External \"Prelude.$!!\" not implemented"; }
 
   Node* __0x24_0x23::hfun() { // $#
     // VAR (1,1,(IPath (Arg 1)))
@@ -179,15 +171,7 @@ namespace _Prelude {
     return new ::_Prelude::__0x24_0x21(arg1, ::_Prelude::_ensureNotFree::make(arg2));
   }
 
-  Node* __0x24_0x23_0x23::hfun() { // $##
-    // VAR (1,1,(IPath (Arg 1)))
-    // VAR (2,1,(IPath (Arg 2)))
-    // VAR (3,4,IFree)
-    // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-    // LHS variable (2,1,(IPath (Arg 2))) is argument 2
-    Node** var_3 = ::Engine::Variable::make();
-    return new ::_Prelude::_cond(::_Prelude::__0x3D_0x3A_0x3D::make(arg2, var_3), ::_Prelude::_seq::make(::_Prelude::__0x3D_0x3D::make(var_3, var_3), ::_Prelude::_apply::make(arg1, var_3)));
-  }
+  // external Node* __0x24_0x23_0x23::hfun() { throw "External \"Prelude.$##\" not implemented"; }
 
   Node* _error::hfun() { // error
     // VAR (1,1,(IPath (Arg 1)))
@@ -296,6 +280,52 @@ namespace _Prelude {
     _False_4: // "False"
       return *(arg3);
     _True_4: // "True"
+      return *(arg2);
+  }
+
+  Node* _solve::hfun() { // solve
+    // VAR (1,3,(IPath (Arg 1)))
+    // LHS variable (1,3,(IPath (Arg 1))) is argument 1
+    static void* table_2[]
+      = {&&fail_2, &&var_2, &&choice_2, &&oper_2, &&_False_2, &&_True_2};
+      goto *table_2[(*arg1)->get_kind()];
+    fail_2:
+      return DO_FAIL;
+    var_2:
+      // Engine::narrow(arg1, generator());
+      throw "No narrowing yet";
+      goto *table_2[(*arg1)->get_kind()];
+    choice_2:
+    oper_2:
+      Engine::hfun(arg1);
+      goto *table_2[(*arg1)->get_kind()];
+    _False_2: // "False"
+      return DO_FAIL;
+    _True_2: // "True"
+      return new ::_Prelude::_True();
+  }
+
+  Node* __0x26_0x26_0x3E::hfun() { // &&>
+    // VAR (1,3,(IPath (Arg 1)))
+    // VAR (2,1,(IPath (Arg 2)))
+    // LHS variable (1,3,(IPath (Arg 1))) is argument 1
+    // LHS variable (2,1,(IPath (Arg 2))) is argument 2
+    static void* table_3[]
+      = {&&fail_3, &&var_3, &&choice_3, &&oper_3, &&_False_3, &&_True_3};
+      goto *table_3[(*arg1)->get_kind()];
+    fail_3:
+      return DO_FAIL;
+    var_3:
+      // Engine::narrow(arg1, generator());
+      throw "No narrowing yet";
+      goto *table_3[(*arg1)->get_kind()];
+    choice_3:
+    oper_3:
+      Engine::hfun(arg1);
+      goto *table_3[(*arg1)->get_kind()];
+    _False_3: // "False"
+      return DO_FAIL;
+    _True_3: // "True"
       return *(arg2);
   }
 
@@ -604,11 +634,11 @@ namespace _Prelude {
       Engine::hfun(arg1);
       goto *table_4[(*arg1)->get_kind()];
     __0x5B_0x5D_4: // "[]"
-      return new Litint::Litint(0);
+      return new _Prelude::Litint(0);
     __0x3A_4: // ":"
       // LHS variable (2,0,(IPath (Rel 1 ("Prelude",":") 1))) is not used
       // LHS variable (3,1,(IPath (Rel 1 ("Prelude",":") 2))) is inlined as [(1,4,(IPath (Arg 1))),(3,1,(IPath (Rel 1 ("Prelude",":") 2)))]
-      return new ::_Prelude::__0x2B(Litint::Litint::make(1), ::_Prelude::_length::make(((::_Prelude::__0x3A*) *(arg1))->arg2));
+      return new ::_Prelude::__0x2B(_Prelude::Litint::make(1), ::_Prelude::_length::make(((::_Prelude::__0x3A*) *(arg1))->arg2));
   }
 
   Node* __0x21_0x21::hfun() { // !!
@@ -638,7 +668,7 @@ namespace _Prelude {
       // LHS variable (4,1,(IPath (Rel 1 ("Prelude",":") 2))) is inlined as [(1,5,(IPath (Arg 1))),(4,1,(IPath (Rel 1 ("Prelude",":") 2)))]
       static void* table_6[]
         = {&&fail_6, &&var_6, &&choice_6, &&oper_6, &&_False_6, &&_True_6};
-      Node** var_6 = ::_Prelude::__0x3D_0x3D::make(arg2, Litint::Litint::make(0));
+      Node** var_6 = ::_Prelude::__0x3D_0x3D::make(arg2, _Prelude::Litint::make(0));
         goto *table_6[(*var_6)->get_kind()];
       fail_6:
         return DO_FAIL;
@@ -653,7 +683,7 @@ namespace _Prelude {
       _False_6: // "False"
         static void* table_7[]
           = {&&fail_7, &&var_7, &&choice_7, &&oper_7, &&_False_7, &&_True_7};
-        Node** var_7 = ::_Prelude::__0x3E::make(arg2, Litint::Litint::make(0));
+        Node** var_7 = ::_Prelude::__0x3E::make(arg2, _Prelude::Litint::make(0));
           goto *table_7[(*var_7)->get_kind()];
         fail_7:
           return DO_FAIL;
@@ -668,7 +698,7 @@ namespace _Prelude {
         _False_7: // "False"
           return new ::_Prelude::_failed();
         _True_7: // "True"
-          return new ::_Prelude::__0x21_0x21(((::_Prelude::__0x3A*) *(arg1))->arg2, ::_Prelude::__0x2D::make(arg2, Litint::Litint::make(1)));
+          return new ::_Prelude::__0x21_0x21(((::_Prelude::__0x3A*) *(arg1))->arg2, ::_Prelude::__0x2D::make(arg2, _Prelude::Litint::make(1)));
       _True_6: // "True"
         return *(((::_Prelude::__0x3A*) *(arg1))->arg1);
   }
@@ -1411,7 +1441,7 @@ namespace _Prelude {
     // LHS variable (2,1,(IPath (Arg 2))) is argument 2
     static void* table_3[]
       = {&&fail_3, &&var_3, &&choice_3, &&oper_3, &&_False_3, &&_True_3};
-    Node** var_3 = ::_Prelude::__0x3C_0x3D::make(arg1, Litint::Litint::make(0));
+    Node** var_3 = ::_Prelude::__0x3C_0x3D::make(arg1, _Prelude::Litint::make(0));
       goto *table_3[(*var_3)->get_kind()];
     fail_3:
       return DO_FAIL;
@@ -1454,7 +1484,7 @@ namespace _Prelude {
     __0x3A_5: // ":"
       // LHS variable (3,1,(IPath (Rel 2 ("Prelude",":") 1))) is inlined as [(2,5,(IPath (Arg 2))),(3,1,(IPath (Rel 2 ("Prelude",":") 1)))]
       // LHS variable (4,1,(IPath (Rel 2 ("Prelude",":") 2))) is inlined as [(2,5,(IPath (Arg 2))),(4,1,(IPath (Rel 2 ("Prelude",":") 2)))]
-      return new ::_Prelude::__0x3A(((::_Prelude::__0x3A*) *(arg2))->arg1, ::_Prelude::_take::make(::_Prelude::__0x2D::make(arg1, Litint::Litint::make(1)), ((::_Prelude::__0x3A*) *(arg2))->arg2));
+      return new ::_Prelude::__0x3A(((::_Prelude::__0x3A*) *(arg2))->arg1, ::_Prelude::_take::make(::_Prelude::__0x2D::make(arg1, _Prelude::Litint::make(1)), ((::_Prelude::__0x3A*) *(arg2))->arg2));
   }
 
   Node* _drop::hfun() { // drop
@@ -1464,7 +1494,7 @@ namespace _Prelude {
     // LHS variable (2,1,(IPath (Arg 2))) is argument 2
     static void* table_3[]
       = {&&fail_3, &&var_3, &&choice_3, &&oper_3, &&_False_3, &&_True_3};
-    Node** var_3 = ::_Prelude::__0x3C_0x3D::make(arg1, Litint::Litint::make(0));
+    Node** var_3 = ::_Prelude::__0x3C_0x3D::make(arg1, _Prelude::Litint::make(0));
       goto *table_3[(*var_3)->get_kind()];
     fail_3:
       return DO_FAIL;
@@ -1507,7 +1537,7 @@ namespace _Prelude {
     __0x3A_5: // ":"
       // LHS variable (3,0,(IPath (Rel 2 ("Prelude",":") 1))) is not used
       // LHS variable (4,1,(IPath (Rel 2 ("Prelude",":") 2))) is inlined as [(2,4,(IPath (Arg 2))),(4,1,(IPath (Rel 2 ("Prelude",":") 2)))]
-      return new ::_Prelude::_drop(::_Prelude::__0x2D::make(arg1, Litint::Litint::make(1)), ((::_Prelude::__0x3A*) *(arg2))->arg2);
+      return new ::_Prelude::_drop(::_Prelude::__0x2D::make(arg1, _Prelude::Litint::make(1)), ((::_Prelude::__0x3A*) *(arg2))->arg2);
   }
 
   Node* _splitAt::hfun() { // splitAt
@@ -1517,7 +1547,7 @@ namespace _Prelude {
     // LHS variable (2,1,(IPath (Arg 2))) is argument 2
     static void* table_3[]
       = {&&fail_3, &&var_3, &&choice_3, &&oper_3, &&_False_3, &&_True_3};
-    Node** var_3 = ::_Prelude::__0x3C_0x3D::make(arg1, Litint::Litint::make(0));
+    Node** var_3 = ::_Prelude::__0x3C_0x3D::make(arg1, _Prelude::Litint::make(0));
       goto *table_3[(*var_3)->get_kind()];
     fail_3:
       return DO_FAIL;
@@ -1574,7 +1604,7 @@ namespace _Prelude {
     // LHS variable (1,1,(IPath (Arg 2))) is argument 2
     // LHS variable (4,1,(IPath (Arg 3))) is argument 3
     // [(5,[]),(6,[]),(7,[])]
-    Node** var_5 = ::_Prelude::_splitAt::make(::_Prelude::__0x2D::make(arg2, Litint::Litint::make(1)), arg3);
+    Node** var_5 = ::_Prelude::_splitAt::make(::_Prelude::__0x2D::make(arg2, _Prelude::Litint::make(1)), arg3);
     Node** var_6 = ::_Prelude::_splitAt_0x2EsplitAtp_0x2E239_0x2E__0x23selFP9_0x23ys::make(var_5);
     Node** var_7 = ::_Prelude::_splitAt_0x2EsplitAtp_0x2E239_0x2E__0x23selFP10_0x23zs::make(var_5);
     return new ::_Prelude::__0x28_0x2C_0x29(::_Prelude::__0x3A::make(arg1, var_6), var_7);
@@ -1925,7 +1955,7 @@ namespace _Prelude {
     // LHS variable (3,1,(IPath (Arg 2))) is argument 2
     static void* table_4[]
       = {&&fail_4, &&var_4, &&choice_4, &&oper_4, &&_False_4, &&_True_4};
-    Node** var_4 = ::_Prelude::__0x3D_0x3D::make(arg1, Litchar::Litchar::make('\n'));
+    Node** var_4 = ::_Prelude::__0x3D_0x3D::make(arg1, _Prelude::Litchar::make('\n'));
       goto *table_4[(*var_4)->get_kind()];
     fail_4:
       return DO_FAIL;
@@ -2057,7 +2087,7 @@ namespace _Prelude {
   Node* _unlines::hfun() { // unlines
     // VAR (1,1,(IPath (Arg 1)))
     // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-    return new ::_Prelude::_apply(::_Prelude::_concatMap::make(Engine::Partial::make(::_Prelude::_flip::make(Engine::Partial::make(::_Prelude::__0x2B_0x2B::make(), 2), ::_Prelude::__0x3A::make(Litchar::Litchar::make('\n'), ::_Prelude::__0x5B_0x5D::make())), 1)), arg1);
+    return new ::_Prelude::_apply(::_Prelude::_concatMap::make(Engine::Partial::make(::_Prelude::_flip::make(Engine::Partial::make(::_Prelude::__0x2B_0x2B::make(), 2), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('\n'), ::_Prelude::__0x5B_0x5D::make())), 1)), arg1);
   }
 
   Node* _words::hfun() { // words
@@ -2102,7 +2132,7 @@ namespace _Prelude {
   Node* _words_0x2EisSpace_0x2E283::hfun() { // words.isSpace.283
     // VAR (1,4,(IPath (Arg 1)))
     // LHS variable (1,4,(IPath (Arg 1))) is argument 1
-    return new ::_Prelude::__0x7C_0x7C(::_Prelude::__0x3D_0x3D::make(arg1, Litchar::Litchar::make(' ')), ::_Prelude::__0x7C_0x7C::make(::_Prelude::__0x3D_0x3D::make(arg1, Litchar::Litchar::make('\t')), ::_Prelude::__0x7C_0x7C::make(::_Prelude::__0x3D_0x3D::make(arg1, Litchar::Litchar::make('\n')), ::_Prelude::__0x3D_0x3D::make(arg1, Litchar::Litchar::make('\r')))));
+    return new ::_Prelude::__0x7C_0x7C(::_Prelude::__0x3D_0x3D::make(arg1, _Prelude::Litchar::make(' ')), ::_Prelude::__0x7C_0x7C::make(::_Prelude::__0x3D_0x3D::make(arg1, _Prelude::Litchar::make('\t')), ::_Prelude::__0x7C_0x7C::make(::_Prelude::__0x3D_0x3D::make(arg1, _Prelude::Litchar::make('\n')), ::_Prelude::__0x3D_0x3D::make(arg1, _Prelude::Litchar::make('\r')))));
   }
 
   Node* _words_0x2E__0x23selFP21_0x23w::hfun() { // words._#selFP21#w
@@ -2181,7 +2211,7 @@ namespace _Prelude {
     // VAR (2,1,(IPath (Arg 2)))
     // LHS variable (1,1,(IPath (Arg 1))) is argument 1
     // LHS variable (2,1,(IPath (Arg 2))) is argument 2
-    return new ::_Prelude::__0x2B_0x2B(arg1, ::_Prelude::__0x3A::make(Litchar::Litchar::make(' '), arg2));
+    return new ::_Prelude::__0x2B_0x2B(arg1, ::_Prelude::__0x3A::make(_Prelude::Litchar::make(' '), arg2));
   }
 
   Node* _reverse::hfun() { // reverse
@@ -2311,7 +2341,7 @@ namespace _Prelude {
   Node* _enumFrom::hfun() { // enumFrom
     // VAR (1,2,(IPath (Arg 1)))
     // LHS variable (1,2,(IPath (Arg 1))) is argument 1
-    return new ::_Prelude::__0x3A(arg1, ::_Prelude::_enumFrom::make(::_Prelude::__0x2B::make(arg1, Litint::Litint::make(1))));
+    return new ::_Prelude::__0x3A(arg1, ::_Prelude::_enumFrom::make(::_Prelude::__0x2B::make(arg1, _Prelude::Litint::make(1))));
   }
 
   Node* _enumFromThen::hfun() { // enumFromThen
@@ -2342,7 +2372,7 @@ namespace _Prelude {
       Engine::hfun(var_3);
       goto *table_3[(*var_3)->get_kind()];
     _False_3: // "False"
-      return new ::_Prelude::__0x3A(arg1, ::_Prelude::_enumFromTo::make(::_Prelude::__0x2B::make(arg1, Litint::Litint::make(1)), arg2));
+      return new ::_Prelude::__0x3A(arg1, ::_Prelude::_enumFromTo::make(::_Prelude::__0x2B::make(arg1, _Prelude::Litint::make(1)), arg2));
     _True_3: // "True"
       return new ::_Prelude::__0x5B_0x5D();
   }
@@ -2411,76 +2441,44 @@ namespace _Prelude {
       return new ::_Prelude::__0x3E_0x3D(arg1, arg2);
   }
 
-//hm  Node* _ord::hfun() { // ord
-//hm    // VAR (1,1,(IPath (Arg 1)))
-//hm    // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-//hm    return new ::_Prelude::__0x24_0x23(Engine::Partial::make(::_Prelude::_prim_ord::make(), 1), arg1);
-//hm  }
+  // external Node* _ord::hfun() { throw "External \"Prelude.ord\" not implemented"; }
 
-  // external Node* _prim_ord::hfun() { throw "External \"Prelude.prim_ord\" not implemented"; }
+  // external Node* _chr::hfun() { throw "External \"Prelude.chr\" not implemented"; }
 
-//hm  Node* _chr::hfun() { // chr
-//hm    // VAR (1,1,(IPath (Arg 1)))
-//hm    // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-//hm    return new ::_Prelude::__0x24_0x23(Engine::Partial::make(::_Prelude::_prim_chr::make(), 1), arg1);
-//hm  }
+  // external Node* __0x2B::hfun() { throw "External \"Prelude.+\" not implemented"; }
 
-  // external Node* _prim_chr::hfun() { throw "External \"Prelude.prim_chr\" not implemented"; }
+  // external Node* __0x2D::hfun() { throw "External \"Prelude.-\" not implemented"; }
 
-//hm  Node* __0x2B::hfun() { // +
-//hm    // VAR (1,1,(IPath (Arg 1)))
-//hm    // VAR (2,1,(IPath (Arg 2)))
-//hm    // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-//hm    // LHS variable (2,1,(IPath (Arg 2))) is argument 2
-//hm    return new ::_Prelude::__0x24_0x23(::_Prelude::__0x24_0x23::make(Engine::Partial::make(::_Prelude::_prim_Int_plus::make(), 2), arg2), arg1);
-//hm  }
+  // external Node* __0x2A::hfun() { throw "External \"Prelude.*\" not implemented"; }
 
-  // external Node* _prim_Int_plus::hfun() { throw "External \"Prelude.prim_Int_plus\" not implemented"; }
+  // external Node* _div::hfun() { throw "External \"Prelude.div\" not implemented"; }
 
-//hm  Node* __0x2D::hfun() { // -
-//hm    // VAR (1,1,(IPath (Arg 1)))
-//hm    // VAR (2,1,(IPath (Arg 2)))
-//hm    // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-//hm    // LHS variable (2,1,(IPath (Arg 2))) is argument 2
-//hm    return new ::_Prelude::__0x24_0x23(::_Prelude::__0x24_0x23::make(Engine::Partial::make(::_Prelude::_prim_Int_minus::make(), 2), arg2), arg1);
-//hm  }
+  // external Node* _mod::hfun() { throw "External \"Prelude.mod\" not implemented"; }
 
-  // external Node* _prim_Int_minus::hfun() { throw "External \"Prelude.prim_Int_minus\" not implemented"; }
+  Node* _divMod::hfun() { // divMod
+    // VAR (1,2,(IPath (Arg 1)))
+    // VAR (2,2,(IPath (Arg 2)))
+    // LHS variable (1,2,(IPath (Arg 1))) is argument 1
+    // LHS variable (2,2,(IPath (Arg 2))) is argument 2
+    return new ::_Prelude::__0x28_0x2C_0x29(::_Prelude::_div::make(arg1, arg2), ::_Prelude::_mod::make(arg1, arg2));
+  }
 
-//hm  Node* __0x2A::hfun() { // *
-//hm    // VAR (1,1,(IPath (Arg 1)))
-//hm    // VAR (2,1,(IPath (Arg 2)))
-//hm    // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-//hm    // LHS variable (2,1,(IPath (Arg 2))) is argument 2
-//hm    return new ::_Prelude::__0x24_0x23(::_Prelude::__0x24_0x23::make(Engine::Partial::make(::_Prelude::_prim_Int_times::make(), 2), arg2), arg1);
-//hm  }
+  // external Node* _quot::hfun() { throw "External \"Prelude.quot\" not implemented"; }
 
-  // external Node* _prim_Int_times::hfun() { throw "External \"Prelude.prim_Int_times\" not implemented"; }
+  // external Node* _rem::hfun() { throw "External \"Prelude.rem\" not implemented"; }
 
-//hm  Node* _div::hfun() { // div
-//hm    // VAR (1,1,(IPath (Arg 1)))
-//hm    // VAR (2,1,(IPath (Arg 2)))
-//hm    // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-//hm    // LHS variable (2,1,(IPath (Arg 2))) is argument 2
-//hm    return new ::_Prelude::__0x24_0x23(::_Prelude::__0x24_0x23::make(Engine::Partial::make(::_Prelude::_prim_Int_div::make(), 2), arg2), arg1);
-//hm  }
-
-  // external Node* _prim_Int_div::hfun() { throw "External \"Prelude.prim_Int_div\" not implemented"; }
-
-//hm  Node* _mod::hfun() { // mod
-//hm    // VAR (1,1,(IPath (Arg 1)))
-//hm    // VAR (2,1,(IPath (Arg 2)))
-//hm    // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-//hm    // LHS variable (2,1,(IPath (Arg 2))) is argument 2
-//hm    return new ::_Prelude::__0x24_0x23(::_Prelude::__0x24_0x23::make(Engine::Partial::make(::_Prelude::_prim_Int_mod::make(), 2), arg2), arg1);
-//hm  }
-
-  // external Node* _prim_Int_mod::hfun() { throw "External \"Prelude.prim_Int_mod\" not implemented"; }
+  Node* _quotRem::hfun() { // quotRem
+    // VAR (1,2,(IPath (Arg 1)))
+    // VAR (2,2,(IPath (Arg 2)))
+    // LHS variable (1,2,(IPath (Arg 1))) is argument 1
+    // LHS variable (2,2,(IPath (Arg 2))) is argument 2
+    return new ::_Prelude::__0x28_0x2C_0x29(::_Prelude::_quot::make(arg1, arg2), ::_Prelude::_rem::make(arg1, arg2));
+  }
 
   Node* _negate::hfun() { // negate
     // VAR (1,1,(IPath (Arg 1)))
     // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-    return new ::_Prelude::__0x2D(Litint::Litint::make(0), arg1);
+    return new ::_Prelude::__0x2D(_Prelude::Litint::make(0), arg1);
   }
 
   Node* _negateFloat::hfun() { // negateFloat
@@ -2656,7 +2654,7 @@ namespace _Prelude {
   Node* _putStrLn::hfun() { // putStrLn
     // VAR (1,1,(IPath (Arg 1)))
     // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-    return new ::_Prelude::__0x3E_0x3E(::_Prelude::_putStr::make(arg1), ::_Prelude::_putChar::make(Litchar::Litchar::make('\n')));
+    return new ::_Prelude::__0x3E_0x3E(::_Prelude::_putStr::make(arg1), ::_Prelude::_putChar::make(_Prelude::Litchar::make('\n')));
   }
 
   Node* _getLine::hfun() { // getLine
@@ -2668,7 +2666,7 @@ namespace _Prelude {
     // LHS variable (1,2,(IPath (Arg 1))) is argument 1
     static void* table_2[]
       = {&&fail_2, &&var_2, &&choice_2, &&oper_2, &&_False_2, &&_True_2};
-    Node** var_2 = ::_Prelude::__0x3D_0x3D::make(arg1, Litchar::Litchar::make('\n'));
+    Node** var_2 = ::_Prelude::__0x3D_0x3D::make(arg1, _Prelude::Litchar::make('\n'));
       goto *table_2[(*var_2)->get_kind()];
     fail_2:
       return DO_FAIL;
@@ -2697,56 +2695,50 @@ namespace _Prelude {
   Node* _userError::hfun() { // userError
     // VAR (1,1,(IPath (Arg 1)))
     // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-    return new ::_Prelude::_IOError(arg1);
+    return new ::_Prelude::_UserError(arg1);
   }
 
   Node* _ioError::hfun() { // ioError
-    // VAR (1,4,(IPath (Arg 1)))
-    // VAR (2,1,(IPath (Rel 1 ("Prelude","IOError") 1)))
-    // LHS variable (1,4,(IPath (Arg 1))) is argument 1
-    static void* table_3[]
-      = {&&fail_3, &&var_3, &&choice_3, &&oper_3, &&_IOError_3};
-      goto *table_3[(*arg1)->get_kind()];
-    fail_3:
-      return DO_FAIL;
-    var_3:
-      // Engine::narrow(arg1, generator());
-      throw "No narrowing yet";
-      goto *table_3[(*arg1)->get_kind()];
-    choice_3:
-    oper_3:
-      Engine::hfun(arg1);
-      goto *table_3[(*arg1)->get_kind()];
-    _IOError_3: // "IOError"
-      // LHS variable (2,1,(IPath (Rel 1 ("Prelude","IOError") 1))) is inlined as [(1,4,(IPath (Arg 1))),(2,1,(IPath (Rel 1 ("Prelude","IOError") 1)))]
-      return new ::_Prelude::_error(((::_Prelude::_IOError*) *(arg1))->arg1);
+    // VAR (1,1,(IPath (Arg 1)))
+    // LHS variable (1,1,(IPath (Arg 1))) is argument 1
+    return new ::_Prelude::_error(::_Prelude::_showError::make(arg1));
   }
 
   Node* _showError::hfun() { // showError
-    // VAR (1,4,(IPath (Arg 1)))
+    // VAR (1,7,(IPath (Arg 1)))
     // VAR (2,1,(IPath (Rel 1 ("Prelude","IOError") 1)))
-    // LHS variable (1,4,(IPath (Arg 1))) is argument 1
-    static void* table_3[]
-      = {&&fail_3, &&var_3, &&choice_3, &&oper_3, &&_IOError_3};
-      goto *table_3[(*arg1)->get_kind()];
-    fail_3:
+    // VAR (3,1,(IPath (Rel 1 ("Prelude","UserError") 1)))
+    // VAR (4,1,(IPath (Rel 1 ("Prelude","FailError") 1)))
+    // VAR (5,1,(IPath (Rel 1 ("Prelude","NondetError") 1)))
+    // LHS variable (1,7,(IPath (Arg 1))) is argument 1
+    static void* table_6[]
+      = {&&fail_6, &&var_6, &&choice_6, &&oper_6, &&_IOError_6, &&_UserError_6, &&_FailError_6, &&_NondetError_6};
+      goto *table_6[(*arg1)->get_kind()];
+    fail_6:
       return DO_FAIL;
-    var_3:
+    var_6:
       // Engine::narrow(arg1, generator());
       throw "No narrowing yet";
-      goto *table_3[(*arg1)->get_kind()];
-    choice_3:
-    oper_3:
+      goto *table_6[(*arg1)->get_kind()];
+    choice_6:
+    oper_6:
       Engine::hfun(arg1);
-      goto *table_3[(*arg1)->get_kind()];
-    _IOError_3: // "IOError"
-      // LHS variable (2,1,(IPath (Rel 1 ("Prelude","IOError") 1))) is inlined as [(1,4,(IPath (Arg 1))),(2,1,(IPath (Rel 1 ("Prelude","IOError") 1)))]
-      return *(((::_Prelude::_IOError*) *(arg1))->arg1);
+      goto *table_6[(*arg1)->get_kind()];
+    _IOError_6: // "IOError"
+      // LHS variable (2,1,(IPath (Rel 1 ("Prelude","IOError") 1))) is inlined as [(1,7,(IPath (Arg 1))),(2,1,(IPath (Rel 1 ("Prelude","IOError") 1)))]
+      return new ::_Prelude::__0x2B_0x2B(::_Prelude::__0x3A::make(_Prelude::Litchar::make('i'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('/'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('o'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make(' '), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('e'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('r'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('r'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('o'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('r'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make(':'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make(' '), ::_Prelude::__0x5B_0x5D::make()))))))))))), ((::_Prelude::_IOError*) *(arg1))->arg1);
+    _UserError_6: // "UserError"
+      // LHS variable (3,1,(IPath (Rel 1 ("Prelude","UserError") 1))) is inlined as [(1,7,(IPath (Arg 1))),(3,1,(IPath (Rel 1 ("Prelude","UserError") 1)))]
+      return new ::_Prelude::__0x2B_0x2B(::_Prelude::__0x3A::make(_Prelude::Litchar::make('u'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('s'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('e'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('r'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make(' '), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('e'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('r'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('r'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('o'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('r'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make(':'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make(' '), ::_Prelude::__0x5B_0x5D::make())))))))))))), ((::_Prelude::_UserError*) *(arg1))->arg1);
+    _FailError_6: // "FailError"
+      // LHS variable (4,1,(IPath (Rel 1 ("Prelude","FailError") 1))) is inlined as [(1,7,(IPath (Arg 1))),(4,1,(IPath (Rel 1 ("Prelude","FailError") 1)))]
+      return new ::_Prelude::__0x2B_0x2B(::_Prelude::__0x3A::make(_Prelude::Litchar::make('f'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('a'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('i'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('l'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make(' '), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('e'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('r'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('r'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('o'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('r'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make(':'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make(' '), ::_Prelude::__0x5B_0x5D::make())))))))))))), ((::_Prelude::_FailError*) *(arg1))->arg1);
+    _NondetError_6: // "NondetError"
+      // LHS variable (5,1,(IPath (Rel 1 ("Prelude","NondetError") 1))) is inlined as [(1,7,(IPath (Arg 1))),(5,1,(IPath (Rel 1 ("Prelude","NondetError") 1)))]
+      return new ::_Prelude::__0x2B_0x2B(::_Prelude::__0x3A::make(_Prelude::Litchar::make('n'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('o'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('n'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('d'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('e'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('t'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make(' '), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('e'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('r'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('r'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('o'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make('r'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make(':'), ::_Prelude::__0x3A::make(_Prelude::Litchar::make(' '), ::_Prelude::__0x5B_0x5D::make())))))))))))))), ((::_Prelude::_NondetError*) *(arg1))->arg1);
   }
 
   // external Node* _catch::hfun() { throw "External \"Prelude.catch\" not implemented"; }
-
-  // external Node* _catchFail::hfun() { throw "External \"Prelude.catchFail\" not implemented"; }
 
   Node* _show::hfun() { // show
     // VAR (1,1,(IPath (Arg 1)))
@@ -2938,551 +2930,12 @@ namespace _Prelude {
       return *(arg2);
   }
 
-  Node* __0x3F::hfun() { // ?
-    // VAR (1,1,(IPath (Arg 1)))
-    // VAR (2,1,(IPath (Arg 2)))
-    // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-    // LHS variable (2,1,(IPath (Arg 2))) is argument 2
-//hr    return new ::_Prelude::__0x3F(arg1, arg2);
-    return new Engine::Choice(arg1, arg2);
-  }
+  // external Node* __0x3F::hfun() { throw "External \"Prelude.?\" not implemented"; }
 
   Node* _unknown::hfun() { // unknown
     // VAR (1,1,IFree)
     // Free variable (1,1,IFree) is inlined
     return *(::Engine::Variable::make());
-  }
-
-  Node* _getAllValues::hfun() { // getAllValues
-    // VAR (1,1,(IPath (Arg 1)))
-    // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-    return new ::_Prelude::_return(::_Prelude::_findall::make(Engine::Partial::make(::_Prelude::_flip::make(Engine::Partial::make(::_Prelude::__0x3D_0x3A_0x3D::make(), 2), arg1), 1)));
-  }
-
-  Node* _getSomeValue::hfun() { // getSomeValue
-    // VAR (1,1,(IPath (Arg 1)))
-    // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-    return new ::_Prelude::_return(::_Prelude::_findfirst::make(Engine::Partial::make(::_Prelude::_flip::make(Engine::Partial::make(::_Prelude::__0x3D_0x3A_0x3D::make(), 2), arg1), 1)));
-  }
-
-  // external Node* _try::hfun() { throw "External \"Prelude.try\" not implemented"; }
-
-  Node* _inject::hfun() { // inject
-    // VAR (1,1,(IPath (Arg 1)))
-    // VAR (2,1,(IPath (Arg 2)))
-    // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-    // LHS variable (2,1,(IPath (Arg 2))) is argument 2
-    return new Engine::Partial(::_Prelude::_inject_0x2E__0x23lambda12::make(arg1, arg2), 1);
-  }
-
-  Node* _inject_0x2E__0x23lambda12::hfun() { // inject._#lambda12
-    // VAR (1,1,(IPath (Arg 1)))
-    // VAR (2,1,(IPath (Arg 2)))
-    // VAR (3,2,(IPath (Arg 3)))
-    // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-    // LHS variable (2,1,(IPath (Arg 2))) is argument 2
-    // LHS variable (3,2,(IPath (Arg 3))) is argument 3
-    return new ::_Prelude::__0x26(::_Prelude::_apply::make(arg2, arg3), ::_Prelude::_apply::make(arg1, arg3));
-  }
-
-  Node* _solveAll::hfun() { // solveAll
-    // VAR (1,1,(IPath (Arg 1)))
-    // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-    return new ::_Prelude::_solveAll_0x2Eevalall_0x2E438(::_Prelude::_try::make(arg1));
-  }
-
-  Node* _solveAll_0x2Eevalall3_0x2E438::hfun() { // solveAll.evalall3.438
-    // VAR (1,5,(IPath (Arg 1)))
-    // VAR (2,1,(IPath (Arg 2)))
-    // VAR (3,1,(IPath (Rel 1 ("Prelude",":") 1)))
-    // VAR (4,1,(IPath (Rel 1 ("Prelude",":") 2)))
-    // LHS variable (1,5,(IPath (Arg 1))) is argument 1
-    // LHS variable (2,1,(IPath (Arg 2))) is argument 2
-    static void* table_5[]
-      = {&&fail_5, &&var_5, &&choice_5, &&oper_5, &&__0x5B_0x5D_5, &&__0x3A_5};
-      goto *table_5[(*arg1)->get_kind()];
-    fail_5:
-      return DO_FAIL;
-    var_5:
-      // Engine::narrow(arg1, generator());
-      throw "No narrowing yet";
-      goto *table_5[(*arg1)->get_kind()];
-    choice_5:
-    oper_5:
-      Engine::hfun(arg1);
-      goto *table_5[(*arg1)->get_kind()];
-    __0x5B_0x5D_5: // "[]"
-      return new ::_Prelude::_solveAll_0x2Eevalall2_0x2E438(arg2);
-    __0x3A_5: // ":"
-      // LHS variable (3,1,(IPath (Rel 1 ("Prelude",":") 1))) is inlined as [(1,5,(IPath (Arg 1))),(3,1,(IPath (Rel 1 ("Prelude",":") 1)))]
-      // LHS variable (4,1,(IPath (Rel 1 ("Prelude",":") 2))) is inlined as [(1,5,(IPath (Arg 1))),(4,1,(IPath (Rel 1 ("Prelude",":") 2)))]
-      return new ::_Prelude::_solveAll_0x2Eevalall3_0x2E438_case__0x231(((::_Prelude::__0x3A*) *(arg1))->arg2, ((::_Prelude::__0x3A*) *(arg1))->arg1, arg2);
-  }
-
-  Node* _solveAll_0x2Eevalall3_0x2E438_case__0x231::hfun() { // solveAll.evalall3.438_case_#1
-    // VAR (4,5,(IPath (Arg 1)))
-    // VAR (3,1,(IPath (Arg 2)))
-    // VAR (2,1,(IPath (Arg 3)))
-    // VAR (5,1,(IPath (Rel 4 ("Prelude",":") 1)))
-    // VAR (6,1,(IPath (Rel 4 ("Prelude",":") 2)))
-    // LHS variable (4,5,(IPath (Arg 1))) is argument 1
-    // LHS variable (3,1,(IPath (Arg 2))) is argument 2
-    // LHS variable (2,1,(IPath (Arg 3))) is argument 3
-    static void* table_7[]
-      = {&&fail_7, &&var_7, &&choice_7, &&oper_7, &&__0x5B_0x5D_7, &&__0x3A_7};
-      goto *table_7[(*arg1)->get_kind()];
-    fail_7:
-      return DO_FAIL;
-    var_7:
-      // Engine::narrow(arg1, generator());
-      throw "No narrowing yet";
-      goto *table_7[(*arg1)->get_kind()];
-    choice_7:
-    oper_7:
-      Engine::hfun(arg1);
-      goto *table_7[(*arg1)->get_kind()];
-    __0x5B_0x5D_7: // "[]"
-      return new ::_Prelude::__0x3A(arg2, ::_Prelude::_solveAll_0x2Eevalall2_0x2E438::make(arg3));
-    __0x3A_7: // ":"
-      // LHS variable (5,1,(IPath (Rel 4 ("Prelude",":") 1))) is inlined as [(4,5,(IPath (Arg 1))),(5,1,(IPath (Rel 4 ("Prelude",":") 1)))]
-      // LHS variable (6,1,(IPath (Rel 4 ("Prelude",":") 2))) is inlined as [(4,5,(IPath (Arg 1))),(6,1,(IPath (Rel 4 ("Prelude",":") 2)))]
-      return new ::_Prelude::_solveAll_0x2Eevalall3_0x2E438(::_Prelude::_try::make(arg2), ::_Prelude::__0x3A::make(((::_Prelude::__0x3A*) *(arg1))->arg1, ::_Prelude::__0x2B_0x2B::make(((::_Prelude::__0x3A*) *(arg1))->arg2, arg3)));
-  }
-
-  Node* _solveAll_0x2Eevalall2_0x2E438::hfun() { // solveAll.evalall2.438
-    // VAR (1,5,(IPath (Arg 1)))
-    // VAR (2,1,(IPath (Rel 1 ("Prelude",":") 1)))
-    // VAR (3,1,(IPath (Rel 1 ("Prelude",":") 2)))
-    // LHS variable (1,5,(IPath (Arg 1))) is argument 1
-    static void* table_4[]
-      = {&&fail_4, &&var_4, &&choice_4, &&oper_4, &&__0x5B_0x5D_4, &&__0x3A_4};
-      goto *table_4[(*arg1)->get_kind()];
-    fail_4:
-      return DO_FAIL;
-    var_4:
-      // Engine::narrow(arg1, generator());
-      throw "No narrowing yet";
-      goto *table_4[(*arg1)->get_kind()];
-    choice_4:
-    oper_4:
-      Engine::hfun(arg1);
-      goto *table_4[(*arg1)->get_kind()];
-    __0x5B_0x5D_4: // "[]"
-      return new ::_Prelude::__0x5B_0x5D();
-    __0x3A_4: // ":"
-      // LHS variable (2,1,(IPath (Rel 1 ("Prelude",":") 1))) is inlined as [(1,5,(IPath (Arg 1))),(2,1,(IPath (Rel 1 ("Prelude",":") 1)))]
-      // LHS variable (3,1,(IPath (Rel 1 ("Prelude",":") 2))) is inlined as [(1,5,(IPath (Arg 1))),(3,1,(IPath (Rel 1 ("Prelude",":") 2)))]
-      return new ::_Prelude::_solveAll_0x2Eevalall3_0x2E438(::_Prelude::_try::make(((::_Prelude::__0x3A*) *(arg1))->arg1), ((::_Prelude::__0x3A*) *(arg1))->arg2);
-  }
-
-  Node* _solveAll_0x2Eevalall_0x2E438::hfun() { // solveAll.evalall.438
-    // VAR (1,5,(IPath (Arg 1)))
-    // VAR (4,1,(IPath (Rel 3 ("Prelude",":") 1)))
-    // VAR (5,1,(IPath (Rel 3 ("Prelude",":") 2)))
-    // VAR (2,1,(IPath (Rel 1 ("Prelude",":") 1)))
-    // VAR (3,5,(IPath (Rel 1 ("Prelude",":") 2)))
-    // LHS variable (1,5,(IPath (Arg 1))) is argument 1
-    static void* table_6[]
-      = {&&fail_6, &&var_6, &&choice_6, &&oper_6, &&__0x5B_0x5D_6, &&__0x3A_6};
-      goto *table_6[(*arg1)->get_kind()];
-    fail_6:
-      return DO_FAIL;
-    var_6:
-      // Engine::narrow(arg1, generator());
-      throw "No narrowing yet";
-      goto *table_6[(*arg1)->get_kind()];
-    choice_6:
-    oper_6:
-      Engine::hfun(arg1);
-      goto *table_6[(*arg1)->get_kind()];
-    __0x5B_0x5D_6: // "[]"
-      return new ::_Prelude::__0x5B_0x5D();
-    __0x3A_6: // ":"
-      // LHS variable (2,1,(IPath (Rel 1 ("Prelude",":") 1))) is inlined as [(1,5,(IPath (Arg 1))),(2,1,(IPath (Rel 1 ("Prelude",":") 1)))]
-      Node** var_3 = ((::_Prelude::__0x3A*) *(arg1))->arg2; // [(3,5,(IPath (Rel 1 ("Prelude",":") 2)))] 
-      static void* table_7[]
-        = {&&fail_7, &&var_7, &&choice_7, &&oper_7, &&__0x5B_0x5D_7, &&__0x3A_7};
-        goto *table_7[(*var_3)->get_kind()];
-      fail_7:
-        return DO_FAIL;
-      var_7:
-        // Engine::narrow(var_3, generator());
-        throw "No narrowing yet";
-        goto *table_7[(*var_3)->get_kind()];
-      choice_7:
-      oper_7:
-        Engine::hfun(var_3);
-        goto *table_7[(*var_3)->get_kind()];
-      __0x5B_0x5D_7: // "[]"
-        return new ::_Prelude::__0x3A(((::_Prelude::__0x3A*) *(arg1))->arg1, ::_Prelude::__0x5B_0x5D::make());
-      __0x3A_7: // ":"
-        // LHS variable (4,1,(IPath (Rel 3 ("Prelude",":") 1))) is inlined as [(3,5,(IPath (Rel 1 ("Prelude",":") 2))),(4,1,(IPath (Rel 3 ("Prelude",":") 1)))]
-        // LHS variable (5,1,(IPath (Rel 3 ("Prelude",":") 2))) is inlined as [(3,5,(IPath (Rel 1 ("Prelude",":") 2))),(5,1,(IPath (Rel 3 ("Prelude",":") 2)))]
-        return new ::_Prelude::_solveAll_0x2Eevalall3_0x2E438(::_Prelude::_try::make(((::_Prelude::__0x3A*) *(arg1))->arg1), ::_Prelude::__0x3A::make(((::_Prelude::__0x3A*) *(((::_Prelude::__0x3A*) *(arg1))->arg2))->arg1, ((::_Prelude::__0x3A*) *(((::_Prelude::__0x3A*) *(arg1))->arg2))->arg2));
-  }
-
-  Node* _solveAll2::hfun() { // solveAll2
-    // VAR (1,1,(IPath (Arg 1)))
-    // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-    return new ::_Prelude::_solveAll2_0x2EevalResult_0x2E456(::_Prelude::_try::make(arg1));
-  }
-
-  Node* _solveAll2_0x2EevalResult_0x2E456::hfun() { // solveAll2.evalResult.456
-    // VAR (1,5,(IPath (Arg 1)))
-    // VAR (4,1,(IPath (Rel 3 ("Prelude",":") 1)))
-    // VAR (5,1,(IPath (Rel 3 ("Prelude",":") 2)))
-    // VAR (2,1,(IPath (Rel 1 ("Prelude",":") 1)))
-    // VAR (3,5,(IPath (Rel 1 ("Prelude",":") 2)))
-    // LHS variable (1,5,(IPath (Arg 1))) is argument 1
-    static void* table_6[]
-      = {&&fail_6, &&var_6, &&choice_6, &&oper_6, &&__0x5B_0x5D_6, &&__0x3A_6};
-      goto *table_6[(*arg1)->get_kind()];
-    fail_6:
-      return DO_FAIL;
-    var_6:
-      // Engine::narrow(arg1, generator());
-      throw "No narrowing yet";
-      goto *table_6[(*arg1)->get_kind()];
-    choice_6:
-    oper_6:
-      Engine::hfun(arg1);
-      goto *table_6[(*arg1)->get_kind()];
-    __0x5B_0x5D_6: // "[]"
-      return new ::_Prelude::__0x5B_0x5D();
-    __0x3A_6: // ":"
-      // LHS variable (2,1,(IPath (Rel 1 ("Prelude",":") 1))) is inlined as [(1,5,(IPath (Arg 1))),(2,1,(IPath (Rel 1 ("Prelude",":") 1)))]
-      Node** var_3 = ((::_Prelude::__0x3A*) *(arg1))->arg2; // [(3,5,(IPath (Rel 1 ("Prelude",":") 2)))] 
-      static void* table_7[]
-        = {&&fail_7, &&var_7, &&choice_7, &&oper_7, &&__0x5B_0x5D_7, &&__0x3A_7};
-        goto *table_7[(*var_3)->get_kind()];
-      fail_7:
-        return DO_FAIL;
-      var_7:
-        // Engine::narrow(var_3, generator());
-        throw "No narrowing yet";
-        goto *table_7[(*var_3)->get_kind()];
-      choice_7:
-      oper_7:
-        Engine::hfun(var_3);
-        goto *table_7[(*var_3)->get_kind()];
-      __0x5B_0x5D_7: // "[]"
-        return new ::_Prelude::__0x3A(((::_Prelude::__0x3A*) *(arg1))->arg1, ::_Prelude::__0x5B_0x5D::make());
-      __0x3A_7: // ":"
-        // LHS variable (4,1,(IPath (Rel 3 ("Prelude",":") 1))) is inlined as [(3,5,(IPath (Rel 1 ("Prelude",":") 2))),(4,1,(IPath (Rel 3 ("Prelude",":") 1)))]
-        // LHS variable (5,1,(IPath (Rel 3 ("Prelude",":") 2))) is inlined as [(3,5,(IPath (Rel 1 ("Prelude",":") 2))),(5,1,(IPath (Rel 3 ("Prelude",":") 2)))]
-        return new ::_Prelude::_apply(::_Prelude::_concatMap::make(Engine::Partial::make(::_Prelude::_solveAll2::make(), 1)), ::_Prelude::__0x3A::make(((::_Prelude::__0x3A*) *(arg1))->arg1, ::_Prelude::__0x3A::make(((::_Prelude::__0x3A*) *(((::_Prelude::__0x3A*) *(arg1))->arg2))->arg1, ((::_Prelude::__0x3A*) *(((::_Prelude::__0x3A*) *(arg1))->arg2))->arg2)));
-  }
-
-  Node* _once::hfun() { // once
-    // VAR (1,1,(IPath (Arg 1)))
-    // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-    return new ::_Prelude::_head(::_Prelude::_solveAll::make(arg1));
-  }
-
-  Node* _best::hfun() { // best
-    // VAR (1,1,(IPath (Arg 1)))
-    // VAR (2,1,(IPath (Arg 2)))
-    // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-    // LHS variable (2,1,(IPath (Arg 2))) is argument 2
-    return new ::_Prelude::_best_0x2EbestHelp_0x2E466(arg2, ::_Prelude::__0x5B_0x5D::make(), ::_Prelude::_try::make(arg1), ::_Prelude::__0x5B_0x5D::make());
-  }
-
-  Node* _best_0x2Econstrain_0x2E466::hfun() { // best.constrain.466
-    // VAR (1,1,(IPath (Arg 1)))
-    // VAR (2,1,(IPath (Arg 2)))
-    // VAR (3,5,(IPath (Arg 3)))
-    // VAR (4,1,(IPath (Rel 3 ("Prelude",":") 1)))
-    // VAR (5,3,(IPath (Rel 3 ("Prelude",":") 2)))
-    // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-    // LHS variable (2,1,(IPath (Arg 2))) is argument 2
-    // LHS variable (3,5,(IPath (Arg 3))) is argument 3
-    static void* table_6[]
-      = {&&fail_6, &&var_6, &&choice_6, &&oper_6, &&__0x5B_0x5D_6, &&__0x3A_6};
-      goto *table_6[(*arg3)->get_kind()];
-    fail_6:
-      return DO_FAIL;
-    var_6:
-      // Engine::narrow(arg3, generator());
-      throw "No narrowing yet";
-      goto *table_6[(*arg3)->get_kind()];
-    choice_6:
-    oper_6:
-      Engine::hfun(arg3);
-      goto *table_6[(*arg3)->get_kind()];
-    __0x5B_0x5D_6: // "[]"
-      return *(arg2);
-    __0x3A_6: // ":"
-      // LHS variable (4,1,(IPath (Rel 3 ("Prelude",":") 1))) is inlined as [(3,5,(IPath (Arg 3))),(4,1,(IPath (Rel 3 ("Prelude",":") 1)))]
-      Node** var_5 = ((::_Prelude::__0x3A*) *(arg3))->arg2; // [(5,3,(IPath (Rel 3 ("Prelude",":") 2)))] 
-      static void* table_7[]
-        = {&&fail_7, &&var_7, &&choice_7, &&oper_7, &&__0x5B_0x5D_7, &&__0x3A_7};
-        goto *table_7[(*var_5)->get_kind()];
-      fail_7:
-        return DO_FAIL;
-      var_7:
-        // Engine::narrow(var_5, generator());
-        throw "No narrowing yet";
-        goto *table_7[(*var_5)->get_kind()];
-      choice_7:
-      oper_7:
-        Engine::hfun(var_5);
-        goto *table_7[(*var_5)->get_kind()];
-      __0x5B_0x5D_7: // "[]"
-        return new ::_Prelude::_inject(arg2, Engine::Partial::make(::_Prelude::_best_0x2Econstrain_0x2E466_0x2E__0x23lambda13::make(arg1, ((::_Prelude::__0x3A*) *(arg3))->arg1), 1));
-      __0x3A_7: // ":"
-        return DO_FAIL;
-  }
-
-  Node* _best_0x2Econstrain_0x2E466_0x2E__0x23lambda13::hfun() { // best.constrain.466._#lambda13
-    // VAR (1,1,(IPath (Arg 1)))
-    // VAR (2,1,(IPath (Arg 2)))
-    // VAR (3,1,(IPath (Arg 3)))
-    // VAR (4,2,IFree)
-    // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-    // LHS variable (2,1,(IPath (Arg 2))) is argument 2
-    // LHS variable (3,1,(IPath (Arg 3))) is argument 3
-    Node** var_4 = ::Engine::Variable::make();
-    return new ::_Prelude::__0x26(::_Prelude::_apply::make(arg2, var_4), ::_Prelude::__0x3D_0x3A_0x3D::make(::_Prelude::_apply::make(::_Prelude::_apply::make(arg1, arg3), var_4), ::_Prelude::_True::make()));
-  }
-
-  Node* _best_0x2EbestHelp_0x2E466::hfun() { // best.bestHelp.466
-    // VAR (1,2,(IPath (Arg 1)))
-    // VAR (2,5,(IPath (Arg 2)))
-    // VAR (3,5,(IPath (Arg 3)))
-    // VAR (4,2,(IPath (Arg 4)))
-    // VAR (5,1,(IPath (Rel 3 ("Prelude",":") 1)))
-    // VAR (6,1,(IPath (Rel 3 ("Prelude",":") 2)))
-    // VAR (7,1,(IPath (Rel 2 ("Prelude",":") 1)))
-    // VAR (8,1,(IPath (Rel 2 ("Prelude",":") 2)))
-    // LHS variable (1,2,(IPath (Arg 1))) is argument 1
-    // LHS variable (2,5,(IPath (Arg 2))) is argument 2
-    // LHS variable (3,5,(IPath (Arg 3))) is argument 3
-    // LHS variable (4,2,(IPath (Arg 4))) is argument 4
-    static void* table_9[]
-      = {&&fail_9, &&var_9, &&choice_9, &&oper_9, &&__0x5B_0x5D_9, &&__0x3A_9};
-      goto *table_9[(*arg2)->get_kind()];
-    fail_9:
-      return DO_FAIL;
-    var_9:
-      // Engine::narrow(arg2, generator());
-      throw "No narrowing yet";
-      goto *table_9[(*arg2)->get_kind()];
-    choice_9:
-    oper_9:
-      Engine::hfun(arg2);
-      goto *table_9[(*arg2)->get_kind()];
-    __0x5B_0x5D_9: // "[]"
-      static void* table_10[]
-        = {&&fail_10, &&var_10, &&choice_10, &&oper_10, &&__0x5B_0x5D_10, &&__0x3A_10};
-        goto *table_10[(*arg3)->get_kind()];
-      fail_10:
-        return DO_FAIL;
-      var_10:
-        // Engine::narrow(arg3, generator());
-        throw "No narrowing yet";
-        goto *table_10[(*arg3)->get_kind()];
-      choice_10:
-      oper_10:
-        Engine::hfun(arg3);
-        goto *table_10[(*arg3)->get_kind()];
-      __0x5B_0x5D_10: // "[]"
-        return *(arg4);
-      __0x3A_10: // ":"
-        // LHS variable (5,1,(IPath (Rel 3 ("Prelude",":") 1))) is inlined as [(3,5,(IPath (Arg 3))),(5,1,(IPath (Rel 3 ("Prelude",":") 1)))]
-        // LHS variable (6,1,(IPath (Rel 3 ("Prelude",":") 2))) is inlined as [(3,5,(IPath (Arg 3))),(6,1,(IPath (Rel 3 ("Prelude",":") 2)))]
-        return new ::_Prelude::_best_0x2EevalY_0x2E466(arg1, ::_Prelude::_try::make(::_Prelude::_best_0x2Econstrain_0x2E466::make(arg1, ((::_Prelude::__0x3A*) *(arg3))->arg1, arg4)), ((::_Prelude::__0x3A*) *(arg3))->arg2, arg4);
-    __0x3A_9: // ":"
-      // LHS variable (7,1,(IPath (Rel 2 ("Prelude",":") 1))) is inlined as [(2,5,(IPath (Arg 2))),(7,1,(IPath (Rel 2 ("Prelude",":") 1)))]
-      // LHS variable (8,1,(IPath (Rel 2 ("Prelude",":") 2))) is inlined as [(2,5,(IPath (Arg 2))),(8,1,(IPath (Rel 2 ("Prelude",":") 2)))]
-      return new ::_Prelude::_best_0x2EevalX_0x2E466(arg1, ::_Prelude::_try::make(((::_Prelude::__0x3A*) *(arg2))->arg1), ((::_Prelude::__0x3A*) *(arg2))->arg2, arg3, arg4);
-  }
-
-  Node* _best_0x2EevalY_0x2E466::hfun() { // best.evalY.466
-    // VAR (1,1,(IPath (Arg 1)))
-    // VAR (2,5,(IPath (Arg 2)))
-    // VAR (3,1,(IPath (Arg 3)))
-    // VAR (4,1,(IPath (Arg 4)))
-    // VAR (5,1,(IPath (Rel 2 ("Prelude",":") 1)))
-    // VAR (6,1,(IPath (Rel 2 ("Prelude",":") 2)))
-    // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-    // LHS variable (2,5,(IPath (Arg 2))) is argument 2
-    // LHS variable (3,1,(IPath (Arg 3))) is argument 3
-    // LHS variable (4,1,(IPath (Arg 4))) is argument 4
-    static void* table_7[]
-      = {&&fail_7, &&var_7, &&choice_7, &&oper_7, &&__0x5B_0x5D_7, &&__0x3A_7};
-      goto *table_7[(*arg2)->get_kind()];
-    fail_7:
-      return DO_FAIL;
-    var_7:
-      // Engine::narrow(arg2, generator());
-      throw "No narrowing yet";
-      goto *table_7[(*arg2)->get_kind()];
-    choice_7:
-    oper_7:
-      Engine::hfun(arg2);
-      goto *table_7[(*arg2)->get_kind()];
-    __0x5B_0x5D_7: // "[]"
-      return new ::_Prelude::_best_0x2EbestHelp_0x2E466(arg1, ::_Prelude::__0x5B_0x5D::make(), arg3, arg4);
-    __0x3A_7: // ":"
-      // LHS variable (5,1,(IPath (Rel 2 ("Prelude",":") 1))) is inlined as [(2,5,(IPath (Arg 2))),(5,1,(IPath (Rel 2 ("Prelude",":") 1)))]
-      // LHS variable (6,1,(IPath (Rel 2 ("Prelude",":") 2))) is inlined as [(2,5,(IPath (Arg 2))),(6,1,(IPath (Rel 2 ("Prelude",":") 2)))]
-      return new ::_Prelude::_best_0x2EevalY_0x2E466_case__0x231(((::_Prelude::__0x3A*) *(arg2))->arg2, arg1, arg3, ((::_Prelude::__0x3A*) *(arg2))->arg1, arg4);
-  }
-
-  Node* _best_0x2EevalY_0x2E466_case__0x231::hfun() { // best.evalY.466_case_#1
-    // VAR (6,5,(IPath (Arg 1)))
-    // VAR (1,1,(IPath (Arg 2)))
-    // VAR (3,1,(IPath (Arg 3)))
-    // VAR (5,1,(IPath (Arg 4)))
-    // VAR (4,1,(IPath (Arg 5)))
-    // VAR (7,1,(IPath (Rel 6 ("Prelude",":") 1)))
-    // VAR (8,1,(IPath (Rel 6 ("Prelude",":") 2)))
-    // LHS variable (6,5,(IPath (Arg 1))) is argument 1
-    // LHS variable (1,1,(IPath (Arg 2))) is argument 2
-    // LHS variable (3,1,(IPath (Arg 3))) is argument 3
-    // LHS variable (5,1,(IPath (Arg 4))) is argument 4
-    // LHS variable (4,1,(IPath (Arg 5))) is argument 5
-    static void* table_9[]
-      = {&&fail_9, &&var_9, &&choice_9, &&oper_9, &&__0x5B_0x5D_9, &&__0x3A_9};
-      goto *table_9[(*arg1)->get_kind()];
-    fail_9:
-      return DO_FAIL;
-    var_9:
-      // Engine::narrow(arg1, generator());
-      throw "No narrowing yet";
-      goto *table_9[(*arg1)->get_kind()];
-    choice_9:
-    oper_9:
-      Engine::hfun(arg1);
-      goto *table_9[(*arg1)->get_kind()];
-    __0x5B_0x5D_9: // "[]"
-      return new ::_Prelude::_best_0x2EbestHelp_0x2E466(arg2, ::_Prelude::__0x5B_0x5D::make(), arg3, ::_Prelude::__0x3A::make(arg4, ::_Prelude::__0x5B_0x5D::make()));
-    __0x3A_9: // ":"
-      // LHS variable (7,1,(IPath (Rel 6 ("Prelude",":") 1))) is inlined as [(6,5,(IPath (Arg 1))),(7,1,(IPath (Rel 6 ("Prelude",":") 1)))]
-      // LHS variable (8,1,(IPath (Rel 6 ("Prelude",":") 2))) is inlined as [(6,5,(IPath (Arg 1))),(8,1,(IPath (Rel 6 ("Prelude",":") 2)))]
-      return new ::_Prelude::_best_0x2EbestHelp_0x2E466(arg2, ::_Prelude::__0x3A::make(arg4, ::_Prelude::__0x3A::make(((::_Prelude::__0x3A*) *(arg1))->arg1, ((::_Prelude::__0x3A*) *(arg1))->arg2)), arg3, arg5);
-  }
-
-  Node* _best_0x2EevalX_0x2E466::hfun() { // best.evalX.466
-    // VAR (1,1,(IPath (Arg 1)))
-    // VAR (2,5,(IPath (Arg 2)))
-    // VAR (3,1,(IPath (Arg 3)))
-    // VAR (4,1,(IPath (Arg 4)))
-    // VAR (5,1,(IPath (Arg 5)))
-    // VAR (6,1,(IPath (Rel 2 ("Prelude",":") 1)))
-    // VAR (7,1,(IPath (Rel 2 ("Prelude",":") 2)))
-    // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-    // LHS variable (2,5,(IPath (Arg 2))) is argument 2
-    // LHS variable (3,1,(IPath (Arg 3))) is argument 3
-    // LHS variable (4,1,(IPath (Arg 4))) is argument 4
-    // LHS variable (5,1,(IPath (Arg 5))) is argument 5
-    static void* table_8[]
-      = {&&fail_8, &&var_8, &&choice_8, &&oper_8, &&__0x5B_0x5D_8, &&__0x3A_8};
-      goto *table_8[(*arg2)->get_kind()];
-    fail_8:
-      return DO_FAIL;
-    var_8:
-      // Engine::narrow(arg2, generator());
-      throw "No narrowing yet";
-      goto *table_8[(*arg2)->get_kind()];
-    choice_8:
-    oper_8:
-      Engine::hfun(arg2);
-      goto *table_8[(*arg2)->get_kind()];
-    __0x5B_0x5D_8: // "[]"
-      return new ::_Prelude::_best_0x2EbestHelp_0x2E466(arg1, arg3, arg4, arg5);
-    __0x3A_8: // ":"
-      // LHS variable (6,1,(IPath (Rel 2 ("Prelude",":") 1))) is inlined as [(2,5,(IPath (Arg 2))),(6,1,(IPath (Rel 2 ("Prelude",":") 1)))]
-      // LHS variable (7,1,(IPath (Rel 2 ("Prelude",":") 2))) is inlined as [(2,5,(IPath (Arg 2))),(7,1,(IPath (Rel 2 ("Prelude",":") 2)))]
-      return new ::_Prelude::_best_0x2EevalX_0x2E466_case__0x231(((::_Prelude::__0x3A*) *(arg2))->arg2, arg1, arg3, arg4, ((::_Prelude::__0x3A*) *(arg2))->arg1, arg5);
-  }
-
-  Node* _best_0x2EevalX_0x2E466_case__0x231::hfun() { // best.evalX.466_case_#1
-    // VAR (7,5,(IPath (Arg 1)))
-    // VAR (1,1,(IPath (Arg 2)))
-    // VAR (3,1,(IPath (Arg 3)))
-    // VAR (4,1,(IPath (Arg 4)))
-    // VAR (6,1,(IPath (Arg 5)))
-    // VAR (5,1,(IPath (Arg 6)))
-    // VAR (8,1,(IPath (Rel 7 ("Prelude",":") 1)))
-    // VAR (9,1,(IPath (Rel 7 ("Prelude",":") 2)))
-    // LHS variable (7,5,(IPath (Arg 1))) is argument 1
-    // LHS variable (1,1,(IPath (Arg 2))) is argument 2
-    // LHS variable (3,1,(IPath (Arg 3))) is argument 3
-    // LHS variable (4,1,(IPath (Arg 4))) is argument 4
-    // LHS variable (6,1,(IPath (Arg 5))) is argument 5
-    // LHS variable (5,1,(IPath (Arg 6))) is argument 6
-    static void* table_10[]
-      = {&&fail_10, &&var_10, &&choice_10, &&oper_10, &&__0x5B_0x5D_10, &&__0x3A_10};
-      goto *table_10[(*arg1)->get_kind()];
-    fail_10:
-      return DO_FAIL;
-    var_10:
-      // Engine::narrow(arg1, generator());
-      throw "No narrowing yet";
-      goto *table_10[(*arg1)->get_kind()];
-    choice_10:
-    oper_10:
-      Engine::hfun(arg1);
-      goto *table_10[(*arg1)->get_kind()];
-    __0x5B_0x5D_10: // "[]"
-      return new ::_Prelude::_best_0x2EbestHelp_0x2E466(arg2, ::_Prelude::__0x5B_0x5D::make(), ::_Prelude::__0x2B_0x2B::make(arg3, arg4), ::_Prelude::__0x3A::make(arg5, ::_Prelude::__0x5B_0x5D::make()));
-    __0x3A_10: // ":"
-      // LHS variable (8,1,(IPath (Rel 7 ("Prelude",":") 1))) is inlined as [(7,5,(IPath (Arg 1))),(8,1,(IPath (Rel 7 ("Prelude",":") 1)))]
-      // LHS variable (9,1,(IPath (Rel 7 ("Prelude",":") 2))) is inlined as [(7,5,(IPath (Arg 1))),(9,1,(IPath (Rel 7 ("Prelude",":") 2)))]
-      return new ::_Prelude::_best_0x2EbestHelp_0x2E466(arg2, ::_Prelude::__0x2B_0x2B::make(::_Prelude::__0x3A::make(arg5, ::_Prelude::__0x3A::make(((::_Prelude::__0x3A*) *(arg1))->arg1, ((::_Prelude::__0x3A*) *(arg1))->arg2)), arg3), arg4, arg6);
-  }
-
-  Node* _findall::hfun() { // findall
-    // VAR (1,1,(IPath (Arg 1)))
-    // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-    return new ::_Prelude::_map(Engine::Partial::make(::_Prelude::_unpack::make(), 1), ::_Prelude::_solveAll::make(arg1));
-  }
-
-  Node* _findfirst::hfun() { // findfirst
-    // VAR (1,1,(IPath (Arg 1)))
-    // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-    return new ::_Prelude::_head(::_Prelude::_findall::make(arg1));
-  }
-
-  Node* _browse::hfun() { // browse
-    // VAR (1,1,(IPath (Arg 1)))
-    // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-    return new ::_Prelude::_putStr(::_Prelude::_show::make(::_Prelude::_unpack::make(arg1)));
-  }
-
-  Node* _browseList::hfun() { // browseList
-    // VAR (1,5,(IPath (Arg 1)))
-    // VAR (2,1,(IPath (Rel 1 ("Prelude",":") 1)))
-    // VAR (3,1,(IPath (Rel 1 ("Prelude",":") 2)))
-    // LHS variable (1,5,(IPath (Arg 1))) is argument 1
-    static void* table_4[]
-      = {&&fail_4, &&var_4, &&choice_4, &&oper_4, &&__0x5B_0x5D_4, &&__0x3A_4};
-      goto *table_4[(*arg1)->get_kind()];
-    fail_4:
-      return DO_FAIL;
-    var_4:
-      // Engine::narrow(arg1, generator());
-      throw "No narrowing yet";
-      goto *table_4[(*arg1)->get_kind()];
-    choice_4:
-    oper_4:
-      Engine::hfun(arg1);
-      goto *table_4[(*arg1)->get_kind()];
-    __0x5B_0x5D_4: // "[]"
-      return new ::_Prelude::_done();
-    __0x3A_4: // ":"
-      // LHS variable (2,1,(IPath (Rel 1 ("Prelude",":") 1))) is inlined as [(1,5,(IPath (Arg 1))),(2,1,(IPath (Rel 1 ("Prelude",":") 1)))]
-      // LHS variable (3,1,(IPath (Rel 1 ("Prelude",":") 2))) is inlined as [(1,5,(IPath (Arg 1))),(3,1,(IPath (Rel 1 ("Prelude",":") 2)))]
-      return new ::_Prelude::__0x3E_0x3E(::_Prelude::__0x3E_0x3E::make(::_Prelude::_browse::make(((::_Prelude::__0x3A*) *(arg1))->arg1), ::_Prelude::_putChar::make(Litchar::Litchar::make('\n'))), ::_Prelude::_browseList::make(((::_Prelude::__0x3A*) *(arg1))->arg2));
-  }
-
-  Node* _unpack::hfun() { // unpack
-    // VAR (1,1,(IPath (Arg 1)))
-    // VAR (2,2,IFree)
-    // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-    Node** var_2 = ::Engine::Variable::make();
-    return new ::_Prelude::_cond(::_Prelude::_apply::make(arg1, var_2), var_2);
   }
 
   Node* _PEVAL::hfun() { // PEVAL
@@ -3493,42 +2946,14 @@ namespace _Prelude {
 
   Node* _normalForm::hfun() { // normalForm
     // VAR (1,1,(IPath (Arg 1)))
-    // VAR (2,2,IFree)
     // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-    Node** var_2 = ::Engine::Variable::make();
-    return new ::_Prelude::_cond(::_Prelude::__0x3D_0x3A_0x3D::make(arg1, var_2), var_2);
+    return new ::_Prelude::__0x24_0x21_0x21(Engine::Partial::make(::_Prelude::_id::make(), 1), arg1);
   }
 
   Node* _groundNormalForm::hfun() { // groundNormalForm
     // VAR (1,1,(IPath (Arg 1)))
-    // VAR (2,1,IBind)
     // LHS variable (1,1,(IPath (Arg 1))) is argument 1
-    // [(2,[])]
-    Node** var_2 = ::_Prelude::_normalForm::make(arg1);
-    return new ::_Prelude::_groundNormalForm_case__0x231(var_2);
-  }
-
-  Node* _groundNormalForm_case__0x231::hfun() { // groundNormalForm_case_#1
-    // VAR (2,3,(IPath (Arg 1)))
-    // LHS variable (2,3,(IPath (Arg 1))) is argument 1
-    static void* table_3[]
-      = {&&fail_3, &&var_3, &&choice_3, &&oper_3, &&_False_3, &&_True_3};
-    Node** var_3 = ::_Prelude::__0x3D_0x3D::make(arg1, arg1);
-      goto *table_3[(*var_3)->get_kind()];
-    fail_3:
-      return DO_FAIL;
-    var_3:
-      // Engine::narrow(var_3, generator());
-      throw "No narrowing yet";
-      goto *table_3[(*var_3)->get_kind()];
-    choice_3:
-    oper_3:
-      Engine::hfun(var_3);
-      goto *table_3[(*var_3)->get_kind()];
-    _False_3: // "False"
-      return new ::_Prelude::_failed();
-    _True_3: // "True"
-      return *(arg1);
+    return new ::_Prelude::__0x24_0x23_0x23(Engine::Partial::make(::_Prelude::_id::make(), 1), arg1);
   }
 
   // external Node* _apply::hfun() { throw "External \"Prelude.apply\" not implemented"; }
@@ -4408,7 +3833,7 @@ namespace _Prelude {
   }
 
   Node* _IOError::boolequal(Node** right) { // IOError 
-    static void* table[] = {&&fail, &&var, &&choice, &&oper, &&_IOError};
+    static void* table[] = {&&fail, &&var, &&choice, &&oper, &&_IOError, &&_UserError, &&_FailError, &&_NondetError};
   start:
     goto *table[(*right)->get_kind()];
   fail:
@@ -4421,10 +3846,16 @@ namespace _Prelude {
     goto start;
   _IOError:
     return new ::_Prelude::__0x26_0x26(::_Prelude::__0x3D_0x3D::make(arg1,((::_Prelude::_IOError*) (*right))->arg1), ::_Prelude::_True::make());
+  _UserError:
+    return new ::_Prelude::_False();
+  _FailError:
+    return new ::_Prelude::_False();
+  _NondetError:
+    return new ::_Prelude::_False();
   }
 
   Node* _IOError::compare(Node** right) { // IOError 
-    static void* table[] = {&&fail, &&var, &&choice, &&oper, &&_IOError};
+    static void* table[] = {&&fail, &&var, &&choice, &&oper, &&_IOError, &&_UserError, &&_FailError, &&_NondetError};
     goto *table[(*right)->get_kind()];
   fail:
     return DO_FAIL;
@@ -4436,5 +3867,140 @@ namespace _Prelude {
     goto *table[(*right)->get_kind()];
   _IOError:
     return new ::_Prelude::_compare(arg1,((::_Prelude::_IOError*) (*right))->arg1);
+  _UserError:
+    return new ::_Prelude::_LT();
+  _FailError:
+    return new ::_Prelude::_LT();
+  _NondetError:
+    return new ::_Prelude::_LT();
+  }
+
+  Node* _UserError::boolequal(Node** right) { // UserError 
+    static void* table[] = {&&fail, &&var, &&choice, &&oper, &&_IOError, &&_UserError, &&_FailError, &&_NondetError};
+  start:
+    goto *table[(*right)->get_kind()];
+  fail:
+    return DO_FAIL;
+  var:
+    throw "Program flounders";
+  choice:
+  oper:
+    Engine::hfun(right);
+    goto start;
+  _IOError:
+    return new ::_Prelude::_False();
+  _UserError:
+    return new ::_Prelude::__0x26_0x26(::_Prelude::__0x3D_0x3D::make(arg1,((::_Prelude::_UserError*) (*right))->arg1), ::_Prelude::_True::make());
+  _FailError:
+    return new ::_Prelude::_False();
+  _NondetError:
+    return new ::_Prelude::_False();
+  }
+
+  Node* _UserError::compare(Node** right) { // UserError 
+    static void* table[] = {&&fail, &&var, &&choice, &&oper, &&_IOError, &&_UserError, &&_FailError, &&_NondetError};
+    goto *table[(*right)->get_kind()];
+  fail:
+    return DO_FAIL;
+  var:
+    throw "Program flounders";
+  choice:
+  oper:
+    Engine::hfun(right);
+    goto *table[(*right)->get_kind()];
+  _IOError:
+    return new ::_Prelude::_GT();
+  _UserError:
+    return new ::_Prelude::_compare(arg1,((::_Prelude::_UserError*) (*right))->arg1);
+  _FailError:
+    return new ::_Prelude::_LT();
+  _NondetError:
+    return new ::_Prelude::_LT();
+  }
+
+  Node* _FailError::boolequal(Node** right) { // FailError 
+    static void* table[] = {&&fail, &&var, &&choice, &&oper, &&_IOError, &&_UserError, &&_FailError, &&_NondetError};
+  start:
+    goto *table[(*right)->get_kind()];
+  fail:
+    return DO_FAIL;
+  var:
+    throw "Program flounders";
+  choice:
+  oper:
+    Engine::hfun(right);
+    goto start;
+  _IOError:
+    return new ::_Prelude::_False();
+  _UserError:
+    return new ::_Prelude::_False();
+  _FailError:
+    return new ::_Prelude::__0x26_0x26(::_Prelude::__0x3D_0x3D::make(arg1,((::_Prelude::_FailError*) (*right))->arg1), ::_Prelude::_True::make());
+  _NondetError:
+    return new ::_Prelude::_False();
+  }
+
+  Node* _FailError::compare(Node** right) { // FailError 
+    static void* table[] = {&&fail, &&var, &&choice, &&oper, &&_IOError, &&_UserError, &&_FailError, &&_NondetError};
+    goto *table[(*right)->get_kind()];
+  fail:
+    return DO_FAIL;
+  var:
+    throw "Program flounders";
+  choice:
+  oper:
+    Engine::hfun(right);
+    goto *table[(*right)->get_kind()];
+  _IOError:
+    return new ::_Prelude::_GT();
+  _UserError:
+    return new ::_Prelude::_GT();
+  _FailError:
+    return new ::_Prelude::_compare(arg1,((::_Prelude::_FailError*) (*right))->arg1);
+  _NondetError:
+    return new ::_Prelude::_LT();
+  }
+
+  Node* _NondetError::boolequal(Node** right) { // NondetError 
+    static void* table[] = {&&fail, &&var, &&choice, &&oper, &&_IOError, &&_UserError, &&_FailError, &&_NondetError};
+  start:
+    goto *table[(*right)->get_kind()];
+  fail:
+    return DO_FAIL;
+  var:
+    throw "Program flounders";
+  choice:
+  oper:
+    Engine::hfun(right);
+    goto start;
+  _IOError:
+    return new ::_Prelude::_False();
+  _UserError:
+    return new ::_Prelude::_False();
+  _FailError:
+    return new ::_Prelude::_False();
+  _NondetError:
+    return new ::_Prelude::__0x26_0x26(::_Prelude::__0x3D_0x3D::make(arg1,((::_Prelude::_NondetError*) (*right))->arg1), ::_Prelude::_True::make());
+  }
+
+  Node* _NondetError::compare(Node** right) { // NondetError 
+    static void* table[] = {&&fail, &&var, &&choice, &&oper, &&_IOError, &&_UserError, &&_FailError, &&_NondetError};
+    goto *table[(*right)->get_kind()];
+  fail:
+    return DO_FAIL;
+  var:
+    throw "Program flounders";
+  choice:
+  oper:
+    Engine::hfun(right);
+    goto *table[(*right)->get_kind()];
+  _IOError:
+    return new ::_Prelude::_GT();
+  _UserError:
+    return new ::_Prelude::_GT();
+  _FailError:
+    return new ::_Prelude::_GT();
+  _NondetError:
+    return new ::_Prelude::_compare(arg1,((::_Prelude::_NondetError*) (*right))->arg1);
   }
 }

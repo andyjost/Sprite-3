@@ -3,7 +3,7 @@ module MacroSymbols where
 import List
 import ICurry
 import Block
-import Format
+import XFormat
 import Utils
 import MacroCore
 import MacroEqual

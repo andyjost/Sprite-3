@@ -4,7 +4,7 @@ import List
 import ICurry
 import Block
 import Utils
-import Format
+import XFormat
 import MacroStatement
 
 macro_body qname _ vtable stmt_list

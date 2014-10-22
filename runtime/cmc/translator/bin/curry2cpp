@@ -1,8 +1,7 @@
 #!/bin/bash
 
-# TODO: look in the compile script for a better way
-THISDIR=`(cd \`dirname $0\` > /dev/null ; pwd)`
-BASEDIR=`(cd $THISDIR/.. > /dev/null ; pwd)`
+BASEDIR=$(dirname $(dirname $(readlink -f $0)))
+# echo $BASEDIR
 
 if [ "$1" = "" ]
 then
@@ -10,62 +9,61 @@ then
   exit
 fi
 
-# PAKCSLIBPATH=$PAKCSHOME/lib:$PAKCSHOME/lib/meta
-# export PAKCSLIBPATH
-# echo PAKCSLIBPATH $PAKCSLIBPATH
+FILE=$(dirname $1)/$(basename $1 ".curry")
+if [ ! -f $FILE.curry ]
+then
+  echo Error: \"$FILE.curry\" not found
+  exit
+fi
 
-  FILE=$(dirname $1)/$(basename $1 ".curry")
-  if [ ! -f $FILE.curry ]
-  then
-    echo Error: \"$FILE.curry\" not found
-    exit
-  fi
+parsecurry --flat $FILE
+if [ $? = 0 ]
+   then echo parsed
+   else echo parse error ; exit
+fi
 
-  parsecurry --flat $FILE
-  if [ $? = 0 ]
-     then echo parsed
-     else echo parse error ; exit
-  fi
-
+# ------------------------------------------------------------------
 # create ICurry
 
-  TARGET=$(dirname $1)/.curry/$(basename $1 ".curry")
+CURRYPATH=$PAKCSHOME/lib:$PAKCSHOME/lib/meta:$BASEDIR/icurry:$BASEDIR/format:$BASEDIR/backtrack
+CURRYPATH=$BASEDIR/icurry:$BASEDIR/format:$BASEDIR/backtrack
+export CURRYPATH
 
-  if [ -f $TARGET.icur -a $TARGET.icur -nt $FILE.curry ]
-  then
-    echo \"icur\" up to date
-  else
-    rm -f $FILE.icur 
-    CMCLIBPATH=$BASEDIR/icurry:$BASEDIR/format
-    CURRYPATH=`pwd`/$(dirname $1):$CMCLIBPATH
-    export CURRYPATH
-    echo CURRYPATH $CURRYPATH
-    # command="pakcs $FILE :load Main.curry :eval Main.main :quit"
-    command="pakcs $FILE :load $BASEDIR/icurry/Main.curry :eval Main.main :quit"
-    echo Running $command
-    $command
-    if [ -f $FILE.icur ]
-    then echo \"icur\" file created
-         mv -f $FILE.icur $TARGET.icur
-         mv -f $FILE.read $TARGET.read
-    else echo Fail to create  \"$FILE.icur\" file
-         exit 1
-    fi
-  fi
+TARGET=$(dirname $1)/.curry/$(basename $1 ".curry")
 
-  rm -f $FILE.*pp $TARGET.*pp
-  CMCLIBPATH=$BASEDIR/backtrack:$BASEDIR/format:$BASEDIR/icurry
-  CURRYPATH=`pwd`/$(dirname $1):$CMCLIBPATH
-  export CURRYPATH
+# echo TARGET $TARGET
+
+if [ -f $TARGET.icur -a $TARGET.icur -nt $FILE.curry ]
+then
+  echo \"icur\" up to date
+else
+  rm -f $FILE.icur 
+  # command="pakcs -Dkeepfiles=yes :set v3 :set args $FILE :load $BASEDIR/icurry/Main.curry :eval main :quit"
+  command="pakcs -q :set args $FILE :load $BASEDIR/icurry/Main.curry :eval Main.main :quit"
   echo CURRYPATH $CURRYPATH
-  command="pakcs $TARGET :load $BASEDIR/backtrack/Main.curry :eval main :quit"
   echo Running $command
   $command
-  if [ -f $TARGET.hpp -a -f $TARGET.cpp ]
-  then echo \"C++\" files created
-       exit 0
-  else echo Fail to create  \"C++\" files 
+  if [ -f $FILE.icur ]
+  then echo \"icur\" file created
+       mv -f $FILE.icur $TARGET.icur
+       mv -f $FILE.read $TARGET.read
+  else echo Fail to create  \"$FILE.icur\" file
        exit 1
   fi
+fi
 
+# ------------------------------------------------------------------
+# Convert to C++
 
+rm -f $FILE.*pp $TARGET.*pp
+
+command="pakcs -q :set args $TARGET :load $BASEDIR/backtrack/Main.curry :eval Main.main :quit"
+echo CURRYPATH $CURRYPATH
+echo Running $command
+$command
+if [ -f $TARGET.hpp -a -f $TARGET.cpp ]
+then echo \"C++\" files created
+     exit 0
+else echo Fail to create  \"C++\" files 
+     exit 1
+fi

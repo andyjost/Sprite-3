@@ -13,9 +13,7 @@ else
     rm -f .curry/*.json
     rm -f .curry/*.hpp
     rm -f .curry/*.cpp
+
+    # Recursively down for now
+    rm -rf `find . -name ".curry"`
 fi
-
-# Extra for now
-
-cd $BASEDIR
-rm -rf `find . -name ".curry"`

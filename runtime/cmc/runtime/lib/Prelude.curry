@@ -5,14 +5,16 @@
 ----------------------------------------------------------------------------
 
 module Prelude where
+
 -- Lines beginning with "--++" are part of the prelude
 -- but cannot parsed by the compiler
 
 -- Infix operator declarations:
 
+
 infixl 9 !!
 infixr 9 .
-infixl 7 *, `div`, `mod`
+infixl 7 *, `div`, `mod`, `quot`, `rem`
 infixl 6 +, -
 -- infixr 5 :                          -- declared together with list
 infixr 5 ++
@@ -21,12 +23,15 @@ infix  4  `elem`, `notElem`
 infixr 3 &&
 infixr 2 ||
 infixl 1 >>, >>=
-infixr 0 $, $!, $!!, $#, $##, `seq`, &, &>, ?
+infixr 0 $, $!, $!!, $#, $##, `seq`, &&>, &, &>, ?
+
 
 -- externally defined types for numbers and characters
 data Int
 data Float
 data Char
+
+
 type String = [Char]
 
 -- Some standard combinators:
@@ -62,7 +67,7 @@ until p f x     = if p x then x else until p f (f x)
 --- Evaluates the first argument to head normal form (which could also
 --- be a free variable) and returns the second argument.
 seq     :: _ -> a -> a
-seq external
+x `seq` y = const y $! x
 
 --- Evaluates the argument to head normal form and returns it.
 --- Suspends until the result is bound to a non-variable term.
@@ -80,14 +85,15 @@ ensureSpine l = ensureList (ensureNotFree l)
 ($)     :: (a -> b) -> a -> b
 f $ x   = f x
 
---- Right-associative application with strict evaluation of its argument.
+--- Right-associative application with strict evaluation of its argument
+--- to head normal form.
 ($!)    :: (a -> b) -> a -> b
-f $! x  = x `seq` f x
+($!) external
 
 --- Right-associative application with strict evaluation of its argument
 --- to normal form.
 ($!!)   :: (a -> b) -> a -> b
-f $!! x | x=:=y = f y  where y free
+($!!) external
 
 --- Right-associative application with strict evaluation of its argument
 --- to a non-variable term.
@@ -97,7 +103,7 @@ f $# x  = f $! (ensureNotFree x)
 --- Right-associative application with strict evaluation of its argument
 --- to ground normal form.
 ($##)   :: (a -> b) -> a -> b
-f $## x | x=:=y = y==y `seq` f y  where y free
+($##) external
 
 --- Aborts the execution with an error message.
 error :: String -> _
@@ -108,7 +114,7 @@ prim_error external
 
 --- A non-reducible polymorphic function.
 --- It is useful to express a failure in a search branch of the execution.
---- It could be defined by: <code>failed = head []</code>
+--- It could be defined by: `failed = head []`
 failed :: _
 failed external
 
@@ -144,6 +150,17 @@ if_then_else           :: Bool -> a -> a -> a
 if_then_else b t f = case b of True  -> t
                                False -> f
 
+--- Enforce a Boolean condition to be true.
+--- The computation fails if the argument evaluates to `False`.
+solve :: Bool -> Bool
+solve True = True
+
+--- Conditional expression.
+--- An expression like `(c &&> e)` is evaluated by evaluating the first
+--- argument to `True` and then evaluating `e`.
+--- The expression has no value if the condition does not evaluate to `True`.
+(&&>) :: Bool -> a -> a
+True &&> x = x
 
 --- Equality on finite ground data terms.
 (==)            :: a -> a -> Bool
@@ -152,7 +169,6 @@ if_then_else b t f = case b of True  -> t
 --- Disequality.
 (/=)            :: a -> a -> Bool
 x /= y          = not (x==y)
-
 
 --- Ordering type. Useful as a result of comparison functions.
 data Ordering = LT | EQ | GT
@@ -248,7 +264,8 @@ map f (x:xs)    = f x : map f xs
 
 --- Accumulates all list elements by applying a binary operator from
 --- left to right. Thus,
---- <CODE>foldl f z [x1,x2,...,xn] = (...((z `f` x1) `f` x2) ...) `f` xn</CODE>
+---
+---     foldl f z [x1,x2,...,xn] = (...((z `f` x1) `f` x2) ...) `f` xn
 foldl            :: (a -> b -> a) -> a -> [b] -> a
 foldl _ z []     = z
 foldl f z (x:xs) = foldl f (f z x) xs
@@ -259,7 +276,8 @@ foldl1 f (x:xs)  = foldl f x xs
 
 --- Accumulates all list elements by applying a binary operator from
 --- right to left. Thus,
---- <CODE>foldr f z [x1,x2,...,xn] = (x1 `f` (x2 `f` ... (xn `f` z)...))</CODE>
+---
+---     foldr f z [x1,x2,...,xn] = (x1 `f` (x2 `f` ... (xn `f` z)...))
 foldr            :: (a->b->b) -> b -> [a] -> b
 foldr _ z []     = z
 foldr f z (x:xs) = f x (foldr f z xs)
@@ -291,14 +309,14 @@ zip3 (_:_)  (_:_)  []     = []
 zip3 (x:xs) (y:ys) (z:zs) = (x,y,z) : zip3 xs ys zs
 
 --- Joins two lists into one list by applying a combination function to
---- corresponding pairs of elements. Thus <CODE>zip = zipWith (,)</CODE>
+--- corresponding pairs of elements. Thus `zip = zipWith (,)`
 zipWith                 :: (a->b->c) -> [a] -> [b] -> [c]
 zipWith _ []     _      = []
 zipWith _ (_:_)  []     = []
 zipWith f (x:xs) (y:ys) = f x y : zipWith f xs ys
 
 --- Joins three lists into one list by applying a combination function to
---- corresponding triples of elements. Thus <CODE>zip3 = zipWith3 (,,)</CODE>
+--- corresponding triples of elements. Thus `zip3 = zipWith3 (,,)`
 zipWith3                        :: (a->b->c->d) -> [a] -> [b] -> [c] -> [d]
 zipWith3 _ []     _      _      = []
 zipWith3 _ (_:_)  []     _      = []
@@ -324,12 +342,12 @@ concatMap         :: (a -> [b]) -> [a] -> [b]
 concatMap f       = concat . map f
 
 --- Infinite list of repeated applications of a function f to an element x.
---- Thus, <CODE>iterate f x = [x, f x, f (f x),...]</CODE>
+--- Thus, `iterate f x = [x, f x, f (f x),...]`
 iterate           :: (a -> a) -> a -> [a]
 iterate f x       = x : iterate f (f x)
 
 --- Infinite list where all elements have the same value.
---- Thus, <CODE>repeat x = [x, x, x,...]</CODE>
+--- Thus, `repeat x = [x, x, x,...]`
 repeat            :: a -> [a]
 repeat x          = x : repeat x
 
@@ -462,61 +480,67 @@ enumFromThenTo n1 n2 m = takeWhile p (enumFromThen n1 n2)
 
 --- Converts a character into its ASCII value.
 ord :: Char -> Int
-ord c = prim_ord $# c
-
-prim_ord :: Char -> Int
-prim_ord external
+ord external
 
 --- Converts an ASCII value into a character.
 chr :: Int -> Char
-chr n = prim_chr $# n
-
-prim_chr :: Int -> Char
-prim_chr external
+chr external
 
 
 -- Types of primitive arithmetic functions and predicates
 
 --- Adds two integers.
 (+)   :: Int -> Int -> Int
-x + y = (prim_Int_plus $# y) $# x
-
-prim_Int_plus :: Int -> Int -> Int
-prim_Int_plus external
+(+) external
 
 --- Subtracts two integers.
 (-)   :: Int -> Int -> Int
-x - y = (prim_Int_minus $# y) $# x
-
-prim_Int_minus :: Int -> Int -> Int
-prim_Int_minus external
+(-) external
 
 --- Multiplies two integers.
 (*)   :: Int -> Int -> Int
-x * y = (prim_Int_times $# y) $# x
+(*) external
 
-prim_Int_times :: Int -> Int -> Int
-prim_Int_times external
 
 --- Integer division. The value is the integer quotient of its arguments
---- and always truncated towards zero.
+--- and always truncated towards negative infinity.
 --- Thus, the value of <code>13 `div` 5</code> is <code>2</code>,
---- and the value of <code>-15 `div` 4</code> is <code>-3</code>.
+--- and the value of <code>-15 `div` 4</code> is <code>-4</code>.
 div   :: Int -> Int -> Int
-x `div` y = (prim_Int_div $# y) $# x
-
-prim_Int_div :: Int -> Int -> Int
-prim_Int_div external
+div external
 
 --- Integer remainder. The value is the remainder of the integer division and
 --- it obeys the rule <code>x `mod` y = x - y * (x `div` y)</code>.
 --- Thus, the value of <code>13 `mod` 5</code> is <code>3</code>,
 --- and the value of <code>-15 `mod` 4</code> is <code>-3</code>.
 mod   :: Int -> Int -> Int
-x `mod` y = (prim_Int_mod $# y) $# x
+mod external
 
-prim_Int_mod :: Int -> Int -> Int
-prim_Int_mod external
+--- Returns an integer (quotient,remainder) pair.
+--- The value is the integer quotient of its arguments
+--- and always truncated towards negative infinity.
+divMod :: Int -> Int -> (Int, Int)
+divMod x y = (x `div` y, x `mod` y)
+
+--- Integer division. The value is the integer quotient of its arguments
+--- and always truncated towards zero.
+--- Thus, the value of <code>13 `quot` 5</code> is <code>2</code>,
+--- and the value of <code>-15 `quot` 4</code> is <code>-3</code>.
+quot   :: Int -> Int -> Int
+quot external
+
+--- Integer remainder. The value is the remainder of the integer division and
+--- it obeys the rule <code>x `rem` y = x - y * (x `quot` y)</code>.
+--- Thus, the value of <code>13 `rem` 5</code> is <code>3</code>,
+--- and the value of <code>-15 `rem` 4</code> is <code>-3</code>.
+rem   :: Int -> Int -> Int
+rem external
+
+--- Returns an integer (quotient,remainder) pair.
+--- The value is the integer quotient of its arguments
+--- and always truncated towards zero.
+quotRem :: Int -> Int -> (Int, Int)
+quotRem x y = (x `quot` y, x `rem` y)
 
 --- Unary minus. Usually written as "- e".
 negate :: Int -> Int
@@ -658,42 +682,48 @@ getLine           = do c <- getChar
                                   else do cs <- getLine
                                           return (c:cs)
 
+----------------------------------------------------------------------------
 -- Error handling in the I/O monad:
 
 --- The (abstract) type of error values.
---- Currently, it contains only an error message as a string,
---- but it might be extended in the future to distinguish
---- various error situations.
-data IOError = IOError String
+--- Currently, it distinguishes between general IO errors,
+--- user-generated errors (see 'userError'), failures and non-determinism
+--- errors during IO computations. These errors can be caught by 'catch'
+--- and shown by 'showError'.
+--- Each error contains a string shortly explaining the error.
+--- This type might be extended in the future to distinguish
+--- further error situations.
+data IOError
+  = IOError     String -- normal IO error
+  | UserError   String -- user-specified error
+  | FailError   String -- failing computation
+  | NondetError String -- non-deterministic computation
 
 --- A user error value is created by providing a description of the
 --- error situation as a string.
 userError :: String -> IOError
-userError s = IOError s
+userError s = UserError s
 
 --- Raises an I/O exception with a given error value.
 ioError :: IOError -> IO _
-ioError (IOError s) = error s
+ioError err = error (showError err)
 
 --- Shows an error values as a string.
 showError :: IOError -> String
-showError (IOError s) = s
+showError (IOError     s) = "i/o error: "    ++ s
+showError (UserError   s) = "user error: "   ++ s
+showError (FailError   s) = "fail error: "   ++ s
+showError (NondetError s) = "nondet error: " ++ s
 
 --- Catches a possible error or failure during the execution of an
---- I/O action. <code>(catch act errfun)</code> executes the I/O action
---- <code>act</code>. If an exception or failure occurs
---- during this I/O action, the function <code>errfun</code> is applied
+--- I/O action. `(catch act errfun)` executes the I/O action
+--- `act`. If an exception or failure occurs
+--- during this I/O action, the function `errfun` is applied
 --- to the error value.
 catch :: IO a -> (IOError -> IO a) -> IO a
 catch external
 
---- Catches a possible failure during the execution of an I/O action.
---- <code>(catchFail act err)</code>:
---- apply action <code>act</code> and, if it fails or raises an exception,
---- print a corresponding error message and apply action <code>err</code>.
-catchFail         :: IO a -> IO a -> IO a
-catchFail external
-
+----------------------------------------------------------------------------
 
 --- Converts an arbitrary term into an external string representation.
 show    :: _ -> String
@@ -776,14 +806,13 @@ when p act = if p then act else done
 ----------------------------------------------------------------
 -- Non-determinism and free variables:
 
---- Non-deterministic choice <EM>par excellence</EM>.
---- The value of <EM>x ? y</EM> is either <EM>x</EM> or <EM>y</EM>.
+--- Non-deterministic choice _par excellence_.
+--- The value of `x ? y` is either `x` or `y`.
 --- @param x - The right argument.
 --- @param y - The left argument.
---- @return either <EM>x</EM> or <EM>y</EM> non-deterministically.
+--- @return either `x` or `y` non-deterministically.
 (?)   :: a -> a -> a
-x ? _ = x
-_ ? y = y
+(?) external
 
 
 --- Evaluates to a fresh free variable.
@@ -791,130 +820,6 @@ unknown :: _
 unknown = let x free in x
 
 ----------------------------------------------------------------
--- Encapsulated search:
-
---- Gets all values of an expression (currently, via an incomplete
---- depth-first strategy). Conceptually, all values are computed
---- on a copy of the expression, i.e., the evaluation of the expression
---- does not share any results. Moreover, the evaluation suspends
---- as long as the expression contains unbound variables.
---- Similar to Prolog's findall.
-getAllValues :: a -> IO [a]
-getAllValues e = return (findall (=:=e))
-
---- Gets a value of an expression (currently, via an incomplete
---- depth-first strategy). The expression must have a value, otherwise
---- the computation fails. Conceptually, the value is computed on a copy
---- of the expression, i.e., the evaluation of the expression does not share
---- any results. Moreover, the evaluation suspends as long as the expression
---- contains unbound variables.
-getSomeValue :: a -> IO a
-getSomeValue e = return (findfirst (=:=e))
-
---- Basic search control operator.
-try     :: (a -> Success) -> [a -> Success]
-try external
-
---- Inject operator which adds the application of the unary
---- procedure p to the search variable to the search goal
---- taken from Oz. p x comes before g x to enable a test+generate
---- form in a sequential implementation.
-inject  :: (a -> Success) -> (a -> Success) -> (a -> Success)
-inject g p = \x -> p x & g x
-
---- Computes all solutions via a a depth-first strategy.
---
--- Works as the following algorithm:
---
--- solveAll g = evalResult (try g)
---         where
---           evalResult []      = []
---           evalResult [s]     = [s]
---           evalResult (a:b:c) = concatMap solveAll (a:b:c)
---
--- The following solveAll algorithm is faster.
--- For comparison we have solveAll2, which implements the above algorithm.
-
-solveAll     :: (a -> Success) -> [a -> Success]
-solveAll g = evalall (try g)
-  where
-    evalall []      = []
-    evalall [a]     = [a]
-    evalall (a:b:c) = evalall3 (try a) (b:c)
-
-    evalall2 []    = []
-    evalall2 (a:b) = evalall3 (try a) b
-
-    evalall3 []      b  = evalall2 b
-    evalall3 [l]     b  = l : evalall2 b
-    evalall3 (c:d:e) b  = evalall3 (try c) (d:e ++b)
-
-
-solveAll2  :: (a -> Success) -> [a -> Success]
-solveAll2 g = evalResult (try g)
-        where
-          evalResult []      = []
-          evalResult [s]     = [s]
-          evalResult (a:b:c) = concatMap solveAll2 (a:b:c)
-
-
---- Gets the first solution via a depth-first strategy.
-once :: (a -> Success) -> (a -> Success)
-once g = head (solveAll g)
-
-
---- Gets the best solution via a depth-first strategy according to
---- a specified operator that can always take a decision which
---- of two solutions is better.
---- In general, the comparison operation should be rigid in its arguments!
-best           :: (a -> Success) -> (a -> a -> Bool) -> [a -> Success]
-best g cmp = bestHelp [] (try g) []
- where
-   bestHelp [] []     curbest = curbest
-   bestHelp [] (y:ys) curbest = evalY (try (constrain y curbest)) ys curbest
-   bestHelp (x:xs) ys curbest = evalX (try x) xs ys curbest
-
-   evalY []        ys curbest = bestHelp [] ys curbest
-   evalY [newbest] ys _       = bestHelp [] ys [newbest]
-   evalY (c:d:xs)  ys curbest = bestHelp (c:d:xs) ys curbest
-
-   evalX []        xs ys curbest = bestHelp xs ys curbest
-   evalX [newbest] xs ys _       = bestHelp [] (xs++ys) [newbest]
-   evalX (c:d:e)   xs ys curbest = bestHelp ((c:d:e)++xs) ys curbest
-
-   constrain y []        = y
-   constrain y [curbest] =
-      inject y (\v -> let w free in curbest w & cmp v w  =:= True)
-
-
---- Gets all solutions via a depth-first strategy and unpack
---- the values from the lambda-abstractions.
---- Similar to Prolog's findall.
-findall :: (a -> Success) -> [a]
-findall g = map unpack (solveAll g)
-
-
---- Gets the first solution via a depth-first strategy
---- and unpack the values from the search goals.
-findfirst :: (a -> Success) -> a
-findfirst g = head (findall g)
-
---- Shows the solution of a solved constraint.
-browse  :: (_ -> Success) -> IO ()
-browse g = putStr (show (unpack g))
-
---- Unpacks solutions from a list of lambda abstractions and write
---- them to the screen.
-browseList :: [_ -> Success] -> IO ()
-browseList []     = done
-browseList (g:gs) = browse g >> putChar '\n' >> browseList gs
-
-
---- Unpacks a solution's value from a (solved) search goal.
-unpack  :: (a -> Success) -> a
-unpack g | g x = x where x free
-
-
 --- Identity function used by the partial evaluator
 --- to mark expressions to be partially evaluated.
 PEVAL   :: a -> a
@@ -922,15 +827,15 @@ PEVAL x = x
 
 --- Evaluates the argument to normal form and returns it.
 normalForm :: a -> a
-normalForm x | x =:= y = y where y free
+normalForm x = id $!! x
 
 --- Evaluates the argument to ground normal form and returns it.
 --- Suspends as long as the normal form of the argument is not ground.
 groundNormalForm :: a -> a
-groundNormalForm x | y == y = y where y = normalForm x
+groundNormalForm x = id $## x
 
 -- Only for internal use:
--- Represenation of higher-order applications in FlatCurry.
+-- Representation of higher-order applications in FlatCurry.
 apply :: (a -> b) -> a -> b
 apply external
 
@@ -944,11 +849,11 @@ cond external
 letrec :: a -> a -> Success
 letrec external
 
---- Non-strict equational constraint. Experimental.
+--- Non-strict equational constraint. Used to implement functional patterns.
 (=:<=) :: a -> a -> Success
 (=:<=) external
 
---- Non-strict equational constraint for linear function patterns.
+--- Non-strict equational constraint for linear functional patterns.
 --- Thus, it must be ensured that the first argument is always (after evalutation
 --- by narrowing) a linear pattern. Experimental.
 (=:<<=) :: a -> a -> Success
@@ -962,4 +867,4 @@ ifVar external
 failure :: _ -> _ -> _
 failure external
 
--- the end
+-- the end of the standard prelude

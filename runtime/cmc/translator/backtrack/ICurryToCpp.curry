@@ -3,7 +3,7 @@ import List
 import SetFunctions
 import ICurry
 import Block
-import Format
+import XFormat
 import Utils
 import MacroSymbols
 import MacroBodies

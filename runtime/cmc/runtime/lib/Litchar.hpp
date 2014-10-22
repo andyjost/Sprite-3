@@ -6,8 +6,9 @@
 #include <sstream>
 #include "Engine.hpp"
 #include "Litint.hpp"
+#include "Prelude.hpp"
 
-namespace Litchar {
+namespace _Prelude {
   using namespace Engine;
 
   struct Litchar : Constructor {
@@ -35,16 +36,6 @@ namespace Litchar {
     inline Node* apply(Node**, int) { throw "Impossible partially applied Litchar"; }
     /*inline*/ Node* boolequal(Node**);
     /*inline*/ Node* compare(Node**);
-  };
-
-  struct _ord : Operation {
-    SYMBOL1(_ord,"Litchar::ord")
-    /*inline*/ Node* hfun();
-  };
-
-  struct _chr : Operation {
-    SYMBOL1(_chr,"Litchar::chr")
-    /*inline*/ Node* hfun();
   };
 
 }

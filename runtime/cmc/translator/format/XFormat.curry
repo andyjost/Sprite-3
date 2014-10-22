@@ -1,4 +1,4 @@
-module Format(Formattable(..), format) where
+module XFormat(Formattable(..), format) where
 
 data Formattable
   = FS String

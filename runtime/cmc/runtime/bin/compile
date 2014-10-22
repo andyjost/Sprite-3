@@ -26,7 +26,7 @@ ISMAIN=`egrep "^M$" $TARGET.make`
 
 if [ "$ISMAIN" = "M" ]
 then
-  LINK="g++ $BASE/engine/Engine.o $BASE/lib/Prelude.o $BASE/lib/External.o $BASE/lib/Modified.o $BASE/lib/Litint.o $BASE/lib/Litchar.o -o $FILE $TARGET.o -g -O0"
+  LINK="g++ $BASE/engine/Engine.o $BASE/lib/Prelude.o $BASE/lib/External.o $BASE/lib/Litint.o $BASE/lib/Litchar.o -o $FILE $TARGET.o -g -O0"
   echo Executing $LINK
   $LINK
   if [ "$EXEC" = "yes" ]
@@ -42,7 +42,6 @@ fi
 #    /home/antoy/COMMON/programs/cmc/runtime/engine/Engine.o \
 #    /home/antoy/COMMON/programs/cmc/runtime/lib/Prelude.o \
 #    /home/antoy/COMMON/programs/cmc/runtime/lib/External.o \
-#    /home/antoy/COMMON/programs/cmc/runtime/lib/Modified.o \
 #    /home/antoy/COMMON/programs/cmc/runtime/lib/Litint.o \
 #    /home/antoy/COMMON/programs/cmc/runtime/lib/Litchar.o \
 #    -o Examples/average \
