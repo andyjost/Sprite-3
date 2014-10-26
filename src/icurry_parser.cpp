@@ -32,6 +32,69 @@ namespace sprite { namespace curry
     --t;
   }
 
+  bool isodigit(int c)
+  {
+    switch(c)
+    {
+      case '0': case '1': case '2': case '3':
+      case '4': case '5': case '6': case '7':
+        return true;
+    }
+    return false;
+  }
+
+  char read_escape(std::istream & ifs)
+  {
+    switch(ifs.get())
+    {
+      case '\'': return '\'';
+      case '\"': return '\"';
+      case '?':  return '?';
+      case '\\': return '\\';
+      case 'a':  return '\a';
+      case 'b':  return '\b';
+      case 'f':  return '\f';
+      case 'n':  return '\n';
+      case 'r':  return '\r';
+      case 't':  return '\t';
+      case 'v':  return '\v';
+      case 'X':
+      {
+        // hex
+        std::string s;
+        while(std::isxdigit(ifs.peek()))
+        {
+          if(s.size() == 2)
+          {
+            std::cerr
+              << "wide hex character sequences are not supported"
+              << std::endl;
+            throw ParseError();
+          }
+          s.push_back(ifs.get());
+        }
+        if(s.size() == 0)
+          throw ParseError();
+        return static_cast<char>(std::stoul(s, nullptr, 16));
+      }
+      case 'u': case 'U':
+        std::cerr << "Unicode character literal not supported." << std::endl;
+        break;
+      case '0': case '1': case '2': case '3': case '4':
+      case '5': case '6': case '7': case '8': case '9':
+      {
+        // octal
+        std::string s;
+        while(isodigit(ifs.peek()) && s.size() != 3)
+          s.push_back(ifs.get());
+        if(s.size() == 0)
+          throw ParseError();
+        return static_cast<char>(std::stoul(s, nullptr, 8));
+      }
+    }
+    throw ParseError();
+  }
+
   // Reads a string quoted with delim.  Returns the contents without
   // quotes.
   std::string read_quoted_string(std::istream & ifs, char delim = '"')
@@ -44,7 +107,7 @@ namespace sprite { namespace curry
     while(c && c != delim)
     {
       if(c == '\\')
-        tmp.put(ifs.get());
+        tmp.put(read_escape(ifs));
       else
         tmp.put(c);
       c = ifs.get();

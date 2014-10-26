@@ -36,35 +36,18 @@ void build_vt_for_Char(sprite::compiler::ir_h const & ir)
 {
   Library lib;
 
+  auto char_repr = extern_(lib.char_[7][256], ".Char_repr")
+      .set_initializer({
+#include "sprite_ascii_tables.hpp"
+      });
+
   // Create the vtable for Char nodes.
   function Char_name = inline_<function>(
       ir.labelfun_t, ".name.Char", {"node_p"}
     , [&] {
-        // The format string is super non-portable.
         value node_p = arg("node_p");
         value char_value = *bitcast(&node_p.arrow(ND_SLOT0), *lib.char_);
-        // FIXME: should use a phi node here.
-        if_(
-            // FIXME: this cast should be automatic.
-            // FIXME: the conversion to bool should be automatic.
-            lib.isprint(typecast(char_value, unsigned_(lib.int_))) ==(unsigned_) (0)
-          , [&] {
-              // The format string is super non-portable.
-              value rv = lib.snprintf(
-                  &lib.printbuffer, PRINT_BUFFER_SIZE, "'\\x%" PRIx8 "'"
-                , char_value
-                );
-              if_(rv ==(signed_)(0), [&]{ lib.exit(1); });
-              return_(&lib.printbuffer);
-            }
-          , [&] {
-              value rv = lib.snprintf(
-                  &lib.printbuffer, PRINT_BUFFER_SIZE, "'%c'", char_value
-                );
-              if_(rv ==(signed_)(0), [&]{ lib.exit(1); });
-              return_(&lib.printbuffer);
-            }
-          );
+        return_(&char_repr[char_value]);
       }
     );
 

@@ -12,6 +12,8 @@ clean :
 
 -include ../../Make.include
 
+CFLAGS += '-I.'
+
 ###
 
 .cpp.o :
