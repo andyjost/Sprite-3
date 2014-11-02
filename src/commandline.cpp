@@ -49,7 +49,10 @@ namespace sprite
     // Read the program IR from the .bc file, if possible.  Update the symbol
     // table with the IR.  The subsequent call to compile will fill in the rest
     // of the symbol table.
-    bool const bitcode_up_to_date = is_up_to_date(bitcodefile, readablefile);
+    bool const bitcode_up_to_date = 
+         is_up_to_date(bitcodefile, readablefile)
+      && is_up_to_date(bitcodefile, "/proc/self/exe");
+
     if(bitcode_up_to_date)
     {
       std::string errmsg;

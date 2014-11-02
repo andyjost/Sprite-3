@@ -12,8 +12,7 @@ clean :
 
 install :
 	@echo "Installing tools at $(BININSTALL)"
-	mkdir -p $(BININSTALL)
-	cp $(EXECUTABLES) $(BININSTALL)
+	rsync -a $(EXECUTABLES) $(BININSTALL)
 
 uninstall :
 	-cd $(BININSTALL); rm -f $(EXECUTABLES)

@@ -21,13 +21,11 @@ SPRITE_RT_LIB = $(TOPDIR)runtime/sprite-rt.bc
 # when needed.
 SPRITE_LIB = $(TOPDIR)src/sprite.a
 
-.PHONY : $(SPRITE_RT_LIB) $(SPRITE_LIB)
-
 $(SPRITE_LIB) :
-	cd $(TOPDIR)/src; $(MAKE) sprite.a
+	$(MAKE) -C $(TOPDIR)/src sprite.a
 
 $(SPRITE_RT_LIB) :
-	cd $(TOPDIR)/runtime; $(MAKE) sprite-rt.bc
+	$(MAKE) -C $(TOPDIR)/runtime sprite-rt.bc
 
 $(CONFIG_HPP) :
-	cd $(TOPDIR)/include/sprite; $(MAKE) config.hpp
+	$(MAKE) -C $(TOPDIR)/include/sprite config.hpp

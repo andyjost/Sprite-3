@@ -24,3 +24,4 @@ $(EXECUTABLE) : $(OBJECTS) $(SPRITE_LIB)
 
 $(STATICLIB) : $(EXECUTABLE)
 	./$< > $@
+

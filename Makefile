@@ -11,6 +11,8 @@ clean :
 install : runtime tools
 	$(MAKE) -C runtime install
 	$(MAKE) -C tools install
+	# Compile the Curry libraries.
+	$(BININSTALL)/scc -c $(LIBINSTALL)/currylib/Prelude.curry
 
 uninstall :
 	$(MAKE) -C runtime uninstall

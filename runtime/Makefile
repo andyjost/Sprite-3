@@ -3,7 +3,7 @@ STATICLLVM = sprite-rt.ll
 SOURCES = $(wildcard *.cpp)
 STATICLIB_PART_B = sprite-runtime-part-b/sprite-runtime-part-b.bc
 
-.PHONY : all clean install llvm uninstall $(STATICLIB_PART_B)
+.PHONY : all clean install llvm uninstall
 
 all : $(STATICLIB)
 
@@ -20,6 +20,7 @@ install : $(STATICLIB)
 	ln -s `which $(LIB-CC)` $(LIBINSTALL)/cc
 	rm -f $(LIBINSTALL)/llc 2> /dev/null
 	ln -s `which $(LIB-LLC)` $(LIBINSTALL)/llc
+	rsync -a currylib $(LIBINSTALL)
 
 uninstall :
 	-rm -f $(LIBINSTALL)/$(STATICLIB)
