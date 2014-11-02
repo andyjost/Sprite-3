@@ -1,14 +1,15 @@
 # Requires make >=3.81 for lastword.
 TOPDIR := $(dir $(lastword $(MAKEFILE_LIST)))
+
+# Get the tool configuration.
+-include $(TOPDIR)/Make.config
+
 LLVM_CFLAGS = $(shell $(LLVM-CONFIG) --cppflags --libs core jit native bitreader bitwriter linker)
 LLVM_LDFLAGS = $(shell $(LLVM-CONFIG) --libs core jit native bitreader bitwriter linker) $(shell $(LLVM-CONFIG) --ldflags)
 # LLVM_CFLAGS = $(shell $(LLVM-CONFIG) --cppflags --libs all)
 # LLVM_LDFLAGS = $(shell $(LLVM-CONFIG) --libs all) $(shell $(LLVM-CONFIG) --ldflags)
 CFLAGS += -std=c++11 -Wall $(LLVM_CFLAGS) -I$(TOPDIR)include -Werror
 LDFLAGS = -Wall $(LLVM_LDFLAGS)
-
-# Get the tool configuration.
--include $(TOPDIR)/Make.config
 
 # config.hpp contains information from Make.config.
 CONFIG_HPP = $(TOPDIR)include/sprite/config.hpp

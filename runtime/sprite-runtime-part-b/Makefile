@@ -12,7 +12,7 @@ clean :
 
 -include ../../Make.include
 
-CFLAGS += '-I.'
+CFLAGS += -I.
 
 ###
 
