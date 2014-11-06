@@ -146,27 +146,34 @@ namespace sprite { namespace curry
     return ifs;
   }
   
-  bool read_import_list(std::istream & ifs, std::vector<std::string> & imports)
+  void read_import_list(std::istream & ifs, std::vector<std::string> & imports)
   {
     // The "import" keyword has already been read.
-    std::stringstream tmp;
-    // Read up to the newline.
-    ifs.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    int c = ifs.get();
     while(true)
     {
-      while(std::isspace(c) && c != '\n') { c = ifs.get(); }
-      if(!c || c == '\n') break;
-      while(c && !std::isspace(c)) { tmp.put(c); c = ifs.get(); }
-      word = tmp.str();
-      // Note: "data", being a reserved keyword, is not a valid module name.
-      // It indicates an empty import list, here.
-      if(word == "data")
-        return false;
+      ifs >> word;
+      if(word == "data" || word == "function")
+        return;
       imports.push_back(word);
-      tmp.str("");
     }
-    return true;
+    // std::stringstream tmp;
+    // // Read up to the newline.
+    // ifs.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    // int c = ifs.get();
+    // while(true)
+    // {
+    //   while(std::isspace(c) && c != '\n') { c = ifs.get(); }
+    //   if(!c || c == '\n') break;
+    //   while(c && !std::isspace(c)) { tmp.put(c); c = ifs.get(); }
+    //   word = tmp.str();
+    //   // Note: "data", being a reserved keyword, is not a valid module name.
+    //   // It indicates an empty import list, here.
+    //   if(word == "data")
+    //     return false;
+    //   imports.push_back(word);
+    //   tmp.str("");
+    // }
+    // return true;
   }
   
   void read_constructor(
@@ -496,8 +503,8 @@ namespace sprite { namespace curry
       if(word == "import")
       {
         DEBUGSTMT(std::cout << "Reading imports" << std::endl;)
-        if(!read_import_list(ifs, mod.imports))
-          goto redo_no_input;
+        read_import_list(ifs, mod.imports);
+        goto redo_no_input;
       }
       else if(word == "data")
       {

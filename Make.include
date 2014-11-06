@@ -18,15 +18,15 @@ CONFIG_HPP = $(TOPDIR)include/sprite/config.hpp
 # made, when needed.
 SPRITE_RT_LIB = $(TOPDIR)runtime/sprite-rt.bc
 
+$(SPRITE_RT_LIB) : $(TOPDIR)/runtime
+	$(MAKE) -C $(TOPDIR)/runtime sprite-rt.bc
+
 # Target programs can depend on this variable to get the Sprite library made,
 # when needed.
 SPRITE_LIB = $(TOPDIR)src/sprite.a
 
-$(SPRITE_LIB) :
+$(SPRITE_LIB) : $(TOPDIR)/src
 	$(MAKE) -C $(TOPDIR)/src sprite.a
 
-$(SPRITE_RT_LIB) :
-	$(MAKE) -C $(TOPDIR)/runtime sprite-rt.bc
-
-$(CONFIG_HPP) :
+$(CONFIG_HPP) : $(TOPDIR)/include/sprite
 	$(MAKE) -C $(TOPDIR)/include/sprite config.hpp

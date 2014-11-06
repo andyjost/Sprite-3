@@ -236,7 +236,7 @@ namespace
         }
       }
 
-      // Determine the names used the final output and any temporary files.
+      // Determine the names used for the final output and any temporary files.
       std::string final_bitcode;
       std::string final_assembly;
       std::string final_executable;

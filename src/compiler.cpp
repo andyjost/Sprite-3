@@ -4,6 +4,9 @@
 #include "sprite/runtime.hpp"
 #include <algorithm>
 
+// DIAGNOSTIC - this may warrant a command-line option setting.
+#include "llvm/Analysis/Verifier.h"
+
 using namespace sprite;
 using namespace sprite::compiler::member_labels; // for ND_* and VT_* enums.
 namespace tgt = sprite::backend;
@@ -14,12 +17,29 @@ namespace
 
   // Looks up a node symbol table from the library.
   inline compiler::NodeSTab const &
-  lookup(compiler::LibrarySTab const & table, curry::Qname const & qname)
+  lookup(compiler::ModuleSTab const & table, curry::Qname const & qname)
   {
     try
-      { return table.modules.at(qname.module).nodes.at(qname.name); }
+      { return table.nodes.at(qname); }
     catch(std::out_of_range const & e)
-      { throw compile_error("symbol '" + qname.str() + "' not found."); }
+    {
+      // DIAGNOSTIC
+      // std::cerr
+      //   << "Contents of symbol table for module " << table.source->name
+      //   << "\n";
+      // for(auto const & node: table.nodes)
+      // {
+      //   std::cerr << "  " << node.first.str();
+      //   if(node.second.tag == CTOR)
+      //     std::cerr << " (CONSTRUCTOR)\n";
+      //   else
+      //     std::cerr << " (FUNCTION)\n";
+      // }
+      // 
+      // std::cerr << "(End contents of symbol table)\n" << std::endl;
+      
+      throw compile_error("symbol '" + qname.str() + "' not found.");
+    }
   }
 
   /**
@@ -34,18 +54,18 @@ namespace
     using result_type = void;
 
     Rewriter(
-        compiler::ModuleCompiler const & compiler_
+        compiler::ModuleSTab const & module_stab_
       , tgt::value const & root_p_
       , curry::Function const * fundef_ = nullptr
       )
-      : compiler(compiler_)
-      , root_p(bitcast(root_p_, *compiler_.ir.node_t))
+      : module_stab(module_stab_)
+      , root_p(bitcast(root_p_, *module_stab.ir().node_t))
       , target_p(root_p)
       , fundef(fundef_)
-      , resolved_path_alloca(tgt::local(*compiler_.ir.node_t))
+      , resolved_path_alloca(tgt::local(*module_stab.ir().node_t))
     {}
 
-    compiler::ModuleCompiler const & compiler;
+    compiler::ModuleSTab const & module_stab;
 
     // A pointer in the target to the root node undergoing pattern matching
     // or rewriting.
@@ -84,7 +104,7 @@ namespace
           if(it == freevar_alloca.end())
           {
             auto pair = freevar_alloca.emplace(
-                pathid, tgt::local(*this->compiler.ir.node_t)
+                pathid, tgt::local(*this->module_stab.ir().node_t)
               );
             this->resolved_path_alloca = pair.first->second;
           }
@@ -114,7 +134,7 @@ namespace
         _resolve_path(this->fundef->paths.at(pathelem.base));
 
       // Add this index.
-      tgt::type node_pt = *this->compiler.ir.node_t;
+      tgt::type node_pt = *this->module_stab.ir().node_t;
       switch(pathelem.idx)
       {
         case 0:
@@ -173,18 +193,18 @@ namespace
   
     // Subcases of Rule.
     result_type operator()(char data)
-      { return rewrite_integer_data_ctor(data, compiler.rt.Char_vt); }
+      { return rewrite_integer_data_ctor(data, module_stab.rt().Char_vt); }
 
     result_type operator()(int64_t data)
-      { return rewrite_integer_data_ctor(data, compiler.rt.Int64_vt); }
+      { return rewrite_integer_data_ctor(data, module_stab.rt().Int64_vt); }
 
     result_type operator()(double data)
-      { return rewrite_integer_data_ctor(data, compiler.rt.Float_vt); }
+      { return rewrite_integer_data_ctor(data, module_stab.rt().Float_vt); }
 
     // Rewrites the root as a FAIL node.
     result_type operator()(curry::Fail const &)
     {
-      this->target_p.arrow(ND_VPTR) = compiler.rt.failed_vt;
+      this->target_p.arrow(ND_VPTR) = module_stab.rt().failed_vt;
       this->target_p.arrow(ND_TAG) = compiler::FAIL;
     }
 
@@ -192,7 +212,7 @@ namespace
     result_type operator()(curry::Ref rule)
     {
       tgt::value target = this->resolve_path_char_p(rule.pathid);
-      this->target_p.arrow(ND_VPTR) = compiler.rt.fwd_vt;
+      this->target_p.arrow(ND_VPTR) = module_stab.rt().fwd_vt;
       this->target_p.arrow(ND_TAG) = compiler::FWD;
       this->target_p.arrow(ND_SLOT0) = target;
     }
@@ -219,10 +239,10 @@ namespace
         // Allocate a new node and place its contents with a recursive call.
         else
         {
-          tgt::value child = this->compiler.node_alloc();
+          tgt::value child = node_alloc(this->module_stab);
           child_data.push_back(child);
           // Clobber the root so the recursive call works.
-          this->target_p = bitcast(child, *this->compiler.ir.node_t);
+          this->target_p = bitcast(child, *this->module_stab.ir().node_t);
           (*this)(subexpr);
         }
       }
@@ -231,8 +251,10 @@ namespace
       this->target_p = orig_target_p;
 
       // Set the vtable and tag.
-      this->compiler.node_init(
-          this->target_p, lookup(compiler.lib_stab, term.qname)
+      node_init(
+          this->target_p
+        , this->module_stab
+        , lookup(module_stab, term.qname)
         );
 
       // Set the child pointers.
@@ -245,7 +267,7 @@ namespace
         // char *& aux = node->slot0;
         ref aux = this->target_p.arrow(ND_SLOT0);
         // aux = array_alloc(n);
-        aux = this->compiler.array_alloc(child_data.size());
+        aux = array_alloc(this->module_stab, child_data.size());
         // char ** children = (char **)aux;
         value children = bitcast(aux, **types::char_());
         for(size_t i=0; i<child_data.size(); ++i)
@@ -261,7 +283,7 @@ namespace
     result_type operator()(curry::ExternalCall const & term)
     {
       tgt::function fun = extern_<tgt::function>(
-          this->compiler.ir.stepfun_t, term.qname.name
+          this->module_stab.ir().stepfun_t, term.qname.name
         );
       fun(this->target_p);
     }
@@ -273,12 +295,12 @@ namespace
     using Rewriter::Rewriter;
 
     FunctionCompiler(
-        compiler::ModuleCompiler const & compiler_
+        compiler::ModuleSTab const & module_stab_
       , tgt::value const & root_p_
       , curry::Function const * fundef_ = nullptr
       )
-      : Rewriter(compiler_, root_p_, fundef_)
-      , inductive_alloca(tgt::local(*this->compiler.ir.node_t))
+      : Rewriter(module_stab_, root_p_, fundef_)
+      , inductive_alloca(tgt::local(*this->module_stab.ir().node_t))
     {}
 
   private:
@@ -309,11 +331,12 @@ namespace
             << "\": expressions in branch conditions are not implemented "
                "and will cause the program to terminate at runtime."
             << std::endl;
-        this->compiler.clib.printf(
+        this->module_stab.clib().printf(
             "Exiting now because an expression in a branch condition was "
             "encountered."
           );
-        this->compiler.clib.exit(1);
+        this->module_stab.clib().exit(1);
+        return_();
         return false;
       }
       else
@@ -369,7 +392,7 @@ namespace
         tgt::scope _ = labels[TAGOFFSET + FWD];
         // Advance to the target of the FWD node and repeat the jump.
         tgt::value const inductive = bitcast(
-            this->inductive_alloca.arrow(ND_SLOT0), *this->compiler.ir.node_t
+            this->inductive_alloca.arrow(ND_SLOT0), *this->module_stab.ir().node_t
           );
         this->inductive_alloca = inductive;
         tgt::value const index = inductive.arrow(ND_TAG) + TAGOFFSET;
@@ -379,7 +402,7 @@ namespace
       // CHOICE case
       {
         tgt::scope _ = labels[TAGOFFSET + CHOICE];
-        this->compiler.clib.printf("CHOICE case hit.\n");
+        this->module_stab.clib().printf("CHOICE case hit.\n");
         tgt::return_().set_metadata("case...CHOICE");
       }
 
@@ -405,30 +428,141 @@ namespace
     result_type operator()(curry::Rule const & rule)
     {
       // Trace.
-      // compiler.clib.printf("S> --- ");
-      // compiler.rt.printexpr(target_p, "\n");
-      // compiler.clib.fflush(nullptr);
+      // module_stab.clib().printf("S> --- ");
+      // module_stab.rt().printexpr(target_p, "\n");
+      // module_stab.clib().fflush(nullptr);
 
       // Step.
       static_cast<Rewriter*>(this)->operator()(rule);
 
       // Trace.
-      // compiler.clib.printf("S> +++ ");
-      // compiler.rt.printexpr(target_p, "\n");
-      // compiler.clib.fflush(nullptr);
+      // module_stab.clib().printf("S> +++ ");
+      // module_stab.rt().printexpr(target_p, "\n");
+      // module_stab.clib().fflush(nullptr);
       tgt::return_();
     }
   };
 
   // Helper to simplify the use of FunctionCompiler.
   void compile_function(
-      compiler::ModuleCompiler const & compiler
+      compiler::ModuleSTab const & module_stab
     , tgt::value const & root_p
     , curry::Function const & fun
     )
   {
-    ::FunctionCompiler c(compiler, root_p, &fun);
+    ::FunctionCompiler c(module_stab, root_p, &fun);
     return fun.def.visit(c);
+  }
+
+  void compile_ctor_vtable(
+      tgt::global & vt
+    , curry::Constructor const & ctor
+    , compiler::ir_h const & ir
+    , tgt::module & module_ir
+    )
+  {
+    // Look up the N function and define it as needed.
+    std::string const n_name = ".N." + std::to_string(ctor.arity);
+    function N(module_ir->getFunction(n_name.c_str()));
+    if(!N.ptr())
+    {
+      N = static_<function>(
+          ir.stepfun_t, flexible(n_name), {"root_p"}
+        , [&]{
+            tgt::value root_p = arg("root_p");
+            tgt::value child;
+            // FIXME: need to implement "dot" and "arrow" with names.
+            switch(ctor.arity)
+            {
+              case 2:
+                child = bitcast(
+                    root_p.arrow(ND_SLOT1), *ir.node_t
+                  );
+                child.arrow(ND_VPTR).arrow(VT_N)(child);
+              case 1:
+                child = bitcast(
+                    root_p.arrow(ND_SLOT0), *ir.node_t
+                  );
+                child.arrow(ND_VPTR).arrow(VT_N)(child)
+                    .set_attribute(tailcall);
+              case 0:
+                break;
+              default:
+              {
+                tgt::value children = bitcast(
+                    root_p.arrow(ND_SLOT0), **ir.node_t
+                  );
+                tgt::value last_call;
+                for(size_t i=0; i<ctor.arity; ++i)
+                {
+                  child = children[i];
+                  last_call = child.arrow(ND_VPTR).arrow(VT_N)(child);
+                }
+                last_call.set_attribute(tailcall);
+                break;
+              }
+            }
+            tgt::return_();
+          }
+        );
+    }
+
+    vt.set_initializer(_t(
+        &get_label_function(ir, ctor.name)
+      , &get_arity_function(ir, ctor.arity)
+      , &get_succ_function(ir, ctor.arity)
+      , &N, &get_null_step_function(ir)
+      ));
+  }
+
+  void compile_function_vtable(
+      tgt::global & vt
+    , curry::Function const & fun
+    , compiler::ir_h const & ir
+    , tgt::module & module_ir
+    )
+  {
+    // Forward declaration.
+    std::string const stepname = ".step." + fun.name;
+    function step(module_ir->getFunction(stepname.c_str()));
+    if(!step.ptr())
+      step = static_<function>(ir.stepfun_t, stepname, {"root_p"});
+
+    std::string const nname = ".N." + fun.name;
+    function N(module_ir->getFunction(nname.c_str()));
+    if(!N.ptr())
+    {
+      N = static_<function>(
+          ir.stepfun_t, nname, {"root_p"}
+        , [&]{
+            tgt::value root_p = arg("root_p");
+            step(root_p);
+            vinvoke(root_p, VT_N, tailcall);
+            return_();
+          }
+        );
+    }
+
+    std::string const hname = ".H." + fun.name;
+    function H(module_ir->getFunction(hname.c_str()));
+    if(!H.ptr())
+    {
+      H = static_<function>(
+          ir.stepfun_t, flexible(hname), {"root_p"}
+        , [&]{
+            tgt::value root_p = arg("root_p");
+            step(root_p);
+            vinvoke(root_p, VT_H, tailcall);
+          }
+        );
+    }
+
+    vt.set_initializer(_t(
+        &get_label_function(ir, fun.name)
+      , &get_arity_function(ir, fun.arity)
+      , &get_succ_function(ir, fun.arity)
+      , &N, &H
+      ));
   }
 }
 
@@ -443,35 +577,33 @@ namespace sprite { namespace compiler
   { return vinvoke(node_p, member).set_attribute(attr); }
 
   ModuleSTab::ModuleSTab(
-      LibrarySTab const & lib_stab_, curry::Module const & src
-    , llvm::LLVMContext & context
+      curry::Module const & src, llvm::LLVMContext & context
     )
     : source(&src), module_ir(src.name, context), nodes()
   {
     // Load the compiler data (e.g., headers) with the module in scope.
     scope _ = module_ir;
-    this->compiler.reset(new ModuleCompiler(lib_stab_));
+    this->headers.reset(new Headers());
   }
 
   ModuleSTab::ModuleSTab(
-      LibrarySTab const & lib_stab_, curry::Module const & src
-    , sprite::backend::module const & M
+      curry::Module const & src, sprite::backend::module const & M
     )
     : source(&src), module_ir(M), nodes()
   {
     // Load the compiler data (e.g., headers) with the module in scope.
     scope _ = module_ir;
-    this->compiler.reset(new ModuleCompiler(lib_stab_));
+    this->headers.reset(new Headers());
   }
 
   // Constructs an expression at the given node address.
   value construct(
-      compiler::ModuleCompiler const & compiler
+      compiler::ModuleSTab const & module_stab
     , tgt::value const & root_p
     , curry::Rule const & term
     )
   {
-    ::Rewriter c(compiler, root_p);
+    ::Rewriter c(module_stab, root_p);
     term.visit(c);
     return c.target_p;
   }
@@ -508,176 +640,93 @@ namespace sprite { namespace compiler
   }
 
   void compile(
-      curry::Library const & lib
+      curry::Module const & cymodule
     , compiler::LibrarySTab & stab
     , llvm::LLVMContext & context
     )
   {
-    for(auto const & cymodule: lib.modules)
-    {
-      // Create a new LLVM module and symbol table entry.
-      auto rv = stab.modules.emplace(
-          cymodule.name, ModuleSTab{stab, cymodule, context}
-        );
-      // OK if the module symbol table already exists.  The IR may have been
-      // loaded from a file.
-      compiler::ModuleSTab & module_stab = rv.first->second;
+    // Create a new LLVM module and symbol table entry.
+    auto rv = stab.modules.emplace(
+        cymodule.name, ModuleSTab{cymodule, context}
+      );
+    // OK if the module symbol table already exists.  The IR may have been
+    // loaded from a file.
+    compiler::ModuleSTab & module_stab = rv.first->second;
 
-      // Helpful aliases.
-      tgt::module & module_ir = module_stab.module_ir;
-      compiler::ModuleCompiler const & compiler = *module_stab.compiler;
-      
-      // Set the module as the current scope.  Subsequent statements will add
-      // functions, type definitions, and data to this module.
-      tgt::scope _ = module_ir;
+    tgt::module & module_ir = module_stab.module_ir;
+    compiler::ir_h const & ir = module_stab.ir();
+    
+    // Set the module as the current scope.  Subsequent statements will add
+    // functions, type definitions, and data to this module.
+    tgt::scope _ = module_ir;
   
-      // Add the static vtable for each constructor to the module.
+    // The loop body for procesing one module.  The primary module and imported
+    // modules are handled separately.  For the primary module, compile code
+    // and create the vtables.  For the non-primary (i.e., imported) modules,
+    // create declarations only.
+    auto process_module = [&](curry::Module const & cymodule, bool is_primary)
+    {
+      // Add the vtable for each constructor to the module.
       for(auto const & dtype: cymodule.datatypes)
       {
         size_t tag = compiler::CTOR;
         for(auto const & ctor: dtype.constructors)
         {
-          // Lookup the N function and define it as needed.
-          std::string const n_name = ".N." + std::to_string(ctor.arity);
-          function N(module_ir->getFunction(n_name.c_str()));
-          if(!N.ptr())
-          {
-            N = static_<function>(
-                compiler.ir.stepfun_t, flexible(n_name), {"root_p"}
-              , [&]{
-                  tgt::value root_p = arg("root_p");
-                  tgt::value child;
-                  // FIXME: need to implement "dot" and "arrow" with names.
-                  switch(ctor.arity)
-                  {
-                    case 2:
-                      child = bitcast(
-                          root_p.arrow(ND_SLOT1), *compiler.ir.node_t
-                        );
-                      child.arrow(ND_VPTR).arrow(VT_N)(child);
-                    case 1:
-                      child = bitcast(
-                          root_p.arrow(ND_SLOT0), *compiler.ir.node_t
-                        );
-                      child.arrow(ND_VPTR).arrow(VT_N)(child)
-                          .set_attribute(tailcall);
-                    case 0:
-                      break;
-                    default:
-                    {
-                      tgt::value children = bitcast(
-                          root_p.arrow(ND_SLOT0), **compiler.ir.node_t
-                        );
-                      tgt::value last_call;
-                      for(size_t i=0; i<ctor.arity; ++i)
-                      {
-                        child = children[i];
-                        last_call = child.arrow(ND_VPTR).arrow(VT_N)(child);
-                      }
-                      last_call.set_attribute(tailcall);
-                      break;
-                    }
-                  }
-                  tgt::return_();
-                }
-              );
-          }
-  
           // Create or find the vtable.
           tgt::globalvar vt = nullptr;
-          std::string const vtname = ".vt.CTOR." + ctor.name;
+          std::string const vtname = ".vt.CTOR." + cymodule.name + "." + ctor.name;
           if(module_ir.hasglobal(vtname))
             vt.reset(module_ir.getglobal(vtname).as_globalvar());
           else
           {
-            vt.reset(
-                static_(compiler.ir.vtable_t, vtname)
-                  .set_initializer(_t(
-                      &get_label_function(compiler.ir, ctor.name)
-                    , &get_arity_function(compiler.ir, ctor.arity)
-                    , &get_succ_function(compiler.ir, ctor.arity)
-                    , &N, &get_null_step_function(compiler.ir)
-                    ))
-              );
+            auto vt_ = extern_(ir.vtable_t, vtname);
+            if(is_primary)
+              compile_ctor_vtable(vt_, ctor, ir, module_ir);
+            vt.reset(vt_.as_globalvar());
            }
   
           // Update the symbol tables.
           module_stab.nodes.emplace(
-              ctor.name, compiler::NodeSTab(ctor, vt, tag++)
+              curry::Qname{cymodule.name, ctor.name}
+            , compiler::NodeSTab(ctor, vt, tag++)
             );
         }
       }
   
-      // Update the symbol tables with the functions.
+      // Update the symbol tables with the forward declarations of functions.
       for(auto const & fun: cymodule.functions)
       {
-        // Forward declaration.
-        std::string const stepname = ".step." + fun.name;
-        function step(module_ir->getFunction(stepname.c_str()));
-        if(!step.ptr())
-          step = static_<function>(compiler.ir.stepfun_t, stepname, {"root_p"});
-
-        std::string const nname = ".N." + fun.name;
-        function N(module_ir->getFunction(nname.c_str()));
-        if(!N.ptr())
-        {
-          N = static_<function>(
-              compiler.ir.stepfun_t, nname, {"root_p"}
-            , [&]{
-                tgt::value root_p = arg("root_p");
-                step(root_p);
-                vinvoke(root_p, VT_N, tailcall);
-                return_();
-              }
-            );
-        }
-
-        std::string const hname = ".H." + fun.name;
-        function H(module_ir->getFunction(hname.c_str()));
-        if(!H.ptr())
-        {
-          H = static_<function>(
-              compiler.ir.stepfun_t, flexible(".H." + fun.name), {"root_p"}
-            , [&]{
-                tgt::value root_p = arg("root_p");
-                step(root_p);
-                vinvoke(root_p, VT_H, tailcall);
-              }
-            );
-        }
-  
         tgt::globalvar vt = nullptr;
-        std::string const vtname = ".vt.OPER." + fun.name;
+        std::string const vtname = ".vt.OPER." + cymodule.name + "." + fun.name;
         if(module_ir.hasglobal(vtname))
           vt.reset(module_ir.getglobal(vtname).as_globalvar());
         else
         {
-          vt.reset(
-              static_(compiler.ir.vtable_t, vtname)
-                .set_initializer(_t(
-                    &get_label_function(compiler.ir, fun.name)
-                  , &get_arity_function(compiler.ir, fun.arity)
-                  , &get_succ_function(compiler.ir, fun.arity)
-                  , &N, &H
-                  ))
-            );
+          auto vt_ = extern_(ir.vtable_t, vtname);
+          if(is_primary)
+            compile_function_vtable(vt_, fun, ir, module_ir);
+          vt.reset(vt_.as_globalvar());
         }
 
         // Update the symbol tables.
         module_stab.nodes.emplace(
-            fun.name, compiler::NodeSTab(fun, vt, compiler::OPER)
+            curry::Qname{cymodule.name, fun.name}
+          , compiler::NodeSTab(fun, vt, compiler::OPER)
           );
       }
   
       // Compile the functions.
-      for(auto const & fun: cymodule.functions)
+      if(is_primary)
       {
-        auto step = module_ir.getglobal(".step." + fun.name);
-        function stepf = dyn_cast<function>(step);
-        if(stepf->size() == 0) // function has no body
+        for(auto const & fun: cymodule.functions)
         {
-          tgt::scope _ = dyn_cast<function>(step);
-          ::compile_function(compiler, arg("root_p"), fun);
+          auto step = module_ir.getglobal(".step." + fun.name);
+          function stepf = dyn_cast<function>(step);
+          if(stepf->size() == 0) // function has no body
+          {
+            tgt::scope _ = dyn_cast<function>(step);
+            ::compile_function(module_stab, arg("root_p"), fun);
+          }
         }
       }
 
@@ -685,13 +734,32 @@ namespace sprite { namespace compiler
       // built-in choice implementation.
       if(cymodule.name == "Prelude")
       {
-        auto ichoice = module_stab.nodes.find("?");
+        auto ichoice = module_stab.nodes.find({"Prelude", "?"});
         if(ichoice == module_stab.nodes.end())
           throw compile_error("Prelude.? was not found");
-        ichoice->second.vtable.reset(compiler.rt.choice_vt.as_globalvar());
+        ichoice->second.vtable.reset(module_stab.rt().choice_vt.as_globalvar());
         ichoice->second.tag = CHOICE;
       }
+
+      // DIAGNOSTIC
+      // module_ir.ptr()->dump();
+      llvm::verifyModule(*module_ir.ptr(), llvm::PrintMessageAction);
+    };
+
+    // Process the imports.
+    for(auto const & import: cymodule.imports)
+    {
+      // DEBUG: can't use the prelude until stubs are added.
+      if(import == "Prelude") continue; // for debugging only!
+
+      auto p = stab.modules.find(import);
+      if(p == stab.modules.end())
+        throw compile_error("Imported module \"" + import + "\" was not found");
+      process_module(*p->second.source, false);
     }
+
+    // Process the primary module.
+    process_module(cymodule, true);
   }
 }}
 

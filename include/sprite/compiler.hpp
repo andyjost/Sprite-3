@@ -63,13 +63,10 @@ namespace sprite { namespace compiler
   struct ModuleSTab
   {
     // Initialize while creating a new LLVM module for holding the IR.
-    ModuleSTab(LibrarySTab const &, curry::Module const &, llvm::LLVMContext &);
+    ModuleSTab(curry::Module const &, llvm::LLVMContext &);
 
     // Initialize from an existing LLVM module.
-    ModuleSTab(
-        LibrarySTab const &, curry::Module const &
-      , sprite::backend::module const & M
-      );
+    ModuleSTab(curry::Module const &, sprite::backend::module const & M);
 
     // Disabled because globalvar is a reference (see NodeSTab).
     ModuleSTab & operator=(ModuleSTab const &) = delete;
@@ -81,10 +78,33 @@ namespace sprite { namespace compiler
     sprite::backend::module module_ir;
 
     // The node information.
-    std::unordered_map<std::string, NodeSTab> nodes;
+    std::unordered_map<curry::Qname, NodeSTab> nodes;
 
-    // Everything needed to compile code in this module.
-    std::shared_ptr<ModuleCompiler> compiler;
+    // The C library, in the target program.
+    sprite::backend::testing::clib_h const & clib() const
+      { return headers->clib; }
+
+    // The Sprite IR library, in the target program.
+    compiler::ir_h const & ir() const
+      { return headers->ir; }
+
+    // The Sprite runtime library, in the target program.
+    compiler::rt_h const & rt() const
+      { return headers->rt; }
+    
+  private:
+
+    // These headers must be loaded while the LLVM module for the Curry module
+    // this class represents is the active one.
+    struct Headers
+    {
+      Headers() : rt(ir) {}
+      sprite::backend::testing::clib_h clib;
+      compiler::ir_h ir;
+      compiler::rt_h rt;
+    };
+
+    std::shared_ptr<Headers> headers;
   };
 
   struct LibrarySTab
@@ -107,59 +127,6 @@ namespace sprite { namespace compiler
     }
   };
 
-  /**
-   * @brief Contains module-specific data used by the compiler.
-   *
-   * This object serves as a single place to hold data the compiler needs while
-   * compiling a module.  These data include the IR definitions (and any other
-   * headers) included in target program, and a reference to the library symbol
-   * table.
-   */
-  struct ModuleCompiler
-  {
-    ModuleCompiler(compiler::LibrarySTab const & lib_stab_)
-      : lib_stab(lib_stab_), rt(ir)
-    {}
-
-    // ==================
-    // ====== Data ======
-    // ==================
-
-    // The symbol table to use for looking up symbols.
-    compiler::LibrarySTab const & lib_stab;
-
-    // The C library, in the target program.
-    sprite::backend::testing::clib_h clib;
-
-    // The Sprite IR library, in the target program.
-    compiler::ir_h ir;
-
-    // The Sprite runtime library, in the target program.
-    compiler::rt_h rt;
-
-    // ========================
-    // ====== Algorithms ======
-    // ========================
-
-    /// Allocates storage for a node.  The return type is i8*.
-    value node_alloc() const
-      { return this->clib.malloc(sizeof_(this->ir.node_t)); }
-
-    /// Allocates storage for @p n pointers.
-    value array_alloc(size_t n) const
-      { return this->clib.malloc(sizeof_(this->ir.node_t) * n); }
-
-    /// Initializes a node.
-    void node_init(
-        value node_p, compiler::NodeSTab const & node_stab
-      ) const
-    {
-      using namespace member_labels;
-      node_p.arrow(ND_VPTR) = bitcast(&node_stab.vtable, *this->ir.vtable_t);
-      node_p.arrow(ND_TAG) = node_stab.tag;
-    }
-  };
-
   // ==============================
   // ====== Module functions ======
   // ==============================
@@ -169,23 +136,23 @@ namespace sprite { namespace compiler
 
   /**
    * @brief Updates the symbol table with the result of compiling the given
-   * Curry library.
+   * Curry module.
    *
    * If the symbol table already contains IR for any given module (e.g.,
    * because it was previously loaded from a .bc file), then the symbol tables
    * are updated without actually compiling any code.
    */
   void compile(
-      sprite::curry::Library const & lib
-    , sprite::compiler::LibrarySTab & stab
-    , llvm::LLVMContext & context
+      sprite::curry::Module const &
+    , sprite::compiler::LibrarySTab &
+    , llvm::LLVMContext &
     );
 
   /// Constructs an expression at the given node address.
   // FIXME: document parameters.
   // Returns the root of the expression as a node_t*.
   value construct(
-      ModuleCompiler const & compiler
+      ModuleSTab const & module_stab
     , value const & root_p
     , sprite::curry::Rule const & expr
     );
@@ -200,5 +167,27 @@ namespace sprite { namespace compiler
 
   /// Gets the vtable pointer from a node pointer.  Skips FWD nodes.
   value get_vtable(value node_p);
+
+  /// Allocates storage for a node.  The return type is i8*.
+  inline value node_alloc(ModuleSTab const & module_stab)
+    { return module_stab.clib().malloc(sizeof_(module_stab.ir().node_t)); }
+
+  /// Allocates storage for @p n pointers.
+  inline value array_alloc(ModuleSTab const & module_stab, size_t n)
+    { return module_stab.clib().malloc(sizeof_(module_stab.ir().node_t) * n); }
+
+  /// Initializes a node.
+  inline void node_init(
+      value node_p
+    , ModuleSTab const & module_stab
+    , compiler::NodeSTab const & node_stab
+    )
+  {
+    using namespace member_labels;
+    node_p.arrow(ND_VPTR) = bitcast(
+        &node_stab.vtable, *module_stab.ir().vtable_t
+      );
+    node_p.arrow(ND_TAG) = node_stab.tag;
+  }
 }}
 

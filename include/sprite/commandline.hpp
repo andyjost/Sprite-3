@@ -121,6 +121,12 @@ namespace sprite
   /// Gets the corresponding Curry file name from an input file name.
   std::string get_curryfile(std::string const & inputfile);
 
+  /**
+   * @brief Searches the module path for the Curry file that provides the named
+   * module.
+   */
+  std::string get_module_file(std::string const & module);
+
   /// Gets the corresponding readable file name from an input file name.
   inline std::string get_readablefile(std::string const & curryfile)
   {
@@ -145,4 +151,10 @@ namespace sprite
 
   /// Gets the path to a C compiler.
   std::string const & get_cc();
+
+  /// Gets the colon-separated list of Curry library paths.
+  std::string const & get_currylib_path();
+
+  /// Gets the split list of Curry library paths.
+  std::vector<std::string> const & get_separated_currylib_paths();
 }

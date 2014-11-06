@@ -13,8 +13,12 @@
 #include <unistd.h>
 #include <fstream>
 #include <cstdio>
+#include <cstdlib>
 #include <sstream>
 #include <cstring>
+#include <vector>
+
+#include <iostream> // DEBUG
 
 namespace sprite
 {
@@ -38,12 +42,23 @@ namespace sprite
 
     // Parse the input program.
     input >> lib;
-    if(modulename != lib.modules.back().name)
+    size_t const ithis = lib.modules.size() - 1;
+    if(modulename != lib.modules[ithis].name)
     {
       throw backend::compile_error(
           "File \"" + readablefile + "\" defines the wrong module ("
-        + lib.modules.back().name + ")."
+        + lib.modules[ithis].name + ")."
         );
+    }
+
+    // Process the imported modules first.
+    auto imports = lib.modules[ithis].imports;
+    for(std::string const & import: imports)
+    {
+      // DEBUG: can't use the prelude until stubs are added.
+      if(import == "Prelude") continue;
+      if(stab.modules.count(import) == 0)
+        compile_file(get_module_file(import), lib, stab, context, false);
     }
 
     // Read the program IR from the .bc file, if possible.  Update the symbol
@@ -65,14 +80,14 @@ namespace sprite
       }
       stab.modules.emplace(
           modulename
-        , compiler::ModuleSTab{stab, lib.modules.back(), backend::module(M)}
+        , compiler::ModuleSTab{lib.modules[ithis], backend::module(M)}
         );
     }
 
-    compiler::compile(lib, stab, context);
+    compiler::compile(lib.modules[ithis], stab, context);
 
     // If asked to, write out the .bc file.
-    if(!bitcode_up_to_date && save_bitcode)
+    if(save_bitcode && !bitcode_up_to_date)
     {
       std::string errmsg;
       llvm::raw_fd_ostream fout(
@@ -116,7 +131,7 @@ namespace sprite
   }
 
   void _create_main_function(
-      compiler::ModuleCompiler const & compiler
+      compiler::ModuleSTab const & module_stab
     , curry::Qname const & start
     )
   {
@@ -124,12 +139,12 @@ namespace sprite
         backend::types::int_(32)(), "main", {}
       , [&]{
           // Construct the root expression (just the "main" symbol).
-          backend::value root_p = compiler.node_alloc();
-          root_p = construct(compiler, root_p, {start, {}});
+          backend::value root_p = node_alloc(module_stab);
+          root_p = construct(module_stab, root_p, {start, {}});
 
           // Evaluate and then print the root expression.
-          compiler.rt.normalize(root_p);
-          compiler.rt.printexpr(root_p, "\n");
+          module_stab.rt().normalize(root_p);
+          module_stab.rt().printexpr(root_p, "\n");
 
           backend::return_(0);
         }
@@ -141,9 +156,8 @@ namespace sprite
     )
   {
     auto & module_stab = stab.modules.at(start.module);
-    auto & compiler = *module_stab.compiler;
     backend::scope _ = module_stab.module_ir;
-    _create_main_function(compiler, start);
+    _create_main_function(module_stab, start);
 
   }
 
@@ -154,6 +168,7 @@ namespace sprite
     struct stat file_stat, relative_stat;
     int err = ::stat(file.c_str(), &file_stat);
     if(err) return false;
+    if(&file == &relative_to) return true; // used by get_module_file.
     err = ::stat(relative_to.c_str(), &relative_stat);
     if(err) return false;
     return relative_stat.st_mtime <= file_stat.st_mtime;
@@ -171,6 +186,59 @@ namespace sprite
     std::string const basedir = dirname(inputfile);
     std::string const modulename = get_modulename(inputfile);
     return join_path(basedir, modulename + ".curry");
+  }
+
+  std::vector<std::string> const & get_separated_currylib_paths()
+  {
+    static std::vector<std::string> paths;
+    if(paths.empty())
+    {
+      std::string const & pathstr = get_currylib_path();
+      size_t a = 0, b = 0;
+      do
+      {
+        b = pathstr.find_first_of(':', a);
+        std::string const elem = pathstr.substr(a, b-a);
+        if(!elem.empty())
+          paths.push_back(elem);
+        a = b + 1;
+      }
+      while(b != std::string::npos);
+    }
+    return paths;
+  }
+
+  std::string const & get_currylib_path()
+  {
+    static std::string lib_path;
+    if(lib_path.empty())
+    {
+      // Start with the CURRYPATH environment variable.
+      char * user_path = std::getenv("CURRYPATH");
+      if(user_path)
+      {
+        lib_path += user_path;
+        lib_path += ":";
+      }
+      // Add the Sprite system library path.
+      lib_path += join_path(SPRITE_LIBINSTALL "/", "currylib/");
+    }
+    return lib_path;
+  }
+
+  std::string get_module_file(std::string const & module)
+  {
+    std::string const file = module + ".curry";
+    for(std::string const & path: get_separated_currylib_paths())
+    {
+      std::string full_path = join_path(path, file);
+      if(is_up_to_date(full_path, full_path))
+        return full_path;
+    }
+    throw backend::compile_error(
+        "No Curry file for module \"" + module + "\" was found in path "
+          + get_currylib_path()
+      );
   }
 
   std::string const & get_curry2read()

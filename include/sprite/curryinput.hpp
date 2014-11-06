@@ -24,6 +24,9 @@ namespace sprite { namespace curry
     std::string module;
     std::string name;
     std::string str() const { return module + "." + name; }
+    // Note: std::hash<Qname> defined below.
+    friend bool operator==(Qname const & lhs, Qname const & rhs)
+      { return lhs.module == rhs.module && lhs.name == rhs.name; }
   };
 
   /// Represents a Curry constructor.
@@ -359,7 +362,6 @@ namespace sprite { namespace curry
     std::vector<Function> functions;
   };
 
-
   /**
    * @brief Represents a Curry library (or program), which is just a collection
    * of modules.
@@ -386,3 +388,21 @@ namespace sprite { namespace curry
     }
   };
 }}
+
+namespace std
+{
+  template<>
+  struct hash<sprite::curry::Qname>
+  {
+    typedef sprite::curry::Qname argument_type;
+    typedef size_t result_type;
+
+    result_type operator()(argument_type const & arg) const
+    {
+      result_type const h0(std::hash<std::string>()(arg.module));
+      result_type const h1(std::hash<std::string>()(arg.name));
+      return h0 ^ (h1 << 1);
+    }
+  };
+}
+
