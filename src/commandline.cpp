@@ -42,21 +42,18 @@ namespace sprite
 
     // Parse the input program.
     input >> lib;
-    size_t const ithis = lib.modules.size() - 1;
-    if(modulename != lib.modules[ithis].name)
+    curry::Module const & cymodule = lib.modules.back();
+    if(modulename != cymodule.name)
     {
       throw backend::compile_error(
           "File \"" + readablefile + "\" defines the wrong module ("
-        + lib.modules[ithis].name + ")."
+        + cymodule.name + ")."
         );
     }
 
     // Process the imported modules first.
-    auto imports = lib.modules[ithis].imports;
-    for(std::string const & import: imports)
+    for(std::string const & import: cymodule.imports)
     {
-      // DEBUG: can't use the prelude until stubs are added.
-      if(import == "Prelude") continue;
       if(stab.modules.count(import) == 0)
         compile_file(get_module_file(import), lib, stab, context, false);
     }
@@ -80,11 +77,11 @@ namespace sprite
       }
       stab.modules.emplace(
           modulename
-        , compiler::ModuleSTab{lib.modules[ithis], backend::module(M)}
+        , compiler::ModuleSTab{cymodule, backend::module(M)}
         );
     }
 
-    compiler::compile(lib.modules[ithis], stab, context);
+    compiler::compile(cymodule, stab, context);
 
     // If asked to, write out the .bc file.
     if(save_bitcode && !bitcode_up_to_date)

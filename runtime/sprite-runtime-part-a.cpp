@@ -1,5 +1,6 @@
 #include "stdio.h"
 #include "stdint.h"
+#include "stdlib.h"
 
 namespace sprite { namespace compiler
 {
@@ -71,3 +72,4 @@ extern "C"
     DATA(root, int64_t) = x + y;
   }
 }
+

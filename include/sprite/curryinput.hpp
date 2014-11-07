@@ -368,7 +368,8 @@ namespace sprite { namespace curry
    */
   struct Library
   {
-    std::vector<Module> modules;
+    // Note: the module addresses need to remain stable.
+    std::list<Module> modules;
 
     /// Move the contents of another Library into this one.
     Library & merge_from(Library & arg)
@@ -377,7 +378,6 @@ namespace sprite { namespace curry
         modules = std::move(arg.modules);
       else
       {
-        modules.reserve(modules.size() + arg.modules.size());
         std::move(
             std::begin(arg.modules), std::end(arg.modules)
           , std::back_inserter(modules)

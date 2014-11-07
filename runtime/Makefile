@@ -38,7 +38,7 @@ sprite-runtime-part-a.bc : sprite-runtime-part-a.cpp
 	# Note: pipefail is used because llvm-as returns non-error even if clang fails.
 	bash -o pipefail -c '$(CLANG) -S -emit-llvm sprite-runtime-part-a.cpp -o - | $(LLVM-AS) > sprite-runtime-part-a.bc'
 
-$(STATICLIB_PART_B) :
+$(STATICLIB_PART_B) : sprite-runtime-part-b
 	# Runtime part B: bitcode generated directly using the C++ API.
 	$(MAKE) -C sprite-runtime-part-b
 

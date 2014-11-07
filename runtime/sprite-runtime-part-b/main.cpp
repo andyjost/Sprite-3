@@ -1,5 +1,6 @@
 #include "sprite/compiler.hpp"
 #include "sprite/runtime.hpp"
+#include "sprite/backend/support/testing.hpp"
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -47,6 +48,7 @@ int main()
 	module module_b("sprit_runtime_part_b");
 	scope _ = module_b;
 	sprite::compiler::ir_h ir;
+  sprite::backend::testing::clib_h clib;
 
   // Declare the null step function.
   extern_(ir.stepfun_t, ".nullstep", {}, []{});
@@ -70,5 +72,54 @@ int main()
   #define SPRITE_HANDLE_BUILTIN(name, arity) build_vt_for_##name(ir);
   #include "sprite/builtins.def"
 
+  // Create stubs for unimplemented external functions.
+  #define DECLARE_EXTERNAL_STUB(name)                                 \
+      extern_<function>(                                              \
+          ir.stepfun_t, #name, {}                                     \
+        , [&] {                                                       \
+            clib.printf(                                              \
+              "External function \"" #name "\" is not implemented.\n" \
+            );                                                        \
+            clib.exit(EXIT_FAILURE);                                  \
+          }                                                           \
+        );                                                            \
+    /**/
+  DECLARE_EXTERNAL_STUB(seq)
+  DECLARE_EXTERNAL_STUB(ensureNotFree)
+  DECLARE_EXTERNAL_STUB(prim_error)
+  DECLARE_EXTERNAL_STUB(failed)
+  DECLARE_EXTERNAL_STUB(==)
+  DECLARE_EXTERNAL_STUB(compare)
+  DECLARE_EXTERNAL_STUB(prim_ord)
+  DECLARE_EXTERNAL_STUB(prim_chr)
+  // DECLARE_EXTERNAL_STUB(prim_Int_plus)
+  DECLARE_EXTERNAL_STUB(prim_Int_minus)
+  DECLARE_EXTERNAL_STUB(prim_Int_times)
+  DECLARE_EXTERNAL_STUB(prim_Int_div)
+  DECLARE_EXTERNAL_STUB(prim_Int_mod)
+  DECLARE_EXTERNAL_STUB(prim_Int_quot)
+  DECLARE_EXTERNAL_STUB(prim_Int_rem)
+  DECLARE_EXTERNAL_STUB(prim_negateFloat)
+  DECLARE_EXTERNAL_STUB(=:=)
+  DECLARE_EXTERNAL_STUB(success)
+  DECLARE_EXTERNAL_STUB(&)
+  DECLARE_EXTERNAL_STUB(>>=)
+  DECLARE_EXTERNAL_STUB(return)
+  DECLARE_EXTERNAL_STUB(prim_putChar)
+  DECLARE_EXTERNAL_STUB(getChar)
+  DECLARE_EXTERNAL_STUB(prim_readFile)
+  DECLARE_EXTERNAL_STUB(prim_readFileContents)
+  DECLARE_EXTERNAL_STUB(prim_writeFile)
+  DECLARE_EXTERNAL_STUB(prim_appendFile)
+  DECLARE_EXTERNAL_STUB(catch)
+  DECLARE_EXTERNAL_STUB(prim_show)
+  DECLARE_EXTERNAL_STUB(apply)
+  DECLARE_EXTERNAL_STUB(cond)
+  DECLARE_EXTERNAL_STUB(letrec)
+  DECLARE_EXTERNAL_STUB(=:<=)
+  DECLARE_EXTERNAL_STUB(=:<<=)
+  DECLARE_EXTERNAL_STUB(ifVar)
+  DECLARE_EXTERNAL_STUB(failure)
+  
   llvm::WriteBitcodeToFile(module_b.ptr(), llvm::outs());
 }

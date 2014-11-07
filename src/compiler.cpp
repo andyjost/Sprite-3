@@ -335,7 +335,7 @@ namespace
             "Exiting now because an expression in a branch condition was "
             "encountered."
           );
-        this->module_stab.clib().exit(1);
+        this->module_stab.clib().exit(EXIT_FAILURE);
         return_();
         return false;
       }
@@ -749,9 +749,6 @@ namespace sprite { namespace compiler
     // Process the imports.
     for(auto const & import: cymodule.imports)
     {
-      // DEBUG: can't use the prelude until stubs are added.
-      if(import == "Prelude") continue; // for debugging only!
-
       auto p = stab.modules.find(import);
       if(p == stab.modules.end())
         throw compile_error("Imported module \"" + import + "\" was not found");
