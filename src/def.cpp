@@ -115,7 +115,7 @@ namespace sprite { namespace backend
     {
       // The function must currently have no body.
       if(!fun->empty())
-        throw compile_error("Multiply-defined function.");
+        throw compile_error("Multiply-defined function: \"" + name + "\".");
 
       scope _ = fun;
       body();

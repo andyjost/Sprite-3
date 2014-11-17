@@ -61,15 +61,24 @@ extern "C"
   #define SUCC_1(root) reinterpret_cast<sprite::compiler::node*&>(root->slot1)
   #define DATA(root, type) (*reinterpret_cast<type *>(&root->slot0))
 
-  void prim_Int_plus(sprite::compiler::node * root)
-  {
-    sprite::compiler::node * lhs = SUCC_0(root);
-    sprite::compiler::node * rhs = SUCC_1(root);
-    int64_t const x = DATA(lhs, int64_t);
-    int64_t const y = DATA(rhs, int64_t);
-    root->vptr = lhs->vptr;
-    root->tag = sprite::compiler::CTOR;
-    DATA(root, int64_t) = x + y;
-  }
+  #define DEFINE_PRIMITIVE_BINARY(name, type, op)      \
+      void name(sprite::compiler::node * root)         \
+      {                                                \
+        sprite::compiler::node * lhs = SUCC_0(root);   \
+        sprite::compiler::node * rhs = SUCC_1(root);   \
+        /* FIXME: need to ensureNotFree.  And more? */ \
+        lhs->vptr->H(lhs);                             \
+        rhs->vptr->H(rhs);                             \
+        type const x = DATA(lhs, type);                \
+        type const y = DATA(rhs, type);                \
+        root->vptr = lhs->vptr;                        \
+        root->tag = sprite::compiler::CTOR;            \
+        DATA(root, type) = x op y;                     \
+      }                                                \
+    /**/
+
+  DEFINE_PRIMITIVE_BINARY(prim_Int_plus, int64_t, +)
+  DEFINE_PRIMITIVE_BINARY(prim_Int_minus, int64_t, -)
+  DEFINE_PRIMITIVE_BINARY(prim_Int_times, int64_t, *)
 }
 

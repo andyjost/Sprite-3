@@ -84,6 +84,9 @@ int main()
           }                                                           \
         );                                                            \
     /**/
+  // PAKCS Prelude externals
+  // =======================
+  #if 0
   DECLARE_EXTERNAL_STUB(seq)
   DECLARE_EXTERNAL_STUB(ensureNotFree)
   DECLARE_EXTERNAL_STUB(prim_error)
@@ -120,6 +123,60 @@ int main()
   DECLARE_EXTERNAL_STUB(=:<<=)
   DECLARE_EXTERNAL_STUB(ifVar)
   DECLARE_EXTERNAL_STUB(failure)
+  #endif
+
+  // CMC Prelude externals
+  // =======================
+  DECLARE_EXTERNAL_STUB(ensureNotFree)
+  DECLARE_EXTERNAL_STUB($!)
+  DECLARE_EXTERNAL_STUB($!!)
+  DECLARE_EXTERNAL_STUB($##)
+  DECLARE_EXTERNAL_STUB(prim_error)
+  DECLARE_EXTERNAL_STUB(failed)
+  DECLARE_EXTERNAL_STUB(==)
+  DECLARE_EXTERNAL_STUB(compare)
+  DECLARE_EXTERNAL_STUB(ord)
+  DECLARE_EXTERNAL_STUB(chr)
+  // DECLARE_EXTERNAL_STUB(+)
+  //DECLARE_EXTERNAL_STUB(-)
+  // DECLARE_EXTERNAL_STUB(*)
+  DECLARE_EXTERNAL_STUB(div)
+  DECLARE_EXTERNAL_STUB(mod)
+  DECLARE_EXTERNAL_STUB(quot)
+  DECLARE_EXTERNAL_STUB(rem)
+  DECLARE_EXTERNAL_STUB(prim_negateFloat)
+  DECLARE_EXTERNAL_STUB(=:=)
+  DECLARE_EXTERNAL_STUB(success)
+  DECLARE_EXTERNAL_STUB(&)
+  DECLARE_EXTERNAL_STUB(>>=)
+  DECLARE_EXTERNAL_STUB(return)
+  DECLARE_EXTERNAL_STUB(prim_putChar)
+  DECLARE_EXTERNAL_STUB(getChar)
+  DECLARE_EXTERNAL_STUB(prim_readFile)
+  DECLARE_EXTERNAL_STUB(prim_readFileContents)
+  DECLARE_EXTERNAL_STUB(prim_writeFile)
+  DECLARE_EXTERNAL_STUB(prim_appendFile)
+  DECLARE_EXTERNAL_STUB(catch)
+  DECLARE_EXTERNAL_STUB(prim_show)
+  DECLARE_EXTERNAL_STUB(?)
+  DECLARE_EXTERNAL_STUB(apply)
+  DECLARE_EXTERNAL_STUB(cond)
+  DECLARE_EXTERNAL_STUB(letrec)
+  DECLARE_EXTERNAL_STUB(=:<=)
+  DECLARE_EXTERNAL_STUB(=:<<=)
+  DECLARE_EXTERNAL_STUB(ifVar)
+  DECLARE_EXTERNAL_STUB(failure)
+
+  // (+)
+  #define FORWARD_CALL(prim, extname)                                  \
+      auto prim = extern_<function>(ir.stepfun_t, #prim);              \
+      extern_<function>(                                               \
+          ir.stepfun_t, extname, {"root"}, [&] { prim(arg("root")); }  \
+        );                                                             \
+    /**/
+  FORWARD_CALL(prim_Int_plus, "+")
+  FORWARD_CALL(prim_Int_minus, "-")
+  FORWARD_CALL(prim_Int_times, "*")
   
   llvm::WriteBitcodeToFile(module_b.ptr(), llvm::outs());
 }
