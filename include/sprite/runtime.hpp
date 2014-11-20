@@ -76,7 +76,7 @@ namespace sprite { namespace compiler
   // Provides the rule for getting the vtable symbol name for a built-in type.
   // The basenames come from builtins.def.
   inline std::string get_vt_name(std::string const & basename)
-    { return ".vt." + basename; }
+    { return "_vt_" + basename; }
 
   // Returns an arity function for the specified arity.
   function get_arity_function(ir_h const & ir, size_t arity);

@@ -200,6 +200,14 @@ namespace sprite { namespace curry
     return id;
   }
 
+  Rule return_term(bool is_partial, Term && term)
+  {
+    if(is_partial)
+      return Partial(term);
+    else
+      return term;
+  }
+
   Rule read_rule(std::istream & ifs)
   {
     char c;
@@ -232,8 +240,10 @@ namespace sprite { namespace curry
       // an open paren.
       for(c = ifs.peek(); c; c = ifs.peek())
       {
-        if(c == '\n') { ifs.get(); return term; }
-        if(c == ')' || c == ',') return term;
+        if(c == '\n')
+          { ifs.get(); return return_term(is_partial, std::move(term)); }
+        if(c == ')' || c == ',')
+          return return_term(is_partial, std::move(term));
         if(std::isspace(c)) { ifs.get(); continue; }
         if(c == '(') { ifs.get(); break; }
         throw ParseError();
@@ -241,28 +251,28 @@ namespace sprite { namespace curry
 
       // Parse the first subexpression.
       ifs >> word;
-      term.args.push_back(read_rule(ifs));
-
-      // For partial applications, move the first argument (the function) into
-      // the qname slot.
       if(is_partial)
       {
-        Term const * head = term.args.back().getterm();
-        if(!head) throw ParseError();
-        term.qname = head->qname;
-        term.args.pop_back();
+        Rule rule = read_rule(ifs);
+        if(!rule.getterm()) throw ParseError();
+        term = *rule.getterm();
       }
-  
+      else
+        term.args.push_back(read_rule(ifs));
+
       // Parse more subexpressions.
       for(c = ifs.get(); c; c = ifs.get())
       {
         if(std::isspace(c)) continue;
         if(c == ',')
         {
+          // There should only be one arg list for partials.
+          if(is_partial) throw ParseError();
           ifs >> word;
           term.args.push_back(read_rule(ifs));
         }
-        else if(c == ')') return term;
+        else if(c == ')')
+          return return_term(is_partial, std::move(term));
         else throw ParseError();
       }
     }
@@ -466,6 +476,13 @@ namespace sprite { namespace curry
           // Get the next index.
           ifs >> path.idx;
           base_one_to_zero(path.idx);
+
+          // Get the term typename.  If there is a base path, read it from the
+          // input.  Otherwise, it is the name of this function.
+          if(path.base == curry::nobase)
+            path.typename_ = qname;
+          else
+            ifs >> path.typename_;
         }
       }
       else break;
@@ -494,6 +511,7 @@ namespace sprite { namespace curry
   {
     // The "module" keyword has already been read.
     mod.name = read_quoted_string(ifs);
+
     while(true)
     {
       ifs >> word;

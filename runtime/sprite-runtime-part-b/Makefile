@@ -8,7 +8,7 @@ STATICLIB = sprite-runtime-part-b.bc
 all : $(STATICLIB)
 
 clean :
-	rm -f *.bc $(OBJECTS) $(EXECUTABLE) *.ll
+	rm -f *.bc $(OBJECTS) $(EXECUTABLE) *.ll *.d
 
 -include ../../Make.include
 
@@ -16,8 +16,12 @@ CFLAGS += -I.
 
 ###
 
+# Import dependency info for extant .o files.
+-include $(OBJECTS:.o=.d)
+
 .cpp.o :
 	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) -MM $(CFLAGS) $< > $(@:.o=.d)
 
 $(EXECUTABLE) : $(OBJECTS) $(SPRITE_LIB)
 	$(CC) $^ $(LDFLAGS) -o $@

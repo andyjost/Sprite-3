@@ -87,6 +87,17 @@ namespace
     // reachable from the root node.
     mutable std::map<size_t, tgt::ref> freevar_alloca;
 
+    // Allocates a new node and places an expression there.
+    tgt::value new_(curry::Rule const & rule)
+    {
+      tgt::value data = node_alloc_typed(this->module_stab);
+      tgt::value orig_target_p = this->target_p;
+      this->target_p = data;
+      (*this)(rule);
+      this->target_p = orig_target_p;
+      return data;
+    }
+
     // Looks up a node using the function paths and path reference.  The result
     // is a node_t* in the target.  If the variable referenced is a free
     // variable, then it will be allocated (if necessary).
@@ -133,22 +144,36 @@ namespace
       if(pathelem.base != curry::nobase)
         _resolve_path(this->fundef->paths.at(pathelem.base));
 
-      // Add this index.
+      // Add this index to the path.
+      size_t const term_arity = lookup(
+          this->module_stab, pathelem.typename_
+        ).source->arity;
       tgt::type node_pt = *this->module_stab.ir().node_t;
-      switch(pathelem.idx)
+      switch(term_arity)
       {
-        case 0:
-          this->resolved_path_alloca = bitcast(
-              this->resolved_path_alloca.arrow(ND_SLOT0), node_pt
-            );
-          break;
+        case 0: assert(0 && "indexing a term with no successors");
+        case 2:
+          if(pathelem.idx == 1)
+          {
+            this->resolved_path_alloca = bitcast(
+                this->resolved_path_alloca.arrow(ND_SLOT1), node_pt
+              );
+            break;
+          }
+          // intentional fall-through
         case 1:
-          this->resolved_path_alloca = bitcast(
-              this->resolved_path_alloca.arrow(ND_SLOT1), node_pt
-            );
-          break;
+          if(pathelem.idx == 0)
+          {
+            this->resolved_path_alloca = bitcast(
+                this->resolved_path_alloca.arrow(ND_SLOT0), node_pt
+              );
+            break;
+          }
+          else
+            assert(0 && "error computing path");
         default:
         {
+          assert(pathelem.idx < term_arity);
           value children = bitcast(
               this->resolved_path_alloca.arrow(ND_SLOT0), **node_pt
             );
@@ -215,6 +240,72 @@ namespace
       this->target_p.arrow(ND_VPTR) = module_stab.rt().fwd_vt;
       this->target_p.arrow(ND_TAG) = compiler::FWD;
       this->target_p.arrow(ND_SLOT0) = target;
+    }
+
+    // Rewrites the root as a partial node.
+    // 
+    // The final "apply" in a partial evaluation is shown below.  The terms
+    // beginning with "P." are the partial nodes created by this function.
+    //
+    // Expression: (f a0 ... ak) an
+    /*
+                           apply
+                         /       \
+                        /         \
+              PartialSpine.1.n     an
+               |       \
+               .        ak
+               .
+               .
+              PartialSpine.{n-1}.n
+               |                  \
+               |                   a
+              PartialTerminus.n.n(&f)
+    */
+    // The two numbers following "P." indicate the remaining number of
+    // arguments to be bound, and the final arity, respectively.  They are
+    // packed as two 16-bit integers into the node tag.  The terminal node,
+    // whose type is PartialTerminus, contains the v-table for f as data.
+    //
+    result_type operator()(curry::Partial const & term)
+    {
+      // Use only the first 15 bits to avoid any possibility of interpreting
+      // the tag as a negative value.
+      size_t const N = term.args.size() + 1;
+      if(N & ~0x7FFF)
+        compile_error("Too many successors");
+      int16_t const n = static_cast<int16_t>(N & 0x7FFF);
+      size_t i = 0;
+
+      // The final iteration writes to the target node.  Prior iterations
+      // allocate a new node.
+      auto choose_storage = [&] {
+          if(i+1 == N)
+            return this->target_p;
+          else
+            return node_alloc_typed(this->module_stab);
+        };
+
+      // Create the terminal node, which has the function's vtable as its data.
+      tgt::value prev_node = choose_storage();
+      prev_node.arrow(ND_VPTR) = module_stab.rt().PartialTerminus_vt;
+      prev_node.arrow(ND_TAG) = (n<<16) | n;
+      prev_node.arrow(ND_SLOT0) = &lookup(this->module_stab,term.qname).vtable;
+      prev_node.arrow(ND_SLOT1) = nullptr;
+
+      for(++i; i<N; ++i)
+      {
+        // Create the data successor.
+        tgt::value data = new_(term.args.at(i-1));
+
+        // Build the spine node.
+        tgt::value this_node = choose_storage();
+        this_node.arrow(ND_VPTR) = module_stab.rt().PartialSpine_vt;
+        this_node.arrow(ND_TAG) = (n<<16) | (n-i);
+        this_node.arrow(ND_SLOT0) = prev_node;
+        this_node.arrow(ND_SLOT1) = data;
+        prev_node = this_node;
+      }
     }
 
     result_type operator()(curry::Term const & term)

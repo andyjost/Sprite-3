@@ -44,8 +44,8 @@ ppIKind IFree
 ppLHSvar (Arg i)
   = show 0 ++ " " ++ show i
 
-ppLHSvar (Rel base _ i)
-  = show base ++ " " ++ show i
+ppLHSvar (Rel base iname i)
+  = show base ++ " " ++ show i ++ " " ++ ppIName iname
 ------------------------------------------------------------------
 
 ppStmt n (IExternal string)

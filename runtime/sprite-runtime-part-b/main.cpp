@@ -11,6 +11,8 @@ void build_vt_for_choice(sprite::compiler::ir_h const & ir);
 void build_vt_for_Float(sprite::compiler::ir_h const & ir);
 void build_vt_for_fwd(sprite::compiler::ir_h const & ir);
 void build_vt_for_Int64(sprite::compiler::ir_h const & ir);
+void build_vt_for_PartialSpine(sprite::compiler::ir_h const & ir);
+void build_vt_for_PartialTerminus(sprite::compiler::ir_h const & ir);
 
 namespace sprite { namespace compiler
 {
@@ -40,8 +42,14 @@ void build_vt_for_choice(sprite::compiler::ir_h const & ir)
   { build_vt_for_trivial_node(ir, "choice", 2); }
 void build_vt_for_failed(sprite::compiler::ir_h const & ir)
   { build_vt_for_trivial_node(ir, "failed", 0); }
+void build_vt_for_success(sprite::compiler::ir_h const & ir)
+  { build_vt_for_trivial_node(ir, "success", 0); }
 void build_vt_for_freevar(sprite::compiler::ir_h const & ir)
   { build_vt_for_trivial_node(ir, "freevar", 0); }
+void build_vt_for_PartialSpine(sprite::compiler::ir_h const & ir)
+  { build_vt_for_trivial_node(ir, "PartialSpine", 2); }
+void build_vt_for_PartialTerminus(sprite::compiler::ir_h const & ir)
+  { build_vt_for_trivial_node(ir, "PartialTerminus", 0); }
 
 int main()
 {
@@ -132,13 +140,13 @@ int main()
   DECLARE_EXTERNAL_STUB($!!)
   DECLARE_EXTERNAL_STUB($##)
   DECLARE_EXTERNAL_STUB(prim_error)
-  DECLARE_EXTERNAL_STUB(failed)
+  // DECLARE_EXTERNAL_STUB(failed)
   DECLARE_EXTERNAL_STUB(==)
   DECLARE_EXTERNAL_STUB(compare)
-  DECLARE_EXTERNAL_STUB(ord)
-  DECLARE_EXTERNAL_STUB(chr)
+  // DECLARE_EXTERNAL_STUB(ord)
+  // DECLARE_EXTERNAL_STUB(chr)
   // DECLARE_EXTERNAL_STUB(+)
-  //DECLARE_EXTERNAL_STUB(-)
+  // DECLARE_EXTERNAL_STUB(-)
   // DECLARE_EXTERNAL_STUB(*)
   DECLARE_EXTERNAL_STUB(div)
   DECLARE_EXTERNAL_STUB(mod)
@@ -146,7 +154,7 @@ int main()
   DECLARE_EXTERNAL_STUB(rem)
   DECLARE_EXTERNAL_STUB(prim_negateFloat)
   DECLARE_EXTERNAL_STUB(=:=)
-  DECLARE_EXTERNAL_STUB(success)
+  // DECLARE_EXTERNAL_STUB(success)
   DECLARE_EXTERNAL_STUB(&)
   DECLARE_EXTERNAL_STUB(>>=)
   DECLARE_EXTERNAL_STUB(return)
@@ -159,7 +167,7 @@ int main()
   DECLARE_EXTERNAL_STUB(catch)
   DECLARE_EXTERNAL_STUB(prim_show)
   DECLARE_EXTERNAL_STUB(?)
-  DECLARE_EXTERNAL_STUB(apply)
+  // DECLARE_EXTERNAL_STUB(apply)
   DECLARE_EXTERNAL_STUB(cond)
   DECLARE_EXTERNAL_STUB(letrec)
   DECLARE_EXTERNAL_STUB(=:<=)

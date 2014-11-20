@@ -27,6 +27,7 @@ uninstall :
 	-rm -rf $(LIBINSTALL)/cmc
 	-rm -rf $(LIBINSTALL)/cc
 	-rm -rf $(LIBINSTALL)/llc
+	-rm -rf $(LIBINSTALL)/currylib
 
 -include ../Make.include
 

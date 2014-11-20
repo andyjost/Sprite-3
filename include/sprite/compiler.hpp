@@ -172,6 +172,11 @@ namespace sprite { namespace compiler
   inline value node_alloc(ModuleSTab const & module_stab)
     { return module_stab.clib().malloc(sizeof_(module_stab.ir().node_t)); }
 
+  /// Allocates storage for a node.  The return type is node*.
+  inline value node_alloc_typed(ModuleSTab const & module_stab)
+    { return bitcast(node_alloc(module_stab), *module_stab.ir().node_t); }
+
+
   /// Allocates storage for @p n pointers.
   inline value array_alloc(ModuleSTab const & module_stab, size_t n)
     { return module_stab.clib().malloc(sizeof_(module_stab.ir().node_t) * n); }

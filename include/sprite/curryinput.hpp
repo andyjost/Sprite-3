@@ -77,6 +77,13 @@ namespace sprite { namespace curry
       )
       : qname(qname_), args(args_)
     {}
+
+    Term_(Term_ && term)
+      : qname(std::move(term.qname)), args(std::move(term.args))
+    {}
+
+    Term_(Term_ const &) = default;
+    Term_ & operator=(Term_ const &) = default;
   };
   using Term = Term_<>;
 
@@ -109,6 +116,8 @@ namespace sprite { namespace curry
   struct Partial : Term
   {
     using Term::Term;
+    Partial(Term const & term) : Term(term) {}
+    Partial(Term && term) : Term(std::move(term)) {}
   };
 
   /**
@@ -120,7 +129,7 @@ namespace sprite { namespace curry
    */
   struct Rule
   {
-    Rule(Fail arg) : tag(FAIL), fail() {}
+    Rule(Fail = Fail()) : tag(FAIL), fail() {}
     Rule(char arg) : tag(CHAR), char_(arg) {}
     Rule(int64_t arg) : tag(INT), int_(arg) {}
     Rule(double arg) : tag(DOUBLE), double_(arg) {}
@@ -128,15 +137,7 @@ namespace sprite { namespace curry
     Rule(ExternalCall const & arg) : tag(EXTERNAL), external(arg) {}
     Rule(Partial const & arg) : tag(PARTIAL), partial(arg) {}
     Rule(NLTerm const & arg) : tag(NLTERM), nlterm(arg) {} 
-    template<
-        typename...Args
-      , typename = typename std::enable_if<
-            std::is_constructible<Term, Args...>::value
-          >::type
-      >
-    Rule(Args &&...args)
-      : tag(TERM), term(std::forward<Args>(args)...)
-    {}
+    Rule(Term const & arg) : tag(TERM), term(arg) {}
 
     Rule(Qname const & qname, std::vector<Rule> && args)
       : tag(TERM), term(qname, std::move(args))
@@ -345,7 +346,7 @@ namespace sprite { namespace curry
   {
     std::string name;
     size_t arity;
-    struct PathElem { size_t base; size_t idx; };
+    struct PathElem { size_t base; size_t idx; Qname typename_; };
     std::vector<PathElem> paths;
     Definition def;
   };
