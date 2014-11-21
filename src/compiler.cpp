@@ -149,31 +149,19 @@ namespace
           this->module_stab, pathelem.typename_
         ).source->arity;
       tgt::type node_pt = *this->module_stab.ir().node_t;
+      assert(pathelem.idx < term_arity);
       switch(term_arity)
       {
         case 0: assert(0 && "indexing a term with no successors");
-        case 2:
-          if(pathelem.idx == 1)
-          {
-            this->resolved_path_alloca = bitcast(
-                this->resolved_path_alloca.arrow(ND_SLOT1), node_pt
-              );
-            break;
-          }
-          // intentional fall-through
         case 1:
-          if(pathelem.idx == 0)
-          {
-            this->resolved_path_alloca = bitcast(
-                this->resolved_path_alloca.arrow(ND_SLOT0), node_pt
-              );
-            break;
-          }
-          else
-            assert(0 && "error computing path");
+        case 2:
+          this->resolved_path_alloca = bitcast(
+              this->resolved_path_alloca.arrow(ND_SLOT0 + pathelem.idx)
+            , node_pt
+            );
+          break;
         default:
         {
-          assert(pathelem.idx < term_arity);
           value children = bitcast(
               this->resolved_path_alloca.arrow(ND_SLOT0), **node_pt
             );
