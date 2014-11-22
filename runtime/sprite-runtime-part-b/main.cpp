@@ -92,46 +92,6 @@ int main()
           }                                                           \
         );                                                            \
     /**/
-  // PAKCS Prelude externals
-  // =======================
-  #if 0
-  DECLARE_EXTERNAL_STUB(seq)
-  DECLARE_EXTERNAL_STUB(ensureNotFree)
-  DECLARE_EXTERNAL_STUB(prim_error)
-  DECLARE_EXTERNAL_STUB(failed)
-  DECLARE_EXTERNAL_STUB(==)
-  DECLARE_EXTERNAL_STUB(compare)
-  DECLARE_EXTERNAL_STUB(prim_ord)
-  DECLARE_EXTERNAL_STUB(prim_chr)
-  // DECLARE_EXTERNAL_STUB(prim_Int_plus)
-  DECLARE_EXTERNAL_STUB(prim_Int_minus)
-  DECLARE_EXTERNAL_STUB(prim_Int_times)
-  DECLARE_EXTERNAL_STUB(prim_Int_div)
-  DECLARE_EXTERNAL_STUB(prim_Int_mod)
-  DECLARE_EXTERNAL_STUB(prim_Int_quot)
-  DECLARE_EXTERNAL_STUB(prim_Int_rem)
-  DECLARE_EXTERNAL_STUB(prim_negateFloat)
-  DECLARE_EXTERNAL_STUB(=:=)
-  DECLARE_EXTERNAL_STUB(success)
-  DECLARE_EXTERNAL_STUB(&)
-  DECLARE_EXTERNAL_STUB(>>=)
-  DECLARE_EXTERNAL_STUB(return)
-  DECLARE_EXTERNAL_STUB(prim_putChar)
-  DECLARE_EXTERNAL_STUB(getChar)
-  DECLARE_EXTERNAL_STUB(prim_readFile)
-  DECLARE_EXTERNAL_STUB(prim_readFileContents)
-  DECLARE_EXTERNAL_STUB(prim_writeFile)
-  DECLARE_EXTERNAL_STUB(prim_appendFile)
-  DECLARE_EXTERNAL_STUB(catch)
-  DECLARE_EXTERNAL_STUB(prim_show)
-  DECLARE_EXTERNAL_STUB(apply)
-  DECLARE_EXTERNAL_STUB(cond)
-  DECLARE_EXTERNAL_STUB(letrec)
-  DECLARE_EXTERNAL_STUB(=:<=)
-  DECLARE_EXTERNAL_STUB(=:<<=)
-  DECLARE_EXTERNAL_STUB(ifVar)
-  DECLARE_EXTERNAL_STUB(failure)
-  #endif
 
   // CMC Prelude externals
   // =======================
