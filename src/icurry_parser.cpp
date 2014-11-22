@@ -373,7 +373,7 @@ namespace sprite { namespace curry
         // Parse (varid,_,'IBind').
         int c = ifs.get();
         SPRITE_SKIPSPACE_EXPECTING('(')
-        ifs >> step.varid;
+        step.varid = read_variable_ref(ifs);
         c = ifs.get();
         SPRITE_SKIPSPACE_EXPECTING(',')
         size_t unused;

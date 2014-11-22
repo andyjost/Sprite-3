@@ -376,7 +376,9 @@ namespace
 
     result_type operator()(curry::NLTerm const & term)
     {
-      assert(0);
+      for(curry::NLTerm::Step const & step: term.steps)
+        this->new_(this->resolve_path(step.varid), step.term);
+      return (*this)(term.result);
     }
 
     result_type operator()(curry::ExternalCall const & term)
