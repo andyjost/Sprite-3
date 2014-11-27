@@ -61,11 +61,11 @@ namespace sprite
     // Read the program IR from the .bc file, if possible.  Update the symbol
     // table with the IR.  The subsequent call to compile will fill in the rest
     // of the symbol table.
-    bool const bitcode_up_to_date = 
+    bool const bitcode_is_up_to_date = 
          is_up_to_date(bitcodefile, readablefile)
       && is_up_to_date(bitcodefile, "/proc/self/exe");
 
-    if(bitcode_up_to_date)
+    if(bitcode_is_up_to_date)
     {
       std::string errmsg;
       llvm::Module * M = load_compiled_module(bitcodefile, context, errmsg);
@@ -84,7 +84,7 @@ namespace sprite
     compiler::compile(cymodule, stab, context);
 
     // If asked to, write out the .bc file.
-    if(save_bitcode && !bitcode_up_to_date)
+    if(save_bitcode && !bitcode_is_up_to_date)
     {
       std::string errmsg;
       llvm::raw_fd_ostream fout(
@@ -262,10 +262,14 @@ namespace sprite
   {
     std::string const curryfile = sprite::get_curryfile(inputfile);
     std::string const readablefile = sprite::get_readablefile(curryfile);
-    if(!is_up_to_date(readablefile, curryfile))
+    std::string const & curry2read = sprite::get_curry2read();
+    bool const readablefile_is_up_to_date =
+         is_up_to_date(readablefile, curryfile)
+      && is_up_to_date(readablefile, curry2read);
+    if(!readablefile_is_up_to_date)
     {
       std::stringstream cmd;
-      cmd << sprite::get_curry2read() << " -q " << curryfile;
+      cmd << curry2read << " -q " << curryfile;
       int ok = std::system(cmd.str().c_str());
       if(ok != 0)
         throw backend::compile_error("curry2read failed");

@@ -93,7 +93,7 @@ namespace
     // The next available local ID.
     size_t next_local_id = LOCAL_ID_START;
 
-    // Places an expression at an unallocated location.
+    // Places an expression at an uninitialized location.
     tgt::value new_(tgt::value const & data, curry::Rule const & rule)
     {
       tgt::value orig_target_p = this->target_p;
@@ -268,6 +268,7 @@ namespace
               PartialSpine.{n-1}.n
                |                  \
                |                   a
+               |
               PartialTerminus.n.n(&f)
     */
     // The two numbers following "P." indicate the remaining number of
@@ -756,7 +757,7 @@ namespace sprite { namespace compiler
         {
           // Create or find the vtable.
           tgt::globalvar vt = nullptr;
-          std::string const vtname = ".vt.CTOR." + cymodule.name + "." + ctor.name;
+          std::string const vtname = "_vt_CTOR_" + cymodule.name + "_" + ctor.name;
           if(module_ir.hasglobal(vtname))
             vt.reset(module_ir.getglobal(vtname).as_globalvar());
           else
@@ -779,7 +780,7 @@ namespace sprite { namespace compiler
       for(auto const & fun: cymodule.functions)
       {
         tgt::globalvar vt = nullptr;
-        std::string const vtname = ".vt.OPER." + cymodule.name + "." + fun.name;
+        std::string const vtname = "_vt_OPER_" + cymodule.name + "_" + fun.name;
         if(module_ir.hasglobal(vtname))
           vt.reset(module_ir.getglobal(vtname).as_globalvar());
         else

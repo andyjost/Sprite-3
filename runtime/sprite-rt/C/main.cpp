@@ -3,6 +3,10 @@
 #include "stdlib.h"
 #include <cassert>
 
+#define SUCC_0(root) reinterpret_cast<sprite::compiler::node*&>(root->slot0)
+#define SUCC_1(root) reinterpret_cast<sprite::compiler::node*&>(root->slot1)
+#define DATA(root, type) (*reinterpret_cast<type *>(&root->slot0))
+
 namespace sprite { namespace compiler
 {
   struct node;
@@ -29,7 +33,23 @@ namespace sprite { namespace compiler
     void * slot0;
     void * slot1;
   };
+}}
 
+extern "C"
+{
+  // These are defined in the "LLVM part" of the runtime.
+  extern sprite::compiler::vtable _vt_Char;
+  extern sprite::compiler::vtable _vt_failed;
+  extern sprite::compiler::vtable _vt_fwd;
+  extern sprite::compiler::vtable _vt_Int64;
+  extern sprite::compiler::vtable _vt_success;
+  extern sprite::compiler::vtable _vt_PartialSpine;
+  extern sprite::compiler::vtable _vt_CTOR_Prelude_True;
+  extern sprite::compiler::vtable _vt_CTOR_Prelude_False;
+}
+
+namespace sprite { namespace compiler
+{
   void _printexpr(node * root, bool is_outer)
   {
     node ** begin, ** end;
@@ -44,18 +64,37 @@ namespace sprite { namespace compiler
     }
     if(!is_outer && N > 0) fputs(")", stdout);
   }
+
+  enum EqualityResult { EQ_TRUE, EQ_FALSE, EQ_FAILED };
+
+  EqualityResult _boolequal_impl(node * lhs, node * rhs)
+  {
+    lhs->vptr->H(lhs);
+    rhs->vptr->H(rhs);
+    if(lhs->vptr == &_vt_failed || rhs->vptr == &_vt_failed)
+      return EQ_FAILED;
+    if(lhs->tag != rhs->tag)
+      return EQ_FALSE;
+
+    node ** lbegin;
+    node ** lend;
+    node ** rbegin;
+    node ** rend;
+    lhs->vptr->succ(lhs, &lbegin, &lend);
+    rhs->vptr->succ(rhs, &rbegin, &rend);
+    assert(lend - lbegin == rend - rbegin);
+    for(; lbegin!=lend; ++lbegin, ++rbegin)
+    {
+      EqualityResult const value = _boolequal_impl(*lbegin, *rbegin);
+      if(value != EQ_TRUE)
+        return value;
+    }
+    return EQ_TRUE;
+  }
 }}
 
 extern "C"
 {
-  // These are defined in the "part b" runtime.
-  extern sprite::compiler::vtable _vt_Char;
-  extern sprite::compiler::vtable _vt_failed;
-  extern sprite::compiler::vtable _vt_fwd;
-  extern sprite::compiler::vtable _vt_Int64;
-  extern sprite::compiler::vtable _vt_success;
-  extern sprite::compiler::vtable _vt_PartialSpine;
-
   void sprite_printexpr(sprite::compiler::node * root, char * suffix)
   {
     sprite::compiler::_printexpr(root, true);
@@ -65,10 +104,6 @@ extern "C"
 
   void sprite_normalize(sprite::compiler::node * root)
     { root->vptr->N(root); }
-
-  #define SUCC_0(root) reinterpret_cast<sprite::compiler::node*&>(root->slot0)
-  #define SUCC_1(root) reinterpret_cast<sprite::compiler::node*&>(root->slot1)
-  #define DATA(root, type) (*reinterpret_cast<type *>(&root->slot0))
 
   #define DEFINE_PRIMITIVE_BINARY(name, type, op)      \
       void name(sprite::compiler::node * root)         \
@@ -124,6 +159,22 @@ extern "C"
   {
     root->vptr = &_vt_success;
     root->tag = sprite::compiler::CTOR;
+    root->slot0 = 0;
+    root->slot1 = 0;
+  }
+
+  void true_(sprite::compiler::node * root)
+  {
+    root->vptr = &_vt_CTOR_Prelude_True;
+    root->tag = 1;
+    root->slot0 = 0;
+    root->slot1 = 0;
+  }
+
+  void false_(sprite::compiler::node * root)
+  {
+    root->vptr = &_vt_CTOR_Prelude_False;
+    root->tag = 0;
     root->slot0 = 0;
     root->slot1 = 0;
   }
@@ -210,4 +261,20 @@ extern "C"
   //   root->vptr = &_vt_fwd;
   //   root->tag = sprite::compiler::FWD;
   // }
+
+  void _boolequal(sprite::compiler::node * root)
+  {
+    sprite::compiler::node * lhs = SUCC_0(root);
+    sprite::compiler::node * rhs = SUCC_1(root);
+    switch(_boolequal_impl(lhs, rhs))
+    {
+      case sprite::compiler::EQ_TRUE:
+        return true_(root);
+      case sprite::compiler::EQ_FALSE:
+        return false_(root);
+      case sprite::compiler::EQ_FAILED:
+        return failed(root);
+    }
+  }
 }
+
