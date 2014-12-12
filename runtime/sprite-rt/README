@@ -1,0 +1,5 @@
+The Sprite runtime library is composed of a C++ part and an LLVM part.  They
+are prepared separately in subdirectories and linked to form the final runtime
+library, sprite-rt.bc.  The separation is purely a matter of convenience.  In
+some cases it is easier to write a built-in as C++ code and in other cases it
+easier to write one as LLVM code.

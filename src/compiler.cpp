@@ -83,14 +83,19 @@ namespace
     // to skip over FWD nodes.
     mutable tgt::ref resolved_path_alloca;
 
-    // A mapping that contains free variables.  Free variables are not
-    // reachable from the root node.
+    // A mapping that contains free variables and other local allocations.
+    // These are not reachable from the root node.
     mutable std::map<size_t, tgt::ref> freevar_alloca;
 
-    // Allocates a new node and places an expression there.
-    tgt::value new_(curry::Rule const & rule)
+    // The offset used to tag path ids for local expressions.
+    static size_t const LOCAL_ID_START = 1L << 16;
+
+    // The next available local ID.
+    size_t next_local_id = LOCAL_ID_START;
+
+    // Places an expression at an uninitialized location.
+    tgt::value new_(tgt::value const & data, curry::Rule const & rule)
     {
-      tgt::value data = node_alloc_typed(this->module_stab);
       tgt::value orig_target_p = this->target_p;
       this->target_p = data;
       (*this)(rule);
@@ -98,25 +103,40 @@ namespace
       return data;
     }
 
+    // Allocates a new node and places an expression there.
+    tgt::value new_(curry::Rule const & rule)
+    {
+      tgt::value data = node_alloc_typed(this->module_stab);
+      return this->new_(data, rule);
+    }
+
     // Looks up a node using the function paths and path reference.  The result
-    // is a node_t* in the target.  If the variable referenced is a free
-    // variable, then it will be allocated (if necessary).
+    // is a referent to node_t* in the target.  If the variable referenced is a
+    // free variable, then space for it will be allocated if necessary.
     tgt::value resolve_path(size_t pathid) const
     {
-      auto const & pathelem = this->fundef->paths.at(pathid);
+      static curry::Function::PathElem const local_path{curry::local, 0, {}};
+      auto const & pathelem = pathid >= LOCAL_ID_START
+          ? local_path
+          : this->fundef->paths.at(pathid)
+        ;
 
       switch(pathelem.base)
       {
-        // Handle allocated variables.
+        // Handle special variables.
         case curry::freevar:
         case curry::bind:
+        case curry::local:
         {
           auto it = freevar_alloca.find(pathid);
           if(it == freevar_alloca.end())
           {
+            // Create a node* on the stack.
             auto pair = freevar_alloca.emplace(
                 pathid, tgt::local(*this->module_stab.ir().node_t)
               );
+            // Allocate a new node and store its address on the stack.
+            pair.first->second = node_alloc_typed(this->module_stab);
             this->resolved_path_alloca = pair.first->second;
           }
           else
@@ -248,6 +268,7 @@ namespace
               PartialSpine.{n-1}.n
                |                  \
                |                   a
+               |
               PartialTerminus.n.n(&f)
     */
     // The two numbers following "P." indicate the remaining number of
@@ -356,7 +377,9 @@ namespace
 
     result_type operator()(curry::NLTerm const & term)
     {
-      assert(0);
+      for(curry::NLTerm::Step const & step: term.steps)
+        this->new_(this->resolve_path(step.varid), step.term);
+      return (*this)(term.result);
     }
 
     result_type operator()(curry::ExternalCall const & term)
@@ -392,31 +415,15 @@ namespace
 
   public:
 
-    // Evaluates the condition to get a path index.  Returns false if the
-    // condition cannot be evaluated (in which case, the function cannot be
-    // compiled).
-    bool eval_condition(curry::Rule const & condition, size_t & pathid)
+    // Evaluates the condition to get a path index.
+    size_t build_condition(curry::Rule const & condition)
     {
       if(curry::Ref const * cond = condition.getvar())
+        return cond->pathid;
+      else if(condition.getterm())
       {
-        pathid = cond->pathid;
-        return true;
-      }
-      else if(curry::Term const * term = condition.getterm())
-      {
-        (void) term;
-        std::cerr
-            << "Warning: while compiling function \"" << fundef->name
-            << "\": expressions in branch conditions are not implemented "
-               "and will cause the program to terminate at runtime."
-            << std::endl;
-        this->module_stab.clib().printf(
-            "Exiting now because an expression in a branch condition was "
-            "encountered."
-          );
-        this->module_stab.clib().exit(EXIT_FAILURE);
-        return_();
-        return false;
+        this->new_(this->resolve_path(next_local_id), condition);
+        return next_local_id++;
       }
       else
         throw compile_error("Invalid branch condition");
@@ -425,12 +432,7 @@ namespace
     result_type operator()(curry::Branch const & branch)
     {
       // Look up the inductive node.
-      size_t pathid;
-      if(!eval_condition(branch.condition, pathid))
-      {
-        // Stop compiling.  Something is not implemented for this function.
-        return;
-      }
+      size_t const pathid = build_condition(branch.condition);
       tgt::value const inductive = this->resolve_path(pathid);
 
       // Declare the jump table in the target program.
@@ -490,7 +492,9 @@ namespace
         tgt::scope _ = labels[TAGOFFSET + OPER];
         // Head-normalize the inductive node.
         vinvoke(this->inductive_alloca, VT_H, tailcall);
-        tgt::return_();
+        // Repeat the previous jump.
+        tgt::value const index = inductive.arrow(ND_TAG) + TAGOFFSET;
+        tgt::goto_(jumptable[index], labels);
       }
 
       // Add the label addresses to the jump table.
@@ -753,7 +757,7 @@ namespace sprite { namespace compiler
         {
           // Create or find the vtable.
           tgt::globalvar vt = nullptr;
-          std::string const vtname = ".vt.CTOR." + cymodule.name + "." + ctor.name;
+          std::string const vtname = "_vt_CTOR_" + cymodule.name + "_" + ctor.name;
           if(module_ir.hasglobal(vtname))
             vt.reset(module_ir.getglobal(vtname).as_globalvar());
           else
@@ -776,7 +780,7 @@ namespace sprite { namespace compiler
       for(auto const & fun: cymodule.functions)
       {
         tgt::globalvar vt = nullptr;
-        std::string const vtname = ".vt.OPER." + cymodule.name + "." + fun.name;
+        std::string const vtname = "_vt_OPER_" + cymodule.name + "_" + fun.name;
         if(module_ir.hasglobal(vtname))
           vt.reset(module_ir.getglobal(vtname).as_globalvar());
         else

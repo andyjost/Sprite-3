@@ -2,7 +2,7 @@
 
 all : runtime examples tools
 
-clean :
+clean : uninstall
 	$(MAKE) -C src clean
 	$(MAKE) -C examples clean
 	$(MAKE) -C runtime clean

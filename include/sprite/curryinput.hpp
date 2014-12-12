@@ -338,6 +338,7 @@ namespace sprite { namespace curry
       nobase = std::numeric_limits<size_t>::max()
     , freevar = nobase - 1
     , bind = freevar - 1
+    , local = bind - 1
     };
 
   /// Represents a Curry function.

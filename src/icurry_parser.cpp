@@ -323,8 +323,11 @@ namespace sprite { namespace curry
       Branch branch;
   
       // Read the prefix.
-      size_t unused;
-      ifs >> unused;
+      size_t num;
+      ifs >> num; // unused
+
+      // Read the number of cases.
+      ifs >> num;
   
       // Read the isflex property.
       ifs >> word;
@@ -340,8 +343,8 @@ namespace sprite { namespace curry
       if(!branch.condition.getvar() && !branch.condition.getterm())
         throw ParseError();
   
-      // Read the cases.
-      while(true)
+      // Read 'num' cases.
+      for(; num; --num)
       {
         SPRITE_SKIPSPACE(branch)
         c = ifs.peek();
@@ -355,7 +358,7 @@ namespace sprite { namespace curry
           case_.action = read_definition(ifs);
           branch.cases.push_back(std::move(case_));
         }
-        else break;
+        else throw ParseError();
       }
       return branch;
     }
@@ -373,7 +376,7 @@ namespace sprite { namespace curry
         // Parse (varid,_,'IBind').
         int c = ifs.get();
         SPRITE_SKIPSPACE_EXPECTING('(')
-        ifs >> step.varid;
+        step.varid = read_variable_ref(ifs);
         c = ifs.get();
         SPRITE_SKIPSPACE_EXPECTING(',')
         size_t unused;
