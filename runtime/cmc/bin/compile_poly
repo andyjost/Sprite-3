@@ -1,0 +1,91 @@
+#!/bin/sh
+
+BASEDIR=$(dirname $(dirname $(readlink -f $0)))/translator
+# echo BASEDIR $BASEDIR
+
+if [ "$1" = "-e" ]
+then
+  EXEC="-e"
+  shift
+else
+  EXEC=""
+fi
+
+if [ "$1" = "" ]
+then
+  echo Warning: no file given
+  exit
+fi
+
+FILE=$(dirname $1)/$(basename $1 ".curry")
+TARGET=$(dirname $1)/.curry/$(basename $1 ".curry")
+
+if [ "$EXEC" = "true" ]
+then
+  rm -f $TARGET.* $FILE
+fi
+
+# ------------------------------------------------------------------
+# create ICurry
+
+CURRYPATH=$PAKCSHOME/lib:$PAKCSHOME/lib/meta:$BASEDIR/icurry:$BASEDIR/format:$BASEDIR/backtrack:$BASEDIR/poly
+export CURRYPATH
+
+TARGET=$(dirname $1)/.curry/$(basename $1 ".curry")
+
+# echo TARGET $TARGET
+
+if [ -f $TARGET.icur -a $TARGET.icur -nt $FILE.curry ]
+then
+  echo \"icur\" up to date
+else
+  rm -f $FILE.icur 
+  # command="pakcs -Dkeepfiles=yes :set v3 :set args $FILE :load $BASEDIR/icurry/Main.curry :eval main :quit"
+  command="pakcs -q :set args $FILE :load $BASEDIR/icurry/Main.curry :eval Main.main :quit"
+  echo CURRYPATH $CURRYPATH
+  echo Running $command
+  $command
+  if [ -f $FILE.icur ]
+  then echo \"icur\" file created
+       mv -f $FILE.icur $TARGET.icur
+       mv -f $FILE.read $TARGET.read
+  else echo Fail to create  \"$FILE.icur\" file
+       exit 1
+  fi
+fi
+
+# ------------------------------------------------------------------
+# create Poly
+
+  if [ -f $TARGET.poly -a $TARGET.poly -nt $TARGET.icur ]
+  then
+      echo \"poly\" up to date
+  else
+      rm -f $FILE.poly
+      command="pakcs -q :set args $TARGET :load $BASEDIR/poly/Main.curry  :eval Main.main :quit"
+      echo Running $command
+      $command
+      if [ -f $TARGET.poly ]
+      then echo \"poly\" file created
+      else echo Fail to create  \"poly\" file ; exit
+      fi
+  fi
+
+# ------------------------------------------------------------------
+# Convert to C++
+
+# clean up
+rm -f $FILE.*pp $TARGET.*pp
+# rename since backtrack takes a ".icur" file
+mv -f $TARGET.poly $TARGET.icur
+
+command="pakcs -q :set args $TARGET :load $BASEDIR/backtrack/Main.curry :eval Main.main :quit"
+echo CURRYPATH $CURRYPATH
+echo Running $command
+$command
+if [ -f $TARGET.hpp -a -f $TARGET.cpp ]
+then echo \"C++\" files created
+     exit 0
+else echo Fail to create  \"C++\" files 
+     exit 1
+fi

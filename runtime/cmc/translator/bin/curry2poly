@@ -1,0 +1,69 @@
+#!/bin/bash
+
+BASEDIR=$(dirname $(dirname $(readlink -f $0)))
+# echo $BASEDIR
+
+if [ "$1" = "" ]
+then
+    echo Warning: no file given
+    exit
+fi
+
+FILE=$(dirname $1)/$(basename $1 ".curry")
+if [ ! -f $FILE.curry ]
+then
+    echo Error: \"$FILE.curry\" not found
+    exit
+fi
+
+parsecurry --flat $FILE
+if [ $? = 0 ]
+then echo parsed
+else echo parse error ; exit
+fi
+
+# ------------------------------------------------------------------
+# create ICurry
+
+CURRYPATH=$PAKCSHOME/lib:$PAKCSHOME/lib/meta:$BASEDIR/icurry:$BASEDIR/format:$BASEDIR/poly
+export CURRYPATH
+
+# ------------------------------------------------------------------
+# create ICurry
+
+TARGET=$(dirname $FILE)/.curry/$(basename $FILE ".curry")
+
+if [ -f $TARGET.icur -a $TARGET.icur -nt $FILE.curry ]
+then
+    echo \"icur\" up to date
+else
+    rm -f $FILE.icur 
+    command="pakcs -q :set args $FILE :load $BASEDIR/icurry/Main.curry  :eval Main.main :quit"
+    echo Running $command
+    $command
+    if [ -f $FILE.icur ]
+    then echo \"icur\" file created
+        mv -f $FILE.icur $TARGET.icur
+        mv -f $FILE.read $TARGET.read
+    else echo Fail to create  \"icur\" file ; exit
+    fi
+    # cat $TARGET.read
+fi
+
+# ------------------------------------------------------------------
+# extend ICurry with polymorphic functions
+
+if [ -f $TARGET.poly -a $TARGET.poly -nt $TARGET.icur ]
+then
+    echo \"poly\" up to date
+else
+    rm -f $FILE.poly
+    command="pakcs -q :set args $TARGET :load $BASEDIR/poly/Main.curry  :eval Main.main :quit"
+    echo Running $command
+    $command
+    if [ -f $TARGET.poly ]
+    then echo \"poly\" file created
+    else echo Fail to create \"poly\" file ; exit
+    fi
+fi
+
