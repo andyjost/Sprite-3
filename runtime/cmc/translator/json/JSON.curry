@@ -18,6 +18,7 @@
 --- @author Sergio Antoy
 --- @version April 2014 
 --- @date Thu Apr 24 12:44:17 PDT 2014
+--- @date Sat Dec 13 10:50:19 PST 2014
 ------------------------------------------------------------------------------
 
 module JSON(Json(..),ppJsonColor,ppJsonText,ppJson) where
@@ -57,7 +58,7 @@ ppJsonText x = ppJson mode_text 0 x ++ "\n"
 ppJson _ _ (JS jstring) = "\"" ++ jstring ++ "\" "
 
 ppJson mode _ (JN jnumber)
-  = number mode ++ adjust (show jnumber) ++ reset mode
+  = number mode ++ adjust (show jnumber) ++ reset mode ++ " "
   -- there must be a better way, since: adjust (x ++ ".0") = x
   where adjust x = case reverse x of
                     '0':'.':y -> reverse y

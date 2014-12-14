@@ -1,3 +1,5 @@
+-- ### This program is a stub under development ### --
+
 import ICurry
 import JSON
 import Float
@@ -6,27 +8,67 @@ icurryToJson (IModule name imported_list data_list funct_list)
   = JO [("module", 
        JO (("name",JS name) :
            ("import", JA (map JS imported_list)) :
-	   ("declare_constructors", JA (toData data_list)) :
+	   ("declare_data", JA (map toData data_list)) :
            ("declare_functions", JA (map toFunction funct_list)) :
            [] ) )]
 
-toData data_list
-  = map toConstructor (concatMap ( \x -> zip [0..] x) data_list)
+toData ((_,name), clist)
+  = JO [("name",JS name),
+        ("declare_constructors",  JA (map toConstructor clist))]
 
-toConstructor (index, IConstructor (_,name) arity)
-  = JO [("constructor", 
-     JO [("name",JS name),("arity",JN (i2f arity)),("index",JN (i2f index))] )]
-toFunction (IFunction (_,name) arity scope)
+toConstructor (IConstructor (_,name) arity)
+  = JO [("name",JS name),
+        ("arity",JN (i2f arity))]
+
+toFunction (IFunction (_,name) arity table stmt_list)
   = JO [("function",
-     JO ([("name",JS name),
-          ("arity", JN (i2f arity))] ++
-          toScope scope))]
-          
- 
-toScope (Scope_Expr var_list expr)
-  = [("declare_variables", JA (map toVariable var_list)),
-        ("return", toExpr expr)]
+     JO [("name",JS name),
+          ("arity", JN (i2f arity)),
+          ("var_table", JS "*** N/A ***"),
+          ("statements", JA (map toStmt stmt_list))])]
 
+------------------------------------------------------------------
+
+toStmt (IExternal string)
+  = JO [("external", JS string)]
+
+toStmt (Comment string)
+  = JO [("comment", JS string)]
+
+toStmt (Return expr)
+  = JO [("return", JS (show expr))]
+
+toStmt (DeclareLHSVar path)
+  = JO [("declare_lhs_var", JS (show path))]
+
+toStmt (DeclareFreeVar var)
+  = JO [("declare_lhs_var", JS (show var))]
+
+toStmt (Forward var)
+  = JO [("forward", JS (show var))]
+
+toStmt (Initialize i expr)
+  = JO [("initialize", 
+       JO [("variable", JS (show i)),
+           ("expr", JS (show expr))])]
+
+toStmt (Assign i expr)
+  = JO [("assign", 
+       JO [("variable", JS (show i)),
+           ("expr", JS (show expr))])]
+
+toStmt (Fill i path j)
+  = JO [("fill", JS ((show i) ++ " " ++ (show path) ++ " " ++ (show i)))]
+
+toStmt (ATable suffix flex expr branch_list)
+  = JO [("atable", JN (i2f suffix))]
+
+toStmt (BTable suffix flex expr branch_list)
+  = JO [("btable", JN (i2f suffix))]
+
+------------------------------------------------------------------
+
+{-
 toVariable (index, count, IBind expr)
   = JO [("rhs_var", JO [("index", JN (i2f index)),("count", JN (i2f count)),("expr", toExpr expr)])]
 toVariable (index, count, IFree)
@@ -57,22 +99,4 @@ toExpr (PartApplic missing expr)
 toExpr (Exempt)
   = JO [("expr", JS "exempt")]
 
-toExpr (AlgebraicTable suffix flex expr entry_list)
-  = JO [("algebraic_table", 
-       JO [("suffix", JS suffix),
-       	   ("flexible", if flex then JTrue else JFalse),
-	   ("selector", toExpr expr),
-	   ("branches", JA (map toAlgEntry entry_list))])]
-toAlgEntry (IConstructor cname arity, scope)
- = JO ([("label", JO [(toQName cname),("arity", JN (i2f arity))])] ++ (toScope scope))
-toExpr (BuiltinTable suffix flex expr entry_list)
-  = JO [("builtin_table", 
-       JO [("suffix", JS suffix),
-       	   ("flexible", if flex then JTrue else JFalse),
-	   ("selector", toExpr expr),
-	   ("branches", JA (map toLitEntry entry_list))])]
-toLitEntry (literal, expr)
-  = JO [("label", toLitCase literal),("expr", toExpr expr)]
-toExpr (IOr expr_l expr_r)
-  = JO [("or", JO [("left", toExpr expr_l), ("right", toExpr expr_r)])]
-toExpr Exempt = JO [("exempt", JNull)]
+-}
