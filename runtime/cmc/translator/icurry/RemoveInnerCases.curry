@@ -1,5 +1,7 @@
 module RemoveInnerCases(execute) where
 
+import Unsafe
+
 import List
 import FlatCurry
 
@@ -29,59 +31,65 @@ travRule qname (Rule var_list expr)
 -- 4. function generated so far
 -- A function is generated to replace a case statement that
 -- appears as an argument of a symbol application
+--
+-- component 1 is passed only down
+-- component 2 is constant
+-- components 3 and 4 are returned and used by the caller.
+--
+-- TODO: should use a monad for threading 'stuff'
 
 travExpr stuff a@(Var _) = (stuff, a)
-
 travExpr stuff a@(Lit _) = (stuff, a)
 
 travExpr stuff (Comb mode qname expr_list)
-  = (new_stuff, Comb mode qname new_expr_list)
-  where travArgs stuff' [] = (stuff', [])
-        travArgs (_,b,c,d) (x:xs)
-           = let (head_stuff, head_expr) = travExpr (True,b,c,d) x
-                 (tail_stuff, tail_expr) = travArgs head_stuff xs
-             in  (tail_stuff, head_expr : tail_expr)
-        (new_stuff, new_expr_list) = travArgs stuff expr_list
+  = (st, Comb mode qname new_expr_list)
+  where (st, new_expr_list) = travExprList stuff expr_list
+        travExprList stuff' [] = (stuff', [])
+        travExprList (a,b,c,d) (head:tail)
+          = let ((_,_,ch,dh), head_expr) = travExpr (True,b,c,d) head
+                ((_,_,ct,dt), tail_expr) = travExprList (True,b,ch,dh) tail
+            in  ((a,b,ct,dt), head_expr:tail_expr)
 
-travExpr stuff (Let bind_list expr) 
-  = (new_stuff, Let new_bind_list new_expr)
+travExpr stuff@(a,b,_,_) (Let bind_list expr) 
+  = ((a,b,ce,de), Let new_bind_list new_expr)
   where -- first we do the bindings
         travBindings stuff' [] = (stuff', [])
-        travBindings (_,b,c,d) ((v, x) : xs)
-           = let (head_stuff, head_expr) = travExpr (True,b,c,d) x
-                 (tail_stuff, tail_bind) = travBindings head_stuff xs
-             in  (tail_stuff, (v, head_expr) : tail_bind)
-        (bind_stuff, new_bind_list) = travBindings stuff bind_list
+        travBindings (_,_,c,d) ((v, x) : xs)
+           = let ((_,_,ch,dh), head_expr) = travExpr (True,b,c,d) x
+                 ((_,_,ct,dt), tail_bind) = travBindings (True,b,ch,dh) xs
+             in  ((a,b,ct,dt), (v, head_expr) : tail_bind)
+        ((_,_,cb,dd), new_bind_list) = travBindings stuff bind_list
         -- then we do the expression
-        (new_stuff, new_expr) = travExpr bind_stuff expr
+        ((_,_,ce,de), new_expr) = travExpr (True,b,cb,dd) expr
 
-travExpr stuff (Free var_list expr) 
-  = (new_stuff, Free var_list new_expr) 
-  where (new_stuff, new_expr) = travExpr stuff expr
+travExpr stuff@(a,b,_,_) (Free var_list expr) 
+  = ((a,b,c,d), Free var_list new_expr) 
+  where ((_,_,c,d), new_expr) = travExpr stuff expr
 
-travExpr (_,b,c,d) (Or expr_1 expr_2)
-  = (new_stuff, Or new_expr_1 new_expr_2)
-  where (stuff_1, new_expr_1) = travExpr (True,b,c,d) expr_1
-        (new_stuff, new_expr_2) = travExpr stuff_1 expr_2
+travExpr (a,b,c0,d0) (Or expr_1 expr_2)
+  = ((a,b,c2,d2), Or new_expr_1 new_expr_2)
+  where ((_,_,c1,d1), new_expr_1) = travExpr (True,b,c0,d0) expr_1
+        ((_,_,c2,d2), new_expr_2) = travExpr (True,b,c1,d1) expr_2
 
-travExpr stuff@(a,_,_,_) (Case flex expr branch_list)
+travExpr stuff@(a,b,_,_) (Case flex expr branch_list)
   = result
   where -- first we do the branches
+        -- update last two slots of stuff, preserve first two
         travBranches stuff' [] = (stuff', [])
         travBranches stuff' (Branch pat x : xs)
-           = let (head_stuff, head_expr) = travExpr stuff' x
-                 (tail_stuff, tail_branch) = travBranches head_stuff xs
-             in  (tail_stuff, Branch pat head_expr : tail_branch)
-        (branch_stuff, new_branch_list) = travBranches stuff branch_list
+           = let ((_,_,ch,dh), head_expr) = travExpr stuff' x
+                 ((_,_,ct,dt), tail_branch) = travBranches (a,b,ch,dh) xs
+             in  ((a,b,ct,dt), Branch pat head_expr : tail_branch)
+        ((_,_,cb,db), new_branch_list) = travBranches stuff branch_list
         -- then we do the expression selector
-        (select_stuff, new_expr) = travExpr branch_stuff expr
+        ((_,_,ce,de), new_expr) = travExpr (a,b,cb,db) expr
         -- then either copy or create a new function
         result = if a then create_and_replace y else y
-               where y = (select_stuff, Case flex new_expr new_branch_list)
+               where y = ((a,b,ce,de), Case flex new_expr new_branch_list)
 
-travExpr stuff (Typed expr xtype)
-  = (new_stuff, Typed new_expr xtype)
-  where (new_stuff, new_expr) = travExpr stuff expr
+travExpr stuff@(a,b,_,_) (Typed expr xtype)
+  = ((a,b,c,d), Typed new_expr xtype)
+  where ((_,_,c,d), new_expr) = travExpr stuff expr
 
 ------------------------------------------------------------------
 
