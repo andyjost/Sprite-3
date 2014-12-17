@@ -240,8 +240,13 @@ namespace sprite
 
   std::string const & get_curry2read()
   {
+    // Note: the curry2read and curry2poly programs are identical, except that
+    // the latter introduces some hidden functions, such as .equals.Cons, which
+    // are needed by the compiler.  The name of this function could be
+    // misleading, but its job is to generate the (augmented) readable file, so
+    // I keep it in spite of the discrepency.
     static std::string curry2read = join_path(
-        SPRITE_LIBINSTALL "/", "cmc/translator/bin/curry2read"
+        SPRITE_LIBINSTALL "/", "cmc/translator/bin/curry2poly"
       );
     return curry2read;
   }

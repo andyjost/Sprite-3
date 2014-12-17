@@ -3,23 +3,31 @@
 BASEDIR=$(dirname $(dirname $(readlink -f $0)))
 # echo $BASEDIR
 
-if [ "$1" = "" ]
+QUIET=''
+if [ "$1" == "-q" ]
 then
-    echo Warning: no file given
-    exit
+  QUIET='-q'
+  shift
+fi
+
+if [ "$*" = "" ]
+then
+  echo `basename $0`: no input file. 1>&2
+  exit 1
 fi
 
 FILE=$(dirname $1)/$(basename $1 ".curry")
 if [ ! -f $FILE.curry ]
 then
-    echo Error: \"$FILE.curry\" not found
-    exit
+  echo `basename $0`: \"$FILE.curry\" not found. 1>&2
+  exit 1
 fi
 
-parsecurry --flat $FILE
-if [ $? = 0 ]
-then echo parsed
-else echo parse error ; exit
+parsecurry --flat $QUIET $FILE
+if [ $? -ne 0 ]
+then
+  echo `basename $0`: error parsing \"$FILE.curry\". 1>&2
+  exit 1
 fi
 
 # ------------------------------------------------------------------
@@ -35,17 +43,29 @@ TARGET=$(dirname $FILE)/.curry/$(basename $FILE ".curry")
 
 if [ -f $TARGET.icur -a $TARGET.icur -nt $FILE.curry ]
 then
-    echo \"icur\" up to date
+  if [ -z "$QUIET" ]
+  then
+    echo \"$FILE.icur\" up to date
+  fi
 else
     rm -f $FILE.icur 
-    command="pakcs -q :set args $FILE :load $BASEDIR/icurry/Main.curry  :eval Main.main :quit"
-    echo Running $command
-    $command
+    command="pakcs $QUIET :set args $FILE :load $BASEDIR/icurry/Main.curry :eval Main.main :quit"
+    if [ -n "$QUIET" ]
+    then
+      $command > /dev/null
+    else
+      echo CURRYPATH $CURRYPATH
+      echo Running $command
+      $command
+    fi
+
     if [ -f $FILE.icur ]
-    then echo \"icur\" file created
-        mv -f $FILE.icur $TARGET.icur
-        mv -f $FILE.read $TARGET.read
-    else echo Fail to create  \"icur\" file ; exit
+    then
+      mv -f $FILE.icur $TARGET.icur
+      mv -f $FILE.read $TARGET.read
+    else
+      echo `basename $0`: failed to create \"$FILE.read\". 1>&2
+      exit 1
     fi
     # cat $TARGET.read
 fi
@@ -55,15 +75,31 @@ fi
 
 if [ -f $TARGET.poly -a $TARGET.poly -nt $TARGET.icur ]
 then
-    echo \"poly\" up to date
+  if [ -z "$QUIET" ]
+  then
+    echo \"$FILE.poly\" up to date
+  fi
 else
     rm -f $FILE.poly
-    command="pakcs -q :set args $TARGET :load $BASEDIR/poly/Main.curry  :eval Main.main :quit"
-    echo Running $command
-    $command
+    command="pakcs $QUIET :set args $TARGET :load $BASEDIR/poly/Main.curry :eval Main.main :quit"
+    if [ -n "$QUIET" ]
+    then
+      $command > /dev/null
+    else
+      echo CURRYPATH $CURRYPATH
+      echo Running $command
+      $command
+    fi
+
     if [ -f $TARGET.poly ]
-    then echo \"poly\" file created
-    else echo Fail to create \"poly\" file ; exit
+    then
+      if [ -z "$QUIET" ]
+      then
+        echo \"$FILE.poly\" created
+      fi
+    else
+      echo `basename $0`: failed to create \"$FILE.poly\". 1>&2
+      exit 1
     fi
 fi
 

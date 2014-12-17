@@ -1,7 +1,7 @@
 import ICurry
 -- import Unsafe
 
-icurryToPoly (IModule modname imported_list data_list funct_list)
+icurryToPoly (IModule modname {-imported_list-}_ data_list {-funct_list-}_)
   = [make_funct modname onetype | onetype <- data_list]
 
 make_funct modname ((_,typename),clist)

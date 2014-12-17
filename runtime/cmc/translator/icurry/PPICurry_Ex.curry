@@ -93,7 +93,7 @@ ppStmt n (BTable suffix flex expr branch_list)
 ppShowVariableRef ((index,_,_):_)
   = show index
 
-ppABranch n (IConstructor qname arity, stmt_list)
+ppABranch n (IConstructor qname {-arity-}_, stmt_list)
   = ppIndent n ++ ppIName qname ++ " =>" ++
       foldr ((++) . ppStmt (n+2)) "" stmt_list
 
