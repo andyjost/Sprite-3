@@ -1,11 +1,24 @@
 import ICurry
 -- import Unsafe
 
-icurryToPoly (IModule modname {-imported_list-}_ data_list {-funct_list-}_)
-  = [make_funct modname onetype | onetype <- data_list]
+equals typename = ".=="++"."++typename
+primitive x = ".primitive"++x
 
-make_funct modname ((_,typename),clist)
-  = IFunction (modname, ".equals."++typename) 2 var_list (make_table clist)
+icurryToPoly (IModule modname {-imported_list-}_ data_list {-funct_list-}_)
+  = concat [make_funct modname onetype | onetype <- data_list]
+
+-- The constructor of a builtin type has arity 1, the builtin value it hosts.
+make_funct modname ((_,typename),[])
+  = [(IFunction (modname,symbol) 2 [(1,1,(IPath (Arg 1))),(2,1,(IPath (Arg 2)))] 
+        [(ATable 1 False (Reference [(1,1,(IPath (Arg 1)))]) [((IConstructor (modname,typename) 1),
+           [(ATable 2 False (Reference [(2,1,(IPath (Arg 2)))]) [((IConstructor (modname,typename) 1),
+              [Return (Applic False (modname,primitive (equals typename))
+                     [(Reference [(1,1,(IPath (Arg 1)))]),(Reference [(2,1,(IPath (Arg 2)))])])])])])])]),
+     (IFunction (modname,primitive symbol) 2 [] [(IExternal (modname++"."++primitive symbol))])]
+  where symbol = equals typename
+
+make_funct modname ((_,typename),clist@(_:_))
+  = [IFunction (modname, equals typename) 2 var_list (make_table clist)]
   where var_list = [(1,count,(IPath (Arg 1))),(2,count,(IPath (Arg 2)))]
                      ++ mapping
         mapping = map to_var (map_variables clist)
