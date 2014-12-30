@@ -12,8 +12,8 @@ ppImported imported_list
   = "\n  import" ++
        foldr ((++) . ("\n    " ++ )) "" imported_list
 
-ppData ({-qname-}_, constr_list)
-  = "\n  data " ++ -- ppIName qname ++
+ppData (qname, constr_list)
+  = "\n  data " ++ snd qname ++
       foldr ((++) . ppConstructor) "" (zip constr_list [0..])
 
 ppConstructor (IConstructor qname arity, {-index-}_)

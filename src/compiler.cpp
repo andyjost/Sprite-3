@@ -59,13 +59,16 @@ namespace
       , curry::Function const * fundef_ = nullptr
       )
       : module_stab(module_stab_)
-      , root_p(bitcast(root_p_, *module_stab.ir().node_t))
+      , root_p(bitcast(root_p_, node_pointer_type))
       , target_p(root_p)
       , fundef(fundef_)
-      , resolved_path_alloca(tgt::local(*module_stab.ir().node_t))
+      , resolved_path_alloca(tgt::local(node_pointer_type))
     {}
 
     compiler::ModuleSTab const & module_stab;
+
+    // Any needed types (for convenience).
+    tgt::type node_pointer_type = *module_stab.ir().node_t;
 
     // A pointer in the target to the root node undergoing pattern matching
     // or rewriting.
@@ -110,6 +113,17 @@ namespace
       return this->new_(data, rule);
     }
 
+    // Sets the extended child array to the given value, and returns the same,
+    // cast to char**.
+    tgt::value set_extended_child_array(
+        tgt::value const & node, tgt::value const & array
+      )
+    {
+      ref slot0 = node.arrow(ND_SLOT0);
+      slot0 = array;
+      return bitcast(slot0, **types::char_());
+    }
+
     // Looks up a node using the function paths and path reference.  The result
     // is a referent to node_t* in the target.  If the variable referenced is a
     // free variable, then space for it will be allocated if necessary.
@@ -133,7 +147,7 @@ namespace
           {
             // Create a node* on the stack.
             auto pair = freevar_alloca.emplace(
-                pathid, tgt::local(*this->module_stab.ir().node_t)
+                pathid, tgt::local(node_pointer_type)
               );
             // Allocate a new node and store its address on the stack.
             pair.first->second = node_alloc_typed(this->module_stab);
@@ -168,7 +182,6 @@ namespace
       size_t const term_arity = lookup(
           this->module_stab, pathelem.typename_
         ).source->arity;
-      tgt::type node_pt = *this->module_stab.ir().node_t;
       assert(pathelem.idx < term_arity);
       switch(term_arity)
       {
@@ -177,13 +190,13 @@ namespace
         case 2:
           this->resolved_path_alloca = bitcast(
               this->resolved_path_alloca.arrow(ND_SLOT0 + pathelem.idx)
-            , node_pt
+            , node_pointer_type
             );
           break;
         default:
         {
           value children = bitcast(
-              this->resolved_path_alloca.arrow(ND_SLOT0), **node_pt
+              this->resolved_path_alloca.arrow(ND_SLOT0), **node_pointer_type
             );
           this->resolved_path_alloca = children[pathelem.idx];
         }
@@ -200,7 +213,7 @@ namespace
             }
         , [&]{
               this->resolved_path_alloca = bitcast(
-                  this->resolved_path_alloca.arrow(ND_SLOT0), node_pt
+                  this->resolved_path_alloca.arrow(ND_SLOT0), node_pointer_type
                 );
             }
         );
@@ -273,23 +286,25 @@ namespace
     */
     // The two numbers following "P." indicate the remaining number of
     // arguments to be bound, and the final arity, respectively.  They are
-    // packed as two 16-bit integers into the node tag.  The terminal node,
+    // stored in the "aux" and "tag" locations in the node.  The terminal node,
     // whose type is PartialTerminus, contains the v-table for f as data.
     //
     result_type operator()(curry::Partial const & term)
     {
-      // Use only the first 15 bits to avoid any possibility of interpreting
+      // Use only the first 31 bits to avoid any possibility of interpreting
       // the tag as a negative value.
-      size_t const N = term.args.size() + 1;
-      if(N & ~0x7FFF)
+      auto const & node_stab = lookup(this->module_stab, term.qname);
+      size_t const N = node_stab.source->arity;
+      if(N & ~0x7FFFFFFF)
         compile_error("Too many successors");
-      int16_t const n = static_cast<int16_t>(N & 0x7FFF);
+      int32_t const n = static_cast<int32_t>(N & 0x7FFFFFFF);
+      size_t const niter = term.args.size() + 1;
       size_t i = 0;
 
       // The final iteration writes to the target node.  Prior iterations
       // allocate a new node.
       auto choose_storage = [&] {
-          if(i+1 == N)
+          if(i+1 == niter)
             return this->target_p;
           else
             return node_alloc_typed(this->module_stab);
@@ -298,11 +313,12 @@ namespace
       // Create the terminal node, which has the function's vtable as its data.
       tgt::value prev_node = choose_storage();
       prev_node.arrow(ND_VPTR) = module_stab.rt().PartialTerminus_vt;
-      prev_node.arrow(ND_TAG) = (n<<16) | n;
-      prev_node.arrow(ND_SLOT0) = &lookup(this->module_stab,term.qname).vtable;
+      prev_node.arrow(ND_TAG) = n;
+      prev_node.arrow(ND_AUX) = n;
+      prev_node.arrow(ND_SLOT0) = &node_stab.vtable;
       prev_node.arrow(ND_SLOT1) = nullptr;
 
-      for(++i; i<N; ++i)
+      for(++i; i<niter; ++i)
       {
         // Create the data successor.
         tgt::value data = new_(term.args.at(i-1));
@@ -310,7 +326,8 @@ namespace
         // Build the spine node.
         tgt::value this_node = choose_storage();
         this_node.arrow(ND_VPTR) = module_stab.rt().PartialSpine_vt;
-        this_node.arrow(ND_TAG) = (n<<16) | (n-i);
+        this_node.arrow(ND_TAG) = n;
+        this_node.arrow(ND_AUX) = (n-i);
         this_node.arrow(ND_SLOT0) = prev_node;
         this_node.arrow(ND_SLOT1) = data;
         prev_node = this_node;
@@ -342,7 +359,7 @@ namespace
           tgt::value child = node_alloc(this->module_stab);
           child_data.push_back(child);
           // Clobber the root so the recursive call works.
-          this->target_p = bitcast(child, *this->module_stab.ir().node_t);
+          this->target_p = bitcast(child, node_pointer_type);
           (*this)(subexpr);
         }
       }
@@ -402,7 +419,7 @@ namespace
       , curry::Function const * fundef_ = nullptr
       )
       : Rewriter(module_stab_, root_p_, fundef_)
-      , inductive_alloca(tgt::local(*this->module_stab.ir().node_t))
+      , inductive_alloca(tgt::local(node_pointer_type))
     {}
 
   private:
@@ -473,7 +490,7 @@ namespace
         tgt::scope _ = labels[TAGOFFSET + FWD];
         // Advance to the target of the FWD node and repeat the jump.
         tgt::value const inductive = bitcast(
-            this->inductive_alloca.arrow(ND_SLOT0), *this->module_stab.ir().node_t
+            this->inductive_alloca.arrow(ND_SLOT0), node_pointer_type
           );
         this->inductive_alloca = inductive;
         tgt::value const index = inductive.arrow(ND_TAG) + TAGOFFSET;
@@ -483,8 +500,75 @@ namespace
       // CHOICE case
       {
         tgt::scope _ = labels[TAGOFFSET + CHOICE];
-        this->module_stab.clib().printf("CHOICE case hit.\n");
-        tgt::return_().set_metadata("case...CHOICE");
+        if(pathid >= LOCAL_ID_START)
+        {
+          module_stab.clib().printf("Choice in branch expression.");
+          module_stab.clib().fflush(nullptr);
+          module_stab.clib().exit(1);
+        }
+        else
+        {
+          module_stab.clib().fflush(nullptr);
+          size_t const critical = this->fundef->paths.at(pathid).idx;
+          size_t const n = this->fundef->arity;
+          tgt::value lhs = node_alloc_typed(this->module_stab);
+          tgt::value rhs = node_alloc_typed(this->module_stab);
+
+          lhs.arrow(ND_VPTR) = this->target_p.arrow(ND_VPTR);
+          lhs.arrow(ND_TAG) = this->target_p.arrow(ND_TAG);
+          rhs.arrow(ND_VPTR) = this->target_p.arrow(ND_VPTR);
+          rhs.arrow(ND_TAG) = this->target_p.arrow(ND_TAG);
+          // OK to ignore aux.  The root cannot be a choice because a choice
+          // has no step function.
+
+          if(n < 3)
+          {
+            for(size_t i=0; i<n; ++i)
+            {
+              if(i == critical)
+              {
+                lhs.arrow(ND_SLOT0+i) = inductive.arrow(ND_SLOT0);
+                rhs.arrow(ND_SLOT0+i) = inductive.arrow(ND_SLOT1);
+              }
+              else
+              {
+                lhs.arrow(ND_SLOT0+i) = this->target_p.arrow(ND_SLOT0+i);
+                rhs.arrow(ND_SLOT0+i) = lhs.arrow(ND_SLOT0+i);
+              }
+            }
+          }
+          else
+          {
+            // The LHS argument array is stolen from the root node.
+            value lhs_children = set_extended_child_array(
+                lhs, this->target_p.arrow(ND_SLOT0)
+              );
+            // The RHS argument array is allocated.
+            value rhs_children = set_extended_child_array(
+                rhs, array_alloc(this->module_stab, n)
+              );
+
+            for(size_t i=0; i<n; ++i)
+            {
+              if(i == critical)
+              {
+                lhs_children[i] = inductive.arrow(ND_SLOT0);
+                rhs_children[i] = inductive.arrow(ND_SLOT1);
+              }
+              else
+              {
+                // Nothing to do for LHS.
+                rhs_children[i] = lhs_children[i];
+              }
+            }
+          }
+          this->target_p.arrow(ND_VPTR) = module_stab.rt().choice_vt;
+          this->target_p.arrow(ND_TAG) = compiler::CHOICE;
+          this->target_p.arrow(ND_AUX) = inductive.arrow(ND_AUX);
+          this->target_p.arrow(ND_SLOT0) = bitcast(lhs, *types::char_());
+          this->target_p.arrow(ND_SLOT1) = bitcast(rhs, *types::char_());
+        }
+        tgt::return_();
       }
 
       // OPER case
@@ -510,7 +594,7 @@ namespace
 
     result_type operator()(curry::Rule const & rule)
     {
-      // Trace.
+      // // Trace.
       // module_stab.clib().printf("S> --- ");
       // module_stab.rt().printexpr(target_p, "\n");
       // module_stab.clib().fflush(nullptr);
@@ -518,7 +602,7 @@ namespace
       // Step.
       static_cast<Rewriter*>(this)->operator()(rule);
 
-      // Trace.
+      // // Trace.
       // module_stab.clib().printf("S> +++ ");
       // module_stab.rt().printexpr(target_p, "\n");
       // module_stab.clib().fflush(nullptr);
@@ -533,18 +617,31 @@ namespace
     , curry::Function const & fun
     )
   {
-    ::FunctionCompiler c(module_stab, root_p, &fun);
-    return fun.def.visit(c);
+    try
+    {
+      ::FunctionCompiler c(module_stab, root_p, &fun);
+      return fun.def.visit(c);
+    }
+    catch(...)
+    {
+      std::cerr
+        << "[" << module_stab.source->name << "] In function " << fun.name
+        << std::endl;
+      throw;
+    }
   }
 
   void compile_ctor_vtable(
       tgt::global & vt
-    , curry::Constructor const & ctor
+    , curry::DataType const & dtype
+    , size_t ictor
     , compiler::ir_h const & ir
-    , tgt::module & module_ir
+    , compiler::ModuleSTab & module_stab
     )
   {
     // Look up the N function and define it as needed.
+    auto const & ctor = dtype.constructors[ictor];
+    tgt::module & module_ir = module_stab.module_ir;
     std::string const n_name = ".N." + std::to_string(ctor.arity);
     function N(module_ir->getFunction(n_name.c_str()));
     if(!N.ptr())
@@ -594,6 +691,7 @@ namespace
         &get_label_function(ir, ctor.name)
       , &get_arity_function(ir, ctor.arity)
       , &get_succ_function(ir, ctor.arity)
+      , &get_vt_for_equality(ir, module_stab.source->name, dtype.name)
       , &N, &get_null_step_function(ir)
       ));
   }
@@ -602,10 +700,11 @@ namespace
       tgt::global & vt
     , curry::Function const & fun
     , compiler::ir_h const & ir
-    , tgt::module & module_ir
+    , compiler::ModuleSTab & module_stab
     )
   {
     // Forward declaration.
+    tgt::module & module_ir = module_stab.module_ir;
     std::string const stepname = ".step." + fun.name;
     function step(module_ir->getFunction(stepname.c_str()));
     if(!step.ptr())
@@ -636,6 +735,7 @@ namespace
             tgt::value root_p = arg("root_p");
             step(root_p);
             vinvoke(root_p, VT_H, tailcall);
+            return_();
           }
         );
     }
@@ -644,6 +744,7 @@ namespace
         &get_label_function(ir, fun.name)
       , &get_arity_function(ir, fun.arity)
       , &get_succ_function(ir, fun.arity)
+      , &get_vt_for_primitive_equality(ir, "oper")
       , &N, &H
       ));
   }
@@ -753,25 +854,20 @@ namespace sprite { namespace compiler
       for(auto const & dtype: cymodule.datatypes)
       {
         size_t tag = compiler::CTOR;
-        for(auto const & ctor: dtype.constructors)
+        size_t const N = dtype.constructors.size();
+        for(size_t ictor=0; ictor<N; ++ictor)
         {
-          // Create or find the vtable.
-          tgt::globalvar vt = nullptr;
-          std::string const vtname = "_vt_CTOR_" + cymodule.name + "_" + ctor.name;
-          if(module_ir.hasglobal(vtname))
-            vt.reset(module_ir.getglobal(vtname).as_globalvar());
-          else
-          {
-            auto vt_ = extern_(ir.vtable_t, vtname);
-            if(is_primary)
-              compile_ctor_vtable(vt_, ctor, ir, module_ir);
-            vt.reset(vt_.as_globalvar());
-           }
+          auto const & ctor = dtype.constructors[ictor];
+          // Create or find the vtable and maybe compile code to fill it.
+          std::string const vtname = ".vt.CTOR." + cymodule.name + "." + ctor.name;
+          tgt::global vt = extern_(ir.vtable_t, vtname);
+          if(is_primary && !vt.has_initializer())
+            compile_ctor_vtable(vt, dtype, ictor, ir, module_stab);
   
           // Update the symbol tables.
           module_stab.nodes.emplace(
               curry::Qname{cymodule.name, ctor.name}
-            , compiler::NodeSTab(ctor, vt, tag++)
+            , compiler::NodeSTab(ctor, vt.as_globalvar(), tag++)
             );
         }
       }
@@ -779,22 +875,16 @@ namespace sprite { namespace compiler
       // Update the symbol tables with the forward declarations of functions.
       for(auto const & fun: cymodule.functions)
       {
-        tgt::globalvar vt = nullptr;
-        std::string const vtname = "_vt_OPER_" + cymodule.name + "_" + fun.name;
-        if(module_ir.hasglobal(vtname))
-          vt.reset(module_ir.getglobal(vtname).as_globalvar());
-        else
-        {
-          auto vt_ = extern_(ir.vtable_t, vtname);
-          if(is_primary)
-            compile_function_vtable(vt_, fun, ir, module_ir);
-          vt.reset(vt_.as_globalvar());
-        }
+        // Create or find the vtable and maybe compile code to fill it.
+        std::string const vtname = ".vt.OPER." + cymodule.name + "." + fun.name;
+        tgt::global vt = extern_(ir.vtable_t, vtname);
+        if(is_primary && !vt.has_initializer())
+          compile_function_vtable(vt, fun, ir, module_stab);
 
         // Update the symbol tables.
         module_stab.nodes.emplace(
             curry::Qname{cymodule.name, fun.name}
-          , compiler::NodeSTab(fun, vt, compiler::OPER)
+          , compiler::NodeSTab(fun, vt.as_globalvar(), compiler::OPER)
           );
       }
   

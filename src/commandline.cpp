@@ -139,10 +139,8 @@ namespace sprite
           backend::value root_p = node_alloc(module_stab);
           root_p = construct(module_stab, root_p, {start, {}});
 
-          // Evaluate and then print the root expression.
-          module_stab.rt().normalize(root_p);
-          module_stab.rt().printexpr(root_p, "\n");
-
+          // Evaluate the root expression.
+          module_stab.rt().evaluate(root_p);
           backend::return_(0);
         }
       );

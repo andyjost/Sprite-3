@@ -8,7 +8,11 @@ namespace sprite { namespace curry
     { char const * what() const throw() { return "parse error"; } };
   
   struct Library;
+  struct Function;
 
   /// Parse a Curry library from ICurry.
   std::istream & operator>>(std::istream & ifs, Library & lib);
+
+  /// Parse a Curry Function from ICurry.
+  std::istream & operator>>(std::istream & ifs, Function & fun);
 }}

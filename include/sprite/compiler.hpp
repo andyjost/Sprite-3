@@ -193,6 +193,10 @@ namespace sprite { namespace compiler
         &node_stab.vtable, *module_stab.ir().vtable_t
       );
     node_p.arrow(ND_TAG) = node_stab.tag;
+
+    // For choices, assign a fresh id.
+    if(node_stab.tag == CHOICE)
+      node_p.arrow(ND_AUX) = module_stab.rt().next_choice_id++;
   }
 }}
 

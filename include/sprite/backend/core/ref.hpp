@@ -13,15 +13,15 @@ namespace sprite { namespace backend
   /**
    * @brief Provides a value-like interface to the target of a pointer value.
    */
-  template<typename ValueType>
+  template<typename AddressType, typename ValueType>
   struct basic_reference
   {
     basic_reference(std::nullptr_t) : m_value(nullptr) {}
 
-    basic_reference(ValueType const & arg) : m_value(nullptr)
+    basic_reference(AddressType const & arg) : m_value(nullptr)
       { this->reset(arg); }
 
-    void reset(ValueType const & arg)
+    void reset(AddressType const & arg)
     {
       m_value = arg;
       if(m_value.ptr() && !m_value->getType()->isPointerTy())
@@ -33,11 +33,11 @@ namespace sprite { namespace backend
 
     // Default copy is okay.
 
-    basic_reference & operator=(basic_reference const & arg)
-      { return (*this = ValueType(arg)); }
+    basic_reference const & operator=(basic_reference const & arg) const
+      { return (*this = AddressType(arg)); }
 
     template<typename T, SPRITE_ENABLE_FOR_ALL_VALUE_INITIALIZERS(T)>
-    ref & operator=(T const & arg);
+    basic_reference const & operator=(T const & arg) const;
 
     /// Performs member access into a struct.
     ref dot(uint32_t i) const;
@@ -56,8 +56,8 @@ namespace sprite { namespace backend
     ValueType get() const { return *this; }
 
     /// Get the stored address.
-    ValueType operator&() const { return m_value; }
-    ValueType address() const { return m_value; }
+    AddressType operator&() const { return m_value; }
+    AddressType address() const { return m_value; }
 
     template<typename T, SPRITE_ENABLE_FOR_ALL_VALUE_INITIALIZERS(T)>
     ref operator[](T const & arg) const;
@@ -66,23 +66,34 @@ namespace sprite { namespace backend
       { return SPRITE_APICALL(current_builder().CreateLoad(m_value.ptr())); }
 
     // TODO: generate operators through file inclusion.
-    basic_reference & operator++() { return (*this = get() + 1); }
+    basic_reference const & operator++() const
+    {
+      *this = get() + 1;
+      return *this;
+    }
+
+    ValueType operator++(int) const
+    {
+      ValueType tmp = get();
+      *this = get() + 1;
+      return tmp;
+    }
 
     template<typename T> value operator<(T const & arg) { return get() < arg; }
 
   private:
 
-    ValueType m_value;
+    AddressType m_value;
 
     static_assert(
-        std::is_base_of<llvm::Value, typename ValueType::element_type>::value
+        std::is_base_of<llvm::Value, typename AddressType::element_type>::value
       , "Expected an LLVM Value object"
       );
   };
 
   // Overload ptr() for basic_reference.
-  template<typename ValueType>
-  inline llvm::Value * ptr(basic_reference<ValueType> const & arg)
+  template<typename AddressType>
+  inline llvm::Value * ptr(basic_reference<AddressType> const & arg)
     { return arg.ptr(); }
 
   // The * operator applied to a pointer value is a reference.
@@ -91,9 +102,9 @@ namespace sprite { namespace backend
   operator*(T const & arg)
     { return basic_reference<T>(arg); }
 
-  template<typename ValueType>
+  template<typename AddressType, typename ValueType>
   template<typename T, typename>
-  ref basic_reference<ValueType>::operator[](T const & arg) const
+  ref basic_reference<AddressType, ValueType>::operator[](T const & arg) const
   {
     llvm::Value * tmp[2] {get_constant<int32_t>(0).ptr(), get_value(arg).ptr()};
     try
@@ -130,9 +141,10 @@ namespace sprite { namespace backend
     return ref(v);
   }
 
-  template<typename ValueType>
+  template<typename AddressType, typename ValueType>
   template<typename T, typename>
-  inline ref & basic_reference<ValueType>::operator=(T const & arg)
+  inline basic_reference<AddressType, ValueType> const &
+  basic_reference<AddressType, ValueType>::operator=(T const & arg) const
   {
     type const ty = element_type(get_type(m_value));
     SPRITE_APICALL(
@@ -143,8 +155,8 @@ namespace sprite { namespace backend
     return *this;
   }
 
-  template<typename ValueType>
-  inline ref basic_reference<ValueType>::dot(uint32_t i) const
+  template<typename AddressType, typename ValueType>
+  inline ref basic_reference<AddressType, ValueType>::dot(uint32_t i) const
   {
     type const i32 = types::int_(32);
     Value * tmp[2] {get_constant(i32,0).ptr(), get_constant(i32, i).ptr()};

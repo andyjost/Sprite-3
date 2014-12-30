@@ -30,6 +30,14 @@ namespace sprite { namespace backend
     /// Sets the initializer for a global array variable.
     globalvar set_initializer(any_array_ref const & value);
 
+    /// Indicates whether an initializer is set.
+    bool has_initializer() const
+      { return this->as_globalvar().has_initializer(); }
+
+    /// Returns the initializer, or an empty object.
+    constant get_initializer() const
+      { return this->as_globalvar().get_initializer(); }
+
     // FIXME: support/casting.hpp probably needs to understand basic_reference.
     globalvar as_globalvar() const;
 
@@ -48,9 +56,9 @@ namespace sprite { namespace backend
       );
   };
 
+  // API: globalvar
   template<> struct globalobj<GlobalVariable> : basic_reference<globalvaraddr>
   {
-    // using basic_reference<globalobj<T>>::basic_reference;
     using basic_reference<globalvaraddr>::basic_reference;
 
     /// Sets the initializer for a global variable (excluding arrays).
@@ -59,6 +67,12 @@ namespace sprite { namespace backend
 
     /// Sets the initializer for a global array variable.
     globalvar & set_initializer(any_array_ref const & value);
+
+    /// Indicates whether an initializer is set.
+    bool has_initializer() const;
+
+    /// Returns the initializer, or an empty object.
+    constant get_initializer() const;
 
     // FIXME: temporary until dyn_cast is fixed.
     globalvar as_globalvar() const { return *this; }

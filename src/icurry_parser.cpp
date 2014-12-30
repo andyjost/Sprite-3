@@ -431,7 +431,8 @@ namespace sprite { namespace curry
     // FIXME: The module name is not needed here.
     Qname qname;
     ifs >> qname;
-    if(qname.module != module_name) throw ParseError();
+    if(!module_name.empty() && qname.module != module_name)
+      throw ParseError();
     function.name = qname.name;
     ifs >> function.arity;
     DEBUGSTMT(
@@ -509,6 +510,12 @@ namespace sprite { namespace curry
     // Parse the rules.
     function.def = read_definition(ifs);
   }
+
+  std::istream & operator>>(std::istream & ifs, Function & fun)
+  {
+    read_function(ifs, "", fun);
+    return ifs;
+  }
   
   std::istream & operator>>(std::istream & ifs, Module & mod)
   {
@@ -530,14 +537,15 @@ namespace sprite { namespace curry
       else if(word == "data")
       {
         DEBUGSTMT(std::cout << "Reading data" << std::endl;)
+        std::string name;
+        ifs >> name;
         // Skip over empty "data" declarations.  If the next token is not
         // "constructor", then go back to matching.
         if(ifs >> word)
         {
           if(word != "constructor") goto redo_no_input;
           mod.datatypes.emplace_back();
-          static size_t i = 0;
-          mod.datatypes.back().name = "_typename" + std::to_string(i++);
+          mod.datatypes.back().name = name;
           do
           {
             if(word != "constructor") goto redo_no_input;

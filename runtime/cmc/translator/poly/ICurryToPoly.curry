@@ -1,8 +1,8 @@
 import ICurry
 -- import Unsafe
 
-equals typename = ".=="++"."++typename
-primitive x = ".primitive"++x
+equals typename = "=="++"."++typename
+primitive x = "primitive."++x
 
 icurryToPoly (IModule modname {-imported_list-}_ data_list {-funct_list-}_)
   = concat [make_funct modname onetype | onetype <- data_list]

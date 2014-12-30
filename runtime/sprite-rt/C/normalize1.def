@@ -1,0 +1,51 @@
+// Normalizes a unary node.
+//
+// Variable root must be pre-defined.  The successor must normalize to a data
+// term (i.e., one with exactly one constructor), or TAG must be defined so that
+// the tag is never greater than zero.
+
+// The NORMALIZE macro may be defined to control how to perform normalization.
+#ifndef NORMALIZE
+#define NORMALIZE(arg) arg->vptr->H(arg)
+#endif
+
+// The TAG macro may be defined to control how the tag of the inductive node is
+// obtained.
+#ifndef TAG
+#define TAG(arg) arg->tag
+#endif
+
+  static void * table[] =
+      { &&t_fail, &&t_fwd, &&t_choice, &&t_oper, &&t_ctor};
+  node * arg = SUCC_0(root);
+  node * lhs_choice, * rhs_choice;
+  goto* (&table[4])[TAG(arg)];
+t_fail:
+  return failed(root);
+t_fwd:
+  arg = reinterpret_cast<node *>(arg->slot0);
+  goto* (&table[4])[TAG(arg)];
+t_choice:
+  // FIXME: need to alloc with the correct function.
+  lhs_choice = reinterpret_cast<node*>(malloc(sizeof(node)));
+  rhs_choice = reinterpret_cast<node*>(malloc(sizeof(node)));
+  lhs_choice->vptr = root->vptr;
+  lhs_choice->tag = root->tag;
+  lhs_choice->slot0 = arg->slot0;
+  lhs_choice->slot1 = 0;
+  rhs_choice->vptr = root->vptr;
+  rhs_choice->tag = root->tag;
+  rhs_choice->slot0 = arg->slot1;
+  rhs_choice->slot1 = 0;
+  root->vptr = &_vt_choice;
+  root->tag = CHOICE;
+  root->aux = arg->aux; // copy choice id
+  root->slot0 = lhs_choice;
+  root->slot1 = rhs_choice;
+  return;
+t_oper:
+  NORMALIZE(arg);
+  goto* (&table[4])[TAG(arg)];
+t_ctor:
+#undef NORMALIZE
+#undef TAG

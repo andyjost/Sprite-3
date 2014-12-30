@@ -1,6 +1,6 @@
 .PHONY : all clean install examples libs runtime tools uninstall
 
-all : runtime examples tools
+all : libs runtime tools examples
 
 clean : uninstall
 	$(MAKE) -C src clean
@@ -9,10 +9,8 @@ clean : uninstall
 	$(MAKE) -C tools clean
 
 install : runtime tools
-	$(MAKE) -C runtime install
 	$(MAKE) -C tools install
-	# Compile the Curry libraries.
-	$(BININSTALL)/scc -c $(LIBINSTALL)/currylib/Prelude.curry
+	$(MAKE) -C runtime install
 
 uninstall :
 	$(MAKE) -C runtime uninstall

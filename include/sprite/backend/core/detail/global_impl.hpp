@@ -25,6 +25,12 @@ namespace sprite { namespace backend
     return *this;
   }
 
+  inline bool globalobj<GlobalVariable>::has_initializer() const
+    { return (&*this)->hasInitializer(); }
+
+  inline constant globalobj<GlobalVariable>::get_initializer() const
+    { return constant((&*this)->getInitializer()); }
+
   template<typename T>
   globalvar globalobj<T>::as_globalvar() const
   {

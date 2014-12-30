@@ -9,6 +9,7 @@
 #include "sprite/backend/core/module.hpp"
 #include "sprite/backend/core/scope.hpp"
 #include "sprite/backend/support/exceptions.hpp"
+#include <exception>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -58,6 +59,11 @@ namespace
   // Finalizes the label state when done with it.
   void finalize(label const & l)
   {
+    // The LLVM clean-up functions do not always behave well for malformed
+    // programs (e.g., hangs or SEGVs are possible).  It's better to just leave
+    // the broken program alone.
+    if(std::uncaught_exception())
+      return;
     auto const ptr = l.ptr();
     if(ptr)
     {
@@ -77,7 +83,8 @@ namespace
       {
         // There should be no predecessors.
         assert(llvm::pred_begin(ptr) == llvm::pred_end(ptr));
-        ptr->eraseFromParent();
+        if(ptr->getParent())
+          ptr->eraseFromParent();
       }
     }
   }

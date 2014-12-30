@@ -9,6 +9,7 @@ using namespace sprite::backend;
 void build_vt_for_Char(sprite::compiler::ir_h const & ir);
 void build_vt_for_choice(sprite::compiler::ir_h const & ir);
 void build_vt_for_Float(sprite::compiler::ir_h const & ir);
+void build_vt_for_choice(sprite::compiler::ir_h const & ir);
 void build_vt_for_fwd(sprite::compiler::ir_h const & ir);
 void build_vt_for_Int64(sprite::compiler::ir_h const & ir);
 void build_vt_for_PartialSpine(sprite::compiler::ir_h const & ir);
@@ -23,25 +24,29 @@ namespace sprite { namespace compiler
 // or N.
 void build_vt_for_trivial_node(
     sprite::compiler::ir_h const & ir, std::string const & name, size_t arity
+  , value const & vptr_equality = nullptr
   )
 {
+  value const vptr_null = (*ir.vtable_t)(nullptr);
   extern_(ir.vtable_t, sprite::compiler::get_vt_name(name))
       .set_initializer(_t(
           &get_label_function(ir, name)
         , &get_arity_function(ir, arity)
         , &get_succ_function(ir, arity)
+				, vptr_equality.ptr() ? vptr_equality : vptr_null
         , &get_null_step_function(ir)
         , &get_null_step_function(ir)
         ))
 	  ;
 }
 
-// Note: choice is trivial because H and N are never called.  The pull-tab
-// steps are applied by a parent when it observes its child is a choice.
-void build_vt_for_choice(sprite::compiler::ir_h const & ir)
-  { build_vt_for_trivial_node(ir, "choice", 2); }
 void build_vt_for_failed(sprite::compiler::ir_h const & ir)
-  { build_vt_for_trivial_node(ir, "failed", 0); }
+{
+  build_vt_for_trivial_node(
+      ir, "failed", 0
+    , &get_vt_for_primitive_equality(ir, "failed")
+    );
+}
 void build_vt_for_success(sprite::compiler::ir_h const & ir)
   { build_vt_for_trivial_node(ir, "success", 0); }
 void build_vt_for_freevar(sprite::compiler::ir_h const & ir)
@@ -135,17 +140,5 @@ int main()
   DECLARE_EXTERNAL_STUB(ifVar)
   DECLARE_EXTERNAL_STUB(failure)
 
-  // (+)
-  #define FORWARD_CALL(prim, extname)                                  \
-      auto prim = extern_<function>(ir.stepfun_t, #prim);              \
-      extern_<function>(                                               \
-          ir.stepfun_t, extname, {"root"}, [&] { prim(arg("root")); }  \
-        );                                                             \
-    /**/
-  FORWARD_CALL(prim_Int_plus, "+")
-  FORWARD_CALL(prim_Int_minus, "-")
-  FORWARD_CALL(prim_Int_times, "*")
-  FORWARD_CALL(_boolequal, "==")
-  
   llvm::WriteBitcodeToFile(module_b.ptr(), llvm::outs());
 }

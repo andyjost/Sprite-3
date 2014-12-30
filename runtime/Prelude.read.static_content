@@ -1,0 +1,19 @@
+  function "Prelude.primitive.==.failed" 2
+    table
+    code
+      external "Prelude.failed"
+
+  function "Prelude.primitive.==.fwd" 2
+    table
+    code
+      external "Prelude.primitive.==.fwd"
+
+  function "Prelude.primitive.==.choice" 2
+    table
+    code
+      external "Prelude.primitive.==.choice"
+
+  function "Prelude.primitive.==.oper" 2
+    table
+    code
+      external "Prelude.primitive.==.oper"
