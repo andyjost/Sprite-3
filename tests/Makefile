@@ -15,10 +15,10 @@ CLEANGOLD = $(SOURCES:.curry=.clean)
 # to a .curry file.
 GOLDCURRY = $(SOURCES:.curry=.gold)
 
-.PHONY : check clean cleangold validate $(CHECKCURRY) $(CLEANGOLD) $(GOLDCURRY)
+.PHONY : check clean cleangold run $(CHECKCURRY) $(CLEANGOLD) $(GOLDCURRY)
 
 # Run the tests and validate Sprite vs. PAKCS.
-validate : $(RESULTS) cytest.py
+run : $(RESULTS) cytest.py
 	@python cytest.py validate $(RESULTS)
 
 # Check all tests.  Move failing tests to known_failures.
