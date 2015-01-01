@@ -86,16 +86,17 @@ int main()
   #include "sprite/builtins.def"
 
   // Create stubs for unimplemented external functions.
-  #define DECLARE_EXTERNAL_STUB(name)                                 \
-      extern_<function>(                                              \
-          ir.stepfun_t, #name, {}                                     \
-        , [&] {                                                       \
-            clib.printf(                                              \
-              "External function \"" #name "\" is not implemented.\n" \
-            );                                                        \
-            clib.exit(EXIT_FAILURE);                                  \
-          }                                                           \
-        );                                                            \
+  #define DECLARE_EXTERNAL_STUB(name)                                   \
+      extern_<function>(                                                \
+          ir.stepfun_t, #name, {}                                       \
+        , [&] {                                                         \
+            clib.fprintf(                                               \
+                clib.fdopen(2, "w")                                     \
+              , "External function \"" #name "\" is not implemented.\n" \
+            );                                                          \
+            clib.exit(EXIT_FAILURE);                                    \
+          }                                                             \
+        );                                                              \
     /**/
 
   // CMC Prelude externals

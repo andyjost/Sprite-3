@@ -115,7 +115,7 @@ void build_vt_for_Float(sprite::compiler::ir_h const & ir)
         value node_p = arg("node_p");
         value double_value = *bitcast(&node_p.arrow(ND_SLOT0), *types::double_());
         value rv = lib.snprintf(
-            &lib.printbuffer, PRINT_BUFFER_SIZE, "%f", double_value
+            &lib.printbuffer, PRINT_BUFFER_SIZE, "%g", double_value
           );
         if_(rv ==(signed_)(0)
           , [&]{
