@@ -38,7 +38,7 @@ mkgold :
 	@$(MAKE) $(GOLDCURRY)
 
 %.exe : %.curry
-	scc -o $@ $<
+	$(BININSTALL)/scc -o $@ $<
 
 # Error lines from cytest.py are prepended with $$.  Grep is used to display
 # those when make runs.  I don't know any way to log both stdout and a *copy*
