@@ -19,6 +19,6 @@ tags
 tools/sprite
 tools/scc
 include/sprite/config.hpp
-runtime/sprite-rt/llvm/generate-llvm
+runtime/sprite-rt/llvm/generate-sprite-rt-llvm
 tests/*.exe
 tests/*.result
