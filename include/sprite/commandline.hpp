@@ -1,6 +1,7 @@
 /**
  * @file Provides common facilities for the Sprite command-line tools.
  */
+#include <cstdlib>
 #include <string>
 #include <utility>
 
@@ -16,6 +17,14 @@ namespace sprite { namespace curry
 
 namespace sprite
 {
+  /**
+   * @brief Prepends Sprite library to the path.
+   *
+   * This is needed so that unqualified references to pakcs and parsecurry
+   * within cmc can be resolved.
+   */
+  void export_sprite_lib_to_path();
+
   /**
    * @brief Executes curry2read to generate the .read file.
    */

@@ -187,6 +187,7 @@ namespace
 
   int main_(int argc, char *argv[])
   {
+    sprite::export_sprite_lib_to_path();
     parse_args(argc, argv);
 
     // Compile each Curry file.

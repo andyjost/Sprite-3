@@ -15,10 +15,23 @@ install :
 	mkdir -p $(LIBINSTALL)
 	$(MAKE) -C sprite-rt install
 	cp -r cmc/ $(LIBINSTALL)
-	rm -f $(LIBINSTALL)/cc 2> /dev/null
+	@
+	@rm -f $(LIBINSTALL)/cc 2> /dev/null
 	ln -s `which $(LIB-CC)` $(LIBINSTALL)/cc
-	rm -f $(LIBINSTALL)/llc 2> /dev/null
+	@test -e $(LIBINSTALL)/cc
+	@
+	@rm -f $(LIBINSTALL)/llc 2> /dev/null
 	ln -s `which $(LIB-LLC)` $(LIBINSTALL)/llc
+	@test -e $(LIBINSTALL)/llc
+	@
+	@rm -f $(LIBINSTALL)/pakcs 2> /dev/null
+	ln -s `which $(LIB-PAKCS)` $(LIBINSTALL)/pakcs
+	@test -e $(LIBINSTALL)/pakcs
+	@
+	@rm -f $(LIBINSTALL)/parsecurry 2> /dev/null
+	ln -s `which $(LIB-PARSECURRY)` $(LIBINSTALL)/parsecurry
+	@test -e $(LIBINSTALL)/parsecurry
+	@
 	rsync -a currylib $(LIBINSTALL)
 	$(MAKE) currylibs
 

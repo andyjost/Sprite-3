@@ -26,6 +26,8 @@ namespace
       std::cerr << "Usage: " << argv[0] << " <file.curry>" << std::endl;
       return 1;
     }
+
+    sprite::export_sprite_lib_to_path();
     
     // Compile the input file.
     sprite::curry::Library lib;

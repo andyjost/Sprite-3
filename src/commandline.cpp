@@ -236,6 +236,15 @@ namespace sprite
       );
   }
 
+  void export_sprite_lib_to_path()
+  {
+    char const * oldpath = std::getenv("PATH");
+    std::string newpath =
+        std::string(SPRITE_LIBINSTALL "/:")
+      + std::string(oldpath ? oldpath : "");
+    ::setenv("PATH", newpath.c_str(), true);
+  }
+
   std::string const & get_curry2read()
   {
     // Note: the curry2read and curry2poly programs are identical, except that
@@ -275,7 +284,7 @@ namespace sprite
       cmd << curry2read << " -q " << curryfile;
       int ok = std::system(cmd.str().c_str());
       if(ok != 0)
-        throw backend::compile_error("curry2read failed");
+        throw backend::compile_error(curry2read + " failed");
     }
   }
 
@@ -285,7 +294,8 @@ namespace sprite
     )
   {
     std::stringstream cmd;
-    cmd << sprite::get_llc() << " " << bitcodefile << " -o " << assemblyfile;
+    std::string const & llc = sprite::get_llc();
+    cmd << llc << " " << bitcodefile << " -o " << assemblyfile;
     int ok = std::system(cmd.str().c_str());
     if(remove_source && std::remove(bitcodefile.c_str()) != 0 && ok != 0)
     {
@@ -294,7 +304,7 @@ namespace sprite
       throw backend::compile_error(cmd.str());
     }
     if(ok != 0)
-      throw backend::compile_error("llc failed");
+      throw backend::compile_error(llc + " failed");
   }
 
   /// Uses the platform-specific compiler to convert assembly to an executable.
@@ -304,7 +314,8 @@ namespace sprite
     )
   {
     std::stringstream cmd;
-    cmd << sprite::get_cc() << " " << assemblyfile << " -o " << executablefile;
+    std::string const & cc = sprite::get_cc();
+    cmd << cc << " " << assemblyfile << " -o " << executablefile;
     int ok = std::system(cmd.str().c_str());
     if(remove_source && std::remove(assemblyfile.c_str()) != 0 && ok != 0)
     {
@@ -313,6 +324,6 @@ namespace sprite
       throw backend::compile_error(cmd.str());
     }
     if(ok != 0)
-      throw backend::compile_error("cc failed");
+      throw backend::compile_error(cc + " failed");
   }
 }
