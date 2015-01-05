@@ -15,7 +15,7 @@ CLEANGOLD = $(SOURCES:.curry=.clean)
 # to a .curry file.
 GOLDCURRY = $(SOURCES:.curry=.gold)
 
-.PHONY : check clean cleangold run $(CHECKCURRY) $(CLEANGOLD) $(GOLDCURRY)
+.PHONY : check clean cleangold goldens run $(CHECKCURRY) $(CLEANGOLD) $(GOLDCURRY)
 
 # Run the tests and validate Sprite vs. PAKCS.
 run : $(RESULTS) cytest.py
@@ -34,7 +34,7 @@ cleangold :
 	@$(MAKE) $(CLEANGOLD)
 	
 # Add PAKCS answers to .curry files.
-mkgold :
+goldens :
 	@$(MAKE) $(GOLDCURRY)
 
 %.exe : %.curry
