@@ -30,6 +30,10 @@ namespace sprite { namespace compiler
   function get_null_step_function(ir_h const & ir)
     { return extern_<function>(ir.stepfun_t, ".nullstep"); }
 
+  function get_generic_show_function(ir_h const & ir)
+    { return extern_<function>(ir.showfun_t, "sprite_generic_show"); }
+
+
   // Fills in the body of a successor function.  This function does not appear
   // in the corresponding header file, but is used when preparing the runtime
   // library.

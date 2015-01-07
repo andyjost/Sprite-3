@@ -34,6 +34,7 @@ void build_vt_for_trivial_node(
         , &get_arity_function(ir, arity)
         , &get_succ_function(ir, arity)
 				, vptr_equality.ptr() ? vptr_equality : vptr_null
+        , &get_generic_show_function(ir)
         , &get_null_step_function(ir)
         , &get_null_step_function(ir)
         ))

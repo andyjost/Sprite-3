@@ -19,15 +19,17 @@ namespace sprite { namespace compiler
   typedef uint64_t arityfun_t(node *);
   typedef void stepfun_t(node *);
   typedef void rangefun_t(node *, node ***, node ***);
+  typedef void showfun_t(node *, FILE*, bool is_outer);
 
   struct vtable
   {
-    labelfun_t * label; // Gives the string repr.
-    arityfun_t * arity; // Gives the arity.
-    rangefun_t * succ;  // Gives the range containing the successors.
-    vtable * equality;  // Type-specific equality function.
-    stepfun_t * N;      // Normalization function.
-    stepfun_t * H;      // Head-normalization function.
+    labelfun_t * label;    // Gives the string repr.
+    arityfun_t * arity;    // Gives the arity.
+    rangefun_t * succ;     // Gives the range containing the successors.
+    vtable     * equality; // Type-specific equality function.
+    showfun_t  * show;     // Type-specific show function.
+    stepfun_t  * N;        // Normalization function.
+    stepfun_t  * H;        // Head-normalization function.
   };
 
   struct node
@@ -52,27 +54,10 @@ extern "C"
   extern sprite::compiler::vtable _vt_PartialSpine __asm__(".vt.PartialSpine");
   extern sprite::compiler::vtable _vt_CTOR_Prelude_True __asm__(".vt.CTOR.Prelude.True");
   extern sprite::compiler::vtable _vt_CTOR_Prelude_False __asm__(".vt.CTOR.Prelude.False");
+  extern sprite::compiler::vtable _vt_CTOR_Prelude_Nil __asm__(".vt.CTOR.Prelude.[]");
 
   int32_t next_choice_id = 0;
 }
-
-namespace sprite { namespace compiler
-{
-  void _printexpr(node * root, bool is_outer)
-  {
-    node ** begin, ** end;
-    root->vptr->succ(root, &begin, &end);
-    size_t const N = end - begin;
-    if(!is_outer && N > 0) fputs("(", stdout);
-    fputs(root->vptr->label(root), stdout);
-    for(; begin != end; ++begin)
-    {
-      fputs(" ", stdout);
-      _printexpr(*begin, false);
-    }
-    if(!is_outer && N > 0) fputs(")", stdout);
-  }
-}}
 
 extern "C"
 {
@@ -112,9 +97,59 @@ extern "C"
 
   void sprite_printexpr(node * root, char const * suffix)
   {
-    _printexpr(root, true);
+    root->vptr->show(root, stdout, true);
     if(suffix) fputs(suffix, stdout);
     fflush(0);
+  }
+
+  void sprite_generic_show(node * root, FILE * stream, bool is_outer)
+  {
+    node ** begin, ** end;
+    root->vptr->succ(root, &begin, &end);
+    size_t const N = end - begin;
+    if(!is_outer && N > 0) fputs("(", stream);
+    fputs(root->vptr->label(root), stream);
+    for(; begin != end; ++begin)
+    {
+      fputs(" ", stream);
+      sprite_generic_show(*begin, stream, false);
+    }
+    if(!is_outer && N > 0) fputs(")", stream);
+  }
+
+  void show_Cons(node *, FILE *, bool) __asm__(".show.:");
+  void show_Cons(node * root, FILE * stream, bool /*is_outer*/)
+  {
+    fputc('[', stream);
+    node * arg = SUCC_0(root);
+    arg->vptr->show(arg, stream, true);
+    root = SUCC_1(root);
+    while(root->vptr != &_vt_CTOR_Prelude_Nil)
+    {
+      fputc(',', stream);
+      arg = SUCC_0(root);
+      arg->vptr->show(arg, stream, true);
+      root = SUCC_1(root);
+    }
+    fputc(']', stream);
+  }
+
+  void show_tuple(node *, FILE *, bool) __asm__(".show.()");
+  void show_tuple(node * root, FILE * stream, bool /*is_outer*/)
+  {
+    fputc('(', stream);
+    node ** begin, ** end;
+    root->vptr->succ(root, &begin, &end);
+    if(begin != end)
+    {
+      (*begin)->vptr->show(*begin, stream, true);
+      for(begin++; begin!=end; begin++)
+      {
+        fputc(',', stream);
+        (*begin)->vptr->show(*begin, stream, true);
+      }
+    }
+    fputc(')', stream);
   }
 
   void sprite_normalize(node * root)

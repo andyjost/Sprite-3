@@ -631,6 +631,40 @@ namespace
     }
   }
 
+  // Returns the "show" function for a constructor.
+  function get_show_function_for(
+      compiler::ModuleSTab & module_stab
+    , curry::Constructor const & ctor
+    )
+  {
+    auto const & ir = module_stab.ir();
+    auto const & clib = module_stab.clib();
+    if(module_stab.source->name == "Prelude")
+    {
+      // Special case for Prelude.[]
+      if(ctor.name == "[]")
+      {
+        return extern_<function>(
+            ir.showfun_t, ".show.[]", {"root", "stream"}
+          , [&]{clib.fputs("[]", arg("stream"));}
+          );
+      }
+
+      // Special case for Prelude.:
+      else if(ctor.name == ":")
+        return extern_<function>(ir.showfun_t, ".show.:");
+
+      // Special case for tuples.  A type is a tuple if it is in the Prelude,
+      // its name begins with '(', and its name ends with ')'.
+      else if(
+          ctor.name.size()
+        && ctor.name.front() == '(' && ctor.name.back() == ')'
+        )
+      { return extern_<function>(ir.showfun_t, ".show.()"); }
+    }
+    return get_generic_show_function(ir);
+  }
+
   void compile_ctor_vtable(
       tgt::global & vt
     , curry::DataType const & dtype
@@ -692,6 +726,7 @@ namespace
       , &get_arity_function(ir, ctor.arity)
       , &get_succ_function(ir, ctor.arity)
       , &get_vt_for_equality(ir, module_stab.source->name, dtype.name)
+      , &get_show_function_for(module_stab, ctor)
       , &N, &get_null_step_function(ir)
       ));
   }
@@ -745,6 +780,7 @@ namespace
       , &get_arity_function(ir, fun.arity)
       , &get_succ_function(ir, fun.arity)
       , &get_vt_for_primitive_equality(ir, "oper")
+      , &get_generic_show_function(ir)
       , &N, &H
       ));
   }
@@ -903,15 +939,18 @@ namespace sprite { namespace compiler
         }
       }
 
-      // Special case: update symbol table entries for Prelude.? with the
-      // built-in choice implementation.
+      // Special cases for the Prelude.
       if(cymodule.name == "Prelude")
       {
-        auto ichoice = module_stab.nodes.find({"Prelude", "?"});
-        if(ichoice == module_stab.nodes.end())
-          throw compile_error("Prelude.? was not found");
-        ichoice->second.vtable.reset(module_stab.rt().choice_vt.as_globalvar());
-        ichoice->second.tag = CHOICE;
+        // Update symbol table entries for Prelude.? with the built-in
+        // choice implementation.
+        {
+          auto choice = module_stab.nodes.find({"Prelude", "?"});
+          if(choice == module_stab.nodes.end())
+            throw compile_error("Prelude.? was not found");
+          choice->second.vtable.reset(module_stab.rt().choice_vt.as_globalvar());
+          choice->second.tag = CHOICE;
+        }
       }
 
       // DIAGNOSTIC

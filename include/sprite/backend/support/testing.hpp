@@ -37,6 +37,8 @@ namespace sprite { namespace backend { namespace testing
     function const fdopen = extern_(FILE_p(int_, *char_), "fdopen");
     // int fprintf(FILE *stream, const char *format, ...);
     function const fprintf = extern_(int_(FILE_p, *char_, dots), "fprintf");
+    // int fputs(const char *s, FILE *stream);
+    function const fputs = extern_(int_(*char_, FILE_p), "fputs");
     // int printf(const char *format, ...);
     function const printf = extern_(int_(*char_, dots), "printf");
     // int fflush(FILE *stream);

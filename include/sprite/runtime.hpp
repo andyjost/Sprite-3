@@ -20,6 +20,7 @@ namespace sprite { namespace compiler
     type bool_t = types::bool_();
     type i32_t = types::int_(32);
     type i64_t = types::int_(64);
+    type FILE_p = *types::struct_("FILE");
 
     // Forward declarations.
     type node_t = types::struct_("node");
@@ -36,6 +37,9 @@ namespace sprite { namespace compiler
 
     // The type of a function returning the node's children.
     type rangefun_t = void_t(*node_t, ***node_t, ***node_t);
+
+    // The type of a function that converts an expression into a string.
+    type showfun_t = void_t(*node_t, FILE_p, bool_t);
 
     // The type of a function defining equality.
     // type equalityfun_t = bool_t(*node_t, *node_t);
@@ -65,6 +69,7 @@ namespace sprite { namespace compiler
             , *arityfun_t /*arity*/
             , *rangefun_t /*succ*/
             , *vtable_t   /*equality*/
+            , *showfun_t  /*show*/
             , *stepfun_t  /*N*/
             , *stepfun_t  /*H*/
             }
@@ -78,7 +83,7 @@ namespace sprite { namespace compiler
   // FIXME: using strings to index via dot and arrow would be more convenient.
   namespace member_labels
   {
-    enum VtMember { VT_LABEL, VT_ARITY, VT_SUCC, VT_EQUALITY, VT_N, VT_H };
+    enum VtMember { VT_LABEL, VT_ARITY, VT_SUCC, VT_EQUALITY, VT_SHOW, VT_N, VT_H };
     enum NdMember { ND_VPTR, ND_TAG, ND_AUX, ND_SLOT0, ND_SLOT1 };
   }
   using namespace member_labels;
@@ -96,6 +101,9 @@ namespace sprite { namespace compiler
 
   // Returns a step function that does nothing.
   function get_null_step_function(ir_h const & ir);
+
+  // Returns the generic show function.
+  function get_generic_show_function(ir_h const & ir);
 
   // Makes a function that returns the successor range of a node.  Returns a
   // pointer to that function.

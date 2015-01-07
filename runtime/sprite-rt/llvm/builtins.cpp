@@ -16,6 +16,7 @@ struct Library
   type size_t_= get_type<size_t>();
   type void_ = types::void_();
   type ptrint = types::int_(sizeof_(*char_));
+  type FILE_p = *types::struct_("FILE");
 
   // int snprintf(char *str, size_t size, const char *format, ...);
   function const snprintf = extern_(int_(*char_, size_t_, *char_, dots), "snprintf");
@@ -26,6 +27,9 @@ struct Library
   // void perror(char const *);
   function const perror = extern_(void_(*char_), "perror");
 
+  // int fprintf(FILE *stream, const char *format, ...);
+  function const fprintf = extern_(int_(FILE_p, *char_, dots), "fprintf");
+
   // int isprint(int c);
   function const isprint = extern_(int_(int_), "isprint");
 
@@ -34,6 +38,27 @@ struct Library
       extern_(types::char_()[PRINT_BUFFER_SIZE], ".printbuffer")
           .set_initializer(std::vector<char>(PRINT_BUFFER_SIZE, '\0'));
 };
+
+// Builds a show function for a node with no successor.
+function make_show_for_nullary_node(
+    sprite::compiler::ir_h const & ir
+  , Library const & lib
+  , function const & label
+  )
+{
+  return extern_<function>(
+      ir.showfun_t, flexible(".show"), {"root", "stream", "is_outer"}
+    , [&] {
+        value rv = lib.fprintf(arg("stream"), "%s", label(arg("root")));
+        if_(rv <(signed_)(0)
+          , [&]{
+              lib.perror("Error printing string");
+              lib.exit(1);
+            }
+          );
+      }
+    );
+}
 
 void build_vt_for_Char(sprite::compiler::ir_h const & ir)
 {
@@ -63,6 +88,7 @@ void build_vt_for_Char(sprite::compiler::ir_h const & ir)
         , &get_arity_function(ir, 0)
         , &get_succ_function(ir, 0)
         , &get_vt_for_primitive_equality(ir, "Char")
+        , &make_show_for_nullary_node(ir, lib, Char_name)
         , &get_null_step_function(ir)
         , &get_null_step_function(ir)
         ))
@@ -79,8 +105,14 @@ void build_vt_for_Int64(sprite::compiler::ir_h const & ir)
         value node_p = arg("node_p");
         value int_value = *bitcast(&node_p.arrow(ND_SLOT0), *types::int_(64));
         // The format string is super non-portable.
+        ref format = local(*lib.char_);
+        if_(
+            int_value <(signed_)(0)
+          , [&]{ format = "(%" PRId64 ")"; }
+          , [&]{ format = "%" PRId64; }
+          );
         value rv = lib.snprintf(
-            &lib.printbuffer, PRINT_BUFFER_SIZE, "%" PRId64, int_value
+            &lib.printbuffer, PRINT_BUFFER_SIZE, format, int_value
           );
         if_(rv ==(signed_)(0)
           , [&]{
@@ -98,6 +130,7 @@ void build_vt_for_Int64(sprite::compiler::ir_h const & ir)
         , &get_arity_function(ir, 0)
         , &get_succ_function(ir, 0)
         , &get_vt_for_primitive_equality(ir, "Int")
+        , &make_show_for_nullary_node(ir, lib, Int64_name)
         , &get_null_step_function(ir)
         , &get_null_step_function(ir)
         ))
@@ -114,8 +147,14 @@ void build_vt_for_Float(sprite::compiler::ir_h const & ir)
     , [&] {
         value node_p = arg("node_p");
         value double_value = *bitcast(&node_p.arrow(ND_SLOT0), *types::double_());
+        ref format = local(*lib.char_);
+        if_(
+            double_value <(signed_)(0)
+          , [&]{ format = "(%g)"; }
+          , [&]{ format = "%g"; }
+          );
         value rv = lib.snprintf(
-            &lib.printbuffer, PRINT_BUFFER_SIZE, "%g", double_value
+            &lib.printbuffer, PRINT_BUFFER_SIZE, format, double_value
           );
         if_(rv ==(signed_)(0)
           , [&]{
@@ -133,6 +172,7 @@ void build_vt_for_Float(sprite::compiler::ir_h const & ir)
         , &get_arity_function(ir, 0)
         , &get_succ_function(ir, 0)
         , &get_vt_for_primitive_equality(ir, "Float")
+        , &make_show_for_nullary_node(ir, lib, Float_name)
         , &get_null_step_function(ir)
         , &get_null_step_function(ir)
         ))
@@ -166,6 +206,7 @@ void build_vt_for_choice(sprite::compiler::ir_h const & ir)
         , &get_arity_function(ir, 2)
         , &get_succ_function(ir, 2)
         , get_vt_for_primitive_equality(ir, "choice")
+        , &make_show_for_nullary_node(ir, lib, choice_name)
         , &get_null_step_function(ir)
         , &get_null_step_function(ir)
         ))
@@ -210,6 +251,18 @@ void build_vt_for_fwd(sprite::compiler::ir_h const & ir)
         return_();
       }
     );
+  function fwd_show = inline_<function>(
+      ir.showfun_t, "fwd.show"
+    , {"node_p", "stream", "is_outer"}
+    , [&]{
+        value node_p = arg("node_p");
+        node_p = bitcast(node_p.arrow(ND_SLOT0), *ir.node_t);
+        node_p.arrow(ND_VPTR).arrow(VT_SHOW)(
+            node_p, arg("stream"), arg("is_outer")
+          ).set_attribute(tailcall);
+        return_();
+      }
+    );
   function fwd_N = inline_(
       ir.stepfun_t, ".fwd.N", {"node_p"}
     , [&]{
@@ -233,6 +286,7 @@ void build_vt_for_fwd(sprite::compiler::ir_h const & ir)
       .set_initializer(_t(
           &fwd_name, &fwd_arity, &fwd_succ
         , get_vt_for_primitive_equality(ir, "fwd")
+        , &fwd_show
         , &fwd_N, &fwd_H
         ))
 	  ;
