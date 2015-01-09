@@ -23,13 +23,14 @@ namespace sprite { namespace compiler
 
   struct vtable
   {
-    labelfun_t * label;    // Gives the string repr.
-    arityfun_t * arity;    // Gives the arity.
-    rangefun_t * succ;     // Gives the range containing the successors.
-    vtable     * equality; // Type-specific equality function.
-    showfun_t  * show;     // Type-specific show function.
-    stepfun_t  * N;        // Normalization function.
-    stepfun_t  * H;        // Head-normalization function.
+    labelfun_t * label;      // Gives the string repr.
+    arityfun_t * arity;      // Gives the arity.
+    rangefun_t * succ;       // Gives the range containing the successors.
+    vtable     * equality;   // Type-specific equality function.
+    vtable     * comparison; // Type-specific comparison function.
+    showfun_t  * show;       // Type-specific show function.
+    stepfun_t  * N;          // Normalization function.
+    stepfun_t  * H;          // Head-normalization function.
   };
 
   struct node
@@ -55,6 +56,9 @@ extern "C"
   extern sprite::compiler::vtable _vt_CTOR_Prelude_True __asm__(".vt.CTOR.Prelude.True");
   extern sprite::compiler::vtable _vt_CTOR_Prelude_False __asm__(".vt.CTOR.Prelude.False");
   extern sprite::compiler::vtable _vt_CTOR_Prelude_Nil __asm__(".vt.CTOR.Prelude.[]");
+  extern sprite::compiler::vtable _vt_CTOR_Prelude_LT __asm__(".vt.CTOR.Prelude.LT");
+  extern sprite::compiler::vtable _vt_CTOR_Prelude_EQ __asm__(".vt.CTOR.Prelude.EQ");
+  extern sprite::compiler::vtable _vt_CTOR_Prelude_GT __asm__(".vt.CTOR.Prelude.GT");
 
   int32_t next_choice_id = 0;
 }
@@ -91,6 +95,14 @@ extern "C"
   {
     root->vptr = &_vt_CTOR_Prelude_False;
     root->tag = 0;
+    root->slot0 = 0;
+    root->slot1 = 0;
+  }
+
+  void eq(node * root)
+  {
+    root->vptr = &_vt_CTOR_Prelude_EQ;
+    root->tag = 1;
     root->slot0 = 0;
     root->slot1 = 0;
   }
@@ -325,6 +337,9 @@ extern "C"
   void boolequal(node * root)
     { root->vptr = SUCC_0(root)->vptr->equality; }
 
+  void compare(node * root)
+    { root->vptr = SUCC_0(root)->vptr->comparison; }
+
   // ==.fwd
   void prim_equals_fwd(node *) __asm__("primitive.==.fwd");
   void prim_equals_fwd(node * root)
@@ -332,6 +347,15 @@ extern "C"
     node *& arg0 = SUCC_0(root);
     arg0 = DATA(arg0, node *);
     root->vptr = arg0->vptr->equality;
+  }
+
+  // compare.fwd
+  void prim_compare_fwd(node *) __asm__("primitive.compare.fwd");
+  void prim_compare_fwd(node * root)
+  {
+    node *& arg0 = SUCC_0(root);
+    arg0 = DATA(arg0, node *);
+    root->vptr = arg0->vptr->comparison;
   }
 
   // ==.choice
@@ -355,6 +379,27 @@ extern "C"
     root->slot1 = rhs_choice;
   }
 
+  // compare.choice
+  void prim_compare_choice(node *) __asm__("primitive.compare.choice");
+  void prim_compare_choice(node * root)
+  {
+    node * arg0 = SUCC_0(root);
+    node * lhs_choice, * rhs_choice;
+    // FIXME: need to alloc with the correct function.
+    lhs_choice = reinterpret_cast<node*>(malloc(sizeof(node)));
+    rhs_choice = reinterpret_cast<node*>(malloc(sizeof(node)));
+    lhs_choice->vptr = rhs_choice->vptr = SUCC_0(arg0)->vptr->comparison;
+    lhs_choice->tag = rhs_choice->tag = OPER;
+    lhs_choice->slot0 = arg0->slot0;
+    rhs_choice->slot0 = arg0->slot1;
+    lhs_choice->slot1 = rhs_choice->slot1 = root->slot1;
+    root->vptr = &_vt_choice;
+    root->tag = CHOICE;
+    root->aux = arg0->aux;
+    root->slot0 = lhs_choice;
+    root->slot1 = rhs_choice;
+  }
+
   // ==.oper
   void prim_equals_oper(node *) __asm__("primitive.==.oper");
   void prim_equals_oper(node * root)
@@ -364,11 +409,27 @@ extern "C"
     root->vptr = arg0->vptr->equality;
   }
 
+  // compare.oper
+  void prim_compare_oper(node *) __asm__("primitive.compare.oper");
+  void prim_compare_oper(node * root)
+  {
+    node * arg0 = SUCC_0(root);
+    arg0->vptr->H(arg0);
+    root->vptr = arg0->vptr->comparison;
+  }
+
   // ==.Success
   void prim_equals_Success(node *) __asm__("primitive.==.Success");
   void prim_equals_Success(node * root)
   {
     true_(root);
+  }
+
+  // compare.Success
+  void prim_compare_Success(node *) __asm__("primitive.compare.Success");
+  void prim_compare_Success(node * root)
+  {
+    eq(root);
   }
 
   // ==.IO
@@ -377,6 +438,15 @@ extern "C"
   {
     // TODO
     printf("Equality for IO is not implemented");
+    std::exit(1);
+  }
+
+  // compare.IO
+  void prim_compare_IO(node *) __asm__("primitive.compare.IO");
+  void prim_compare_IO(node * root)
+  {
+    // TODO
+    printf("Comparison for IO is not implemented");
     std::exit(1);
   }
 
@@ -401,5 +471,36 @@ extern "C"
   DECLARE_PRIMITIVE_EQUALITY(Char, char);
   DECLARE_PRIMITIVE_EQUALITY(Int, int64_t);
   DECLARE_PRIMITIVE_EQUALITY(Float, double);
+
+  // compare.T
+  // Creates the lowest-level function implementing comparison for a
+  // fundamental type.  The successors are guaranteed to be normalized.
+  #define DECLARE_PRIMITIVE_COMPARE(curry_typename, c_type) \
+      void prim_compare_ ## curry_typename(node *)          \
+          __asm__("primitive.compare." # curry_typename);   \
+      void prim_compare_ ## curry_typename(node * root)     \
+      {                                                     \
+        c_type const lhs = DATA(SUCC_0(root), c_type);      \
+        c_type const rhs = DATA(SUCC_1(root), c_type);      \
+        if(lhs < rhs)                                       \
+        {                                                   \
+          root->vptr = &_vt_CTOR_Prelude_LT;                \
+          root->tag = 0;                                    \
+        }                                                   \
+        else if(rhs < lhs)                                  \
+        {                                                   \
+          root->vptr = &_vt_CTOR_Prelude_GT;                \
+          root->tag = 2;                                    \
+        }                                                   \
+        else                                                \
+        {                                                   \
+          root->vptr = &_vt_CTOR_Prelude_EQ;                \
+          root->tag = 1;                                    \
+        }                                                   \
+      }                                                     \
+    /**/
+  DECLARE_PRIMITIVE_COMPARE(Char, char);
+  DECLARE_PRIMITIVE_COMPARE(Int, int64_t);
+  DECLARE_PRIMITIVE_COMPARE(Float, double);
 }
 

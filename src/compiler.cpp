@@ -726,6 +726,7 @@ namespace
       , &get_arity_function(ir, ctor.arity)
       , &get_succ_function(ir, ctor.arity)
       , &get_vt_for_equality(ir, module_stab.source->name, dtype.name)
+      , &get_vt_for_comparison(ir, module_stab.source->name, dtype.name)
       , &get_show_function_for(module_stab, ctor)
       , &N, &get_null_step_function(ir)
       ));
@@ -780,6 +781,7 @@ namespace
       , &get_arity_function(ir, fun.arity)
       , &get_succ_function(ir, fun.arity)
       , &get_vt_for_primitive_equality(ir, "oper")
+      , &get_vt_for_primitive_comparison(ir, "oper")
       , &get_generic_show_function(ir)
       , &N, &H
       ));

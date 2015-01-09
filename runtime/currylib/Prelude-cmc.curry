@@ -173,6 +173,13 @@ x /= y          = not (x==y)
 --- Ordering type. Useful as a result of comparison functions.
 data Ordering = LT | EQ | GT
 
+--- Like && for Booleans, but applies to an Ordering.  Short-circuits at the
+--- first non-equal term.
+compare_conjunction :: Ordering -> Ordering -> Ordering
+compare_conjunction LT _ = LT
+compare_conjunction EQ y = y
+compare_conjunction GT _ = GT
+
 --- Comparison of arbitrary ground data terms.
 --- Data constructors are compared in the order of their definition
 --- in the datatype declarations and recursively in the arguments.

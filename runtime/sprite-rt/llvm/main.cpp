@@ -25,6 +25,7 @@ namespace sprite { namespace compiler
 void build_vt_for_trivial_node(
     sprite::compiler::ir_h const & ir, std::string const & name, size_t arity
   , value const & vptr_equality = nullptr
+  , value const & vptr_comparison = nullptr
   )
 {
   value const vptr_null = (*ir.vtable_t)(nullptr);
@@ -34,6 +35,7 @@ void build_vt_for_trivial_node(
         , &get_arity_function(ir, arity)
         , &get_succ_function(ir, arity)
 				, vptr_equality.ptr() ? vptr_equality : vptr_null
+				, vptr_comparison.ptr() ? vptr_comparison : vptr_null
         , &get_generic_show_function(ir)
         , &get_null_step_function(ir)
         , &get_null_step_function(ir)
@@ -46,6 +48,7 @@ void build_vt_for_failed(sprite::compiler::ir_h const & ir)
   build_vt_for_trivial_node(
       ir, "failed", 0
     , &get_vt_for_primitive_equality(ir, "failed")
+    , &get_vt_for_primitive_comparison(ir, "failed")
     );
 }
 void build_vt_for_success(sprite::compiler::ir_h const & ir)
@@ -109,7 +112,7 @@ int main()
   DECLARE_EXTERNAL_STUB(prim_error)
   // DECLARE_EXTERNAL_STUB(failed)
   // DECLARE_EXTERNAL_STUB(==)
-  DECLARE_EXTERNAL_STUB(compare)
+  // DECLARE_EXTERNAL_STUB(compare)
   // DECLARE_EXTERNAL_STUB(ord)
   // DECLARE_EXTERNAL_STUB(chr)
   // DECLARE_EXTERNAL_STUB(+)

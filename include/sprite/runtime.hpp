@@ -41,9 +41,6 @@ namespace sprite { namespace compiler
     // The type of a function that converts an expression into a string.
     type showfun_t = void_t(*node_t, FILE_p, bool_t);
 
-    // The type of a function defining equality.
-    // type equalityfun_t = bool_t(*node_t, *node_t);
-
     ir_h()
     {
       /// A node is made up of a pointer-to-vtable, tag, and two data slots.
@@ -69,6 +66,7 @@ namespace sprite { namespace compiler
             , *arityfun_t /*arity*/
             , *rangefun_t /*succ*/
             , *vtable_t   /*equality*/
+            , *vtable_t   /*comparison*/
             , *showfun_t  /*show*/
             , *stepfun_t  /*N*/
             , *stepfun_t  /*H*/
@@ -83,7 +81,7 @@ namespace sprite { namespace compiler
   // FIXME: using strings to index via dot and arrow would be more convenient.
   namespace member_labels
   {
-    enum VtMember { VT_LABEL, VT_ARITY, VT_SUCC, VT_EQUALITY, VT_SHOW, VT_N, VT_H };
+    enum VtMember { VT_LABEL, VT_ARITY, VT_SUCC, VT_EQUALITY, VT_COMPARISON, VT_SHOW, VT_N, VT_H };
     enum NdMember { ND_VPTR, ND_TAG, ND_AUX, ND_SLOT0, ND_SLOT1 };
   }
   using namespace member_labels;
@@ -164,6 +162,25 @@ namespace sprite { namespace compiler
     )
   {
     std::string const symbolname = ".vt.OPER." + module + ".==." + label;
+    return extern_(ir.vtable_t, symbolname);
+  }
+
+  inline global get_vt_for_primitive_comparison(
+      sprite::compiler::ir_h const & ir, std::string const & typename_
+    )
+  {
+    std::string const symbolname =
+        ".vt.OPER.Prelude.primitive.compare." + typename_;
+    return extern_(ir.vtable_t, symbolname);
+  }
+
+  inline global get_vt_for_comparison(
+      sprite::compiler::ir_h const & ir
+    , std::string const & module
+    , std::string const & label
+    )
+  {
+    std::string const symbolname = ".vt.OPER." + module + ".compare." + label;
     return extern_(ir.vtable_t, symbolname);
   }
 }}
