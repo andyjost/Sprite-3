@@ -84,23 +84,17 @@ namespace sprite { namespace compiler
     sprite::backend::testing::clib_h const & clib() const
       { return headers->clib; }
 
-    // The Sprite IR library, in the target program.
-    compiler::ir_h const & ir() const
-      { return headers->ir; }
-
     // The Sprite runtime library, in the target program.
     compiler::rt_h const & rt() const
       { return headers->rt; }
-    
+
   private:
 
     // These headers must be loaded while the LLVM module for the Curry module
     // this class represents is the active one.
     struct Headers
     {
-      Headers() : rt(ir) {}
       sprite::backend::testing::clib_h clib;
-      compiler::ir_h ir;
       compiler::rt_h rt;
     };
 
@@ -109,7 +103,6 @@ namespace sprite { namespace compiler
 
   struct LibrarySTab
   {
-    // The module information.
     std::unordered_map<std::string, ModuleSTab> modules;
 
     /// Move the contents of another LibrarySTab into this one.
@@ -170,16 +163,15 @@ namespace sprite { namespace compiler
 
   /// Allocates storage for a node.  The return type is i8*.
   inline value node_alloc(ModuleSTab const & module_stab)
-    { return module_stab.clib().malloc(sizeof_(module_stab.ir().node_t)); }
+    { return module_stab.clib().malloc(sizeof_(module_stab.rt().node_t)); }
 
   /// Allocates storage for a node.  The return type is node*.
   inline value node_alloc_typed(ModuleSTab const & module_stab)
-    { return bitcast(node_alloc(module_stab), *module_stab.ir().node_t); }
-
+    { return bitcast(node_alloc(module_stab), *module_stab.rt().node_t); }
 
   /// Allocates storage for @p n pointers.
   inline value array_alloc(ModuleSTab const & module_stab, size_t n)
-    { return module_stab.clib().malloc(sizeof_(module_stab.ir().node_t) * n); }
+    { return module_stab.clib().malloc(sizeof_(module_stab.rt().node_t) * n); }
 
   /// Initializes a node.
   inline void node_init(
@@ -190,7 +182,7 @@ namespace sprite { namespace compiler
   {
     using namespace member_labels;
     node_p.arrow(ND_VPTR) = bitcast(
-        &node_stab.vtable, *module_stab.ir().vtable_t
+        &node_stab.vtable, *module_stab.rt().vtable_t
       );
     node_p.arrow(ND_TAG) = node_stab.tag;
 
@@ -198,5 +190,10 @@ namespace sprite { namespace compiler
     if(node_stab.tag == CHOICE)
       node_p.arrow(ND_AUX) = module_stab.rt().next_choice_id++;
   }
+
+  // Get the repr function for a constructor.
+  function Cy_Repr(
+      ModuleSTab const & module_stab, curry::Constructor const & ctor
+    );
 }}
 

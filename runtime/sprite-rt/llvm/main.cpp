@@ -5,94 +5,87 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace sprite::backend;
+using sprite::compiler::rt_h;
 
-void build_vt_for_Char(sprite::compiler::ir_h const & ir);
-void build_vt_for_choice(sprite::compiler::ir_h const & ir);
-void build_vt_for_Float(sprite::compiler::ir_h const & ir);
-void build_vt_for_choice(sprite::compiler::ir_h const & ir);
-void build_vt_for_fwd(sprite::compiler::ir_h const & ir);
-void build_vt_for_Int64(sprite::compiler::ir_h const & ir);
-void build_vt_for_PartialSpine(sprite::compiler::ir_h const & ir);
-void build_vt_for_PartialTerminus(sprite::compiler::ir_h const & ir);
-
-namespace sprite { namespace compiler
-{
-  function make_succ_function(function fun, ir_h const & ir, int64_t arity);
-}}
+void build_vt_for_Char(rt_h const & rt);
+void build_vt_for_choice(rt_h const & rt);
+void build_vt_for_Float(rt_h const & rt);
+void build_vt_for_choice(rt_h const & rt);
+void build_vt_for_fwd(rt_h const & rt);
+void build_vt_for_Int64(rt_h const & rt);
+void build_vt_for_PartialSpine(rt_h const & rt);
+void build_vt_for_PartialTerminus(rt_h const & rt);
+void build_vt_for_IO(rt_h const & rt);
 
 // A trivial node is one with label and arity, but no meaningful action for H
 // or N.
 void build_vt_for_trivial_node(
-    sprite::compiler::ir_h const & ir, std::string const & name, size_t arity
+    rt_h const & rt
+  , std::string const & name, size_t arity
   , value const & vptr_equality = nullptr
   , value const & vptr_comparison = nullptr
   )
 {
-  value const vptr_null = (*ir.vtable_t)(nullptr);
-  extern_(ir.vtable_t, sprite::compiler::get_vt_name(name))
+  value const vptr_null = (*rt.vtable_t)(nullptr);
+  extern_(rt.vtable_t, sprite::compiler::get_vt_name(name))
       .set_initializer(_t(
-          &get_label_function(ir, name)
-        , &get_arity_function(ir, arity)
-        , &get_succ_function(ir, arity)
+          &rt.Cy_Label(name)
+        , &rt.Cy_Arity( arity)
+        , &rt.Cy_Succ(arity)
 				, vptr_equality.ptr() ? vptr_equality : vptr_null
 				, vptr_comparison.ptr() ? vptr_comparison : vptr_null
-        , &get_generic_show_function(ir)
-        , &get_null_step_function(ir)
-        , &get_null_step_function(ir)
+        , &rt.Cy_GenericRepr
+        , &rt.Cy_NoAction
+        , &rt.Cy_NoAction
         ))
 	  ;
 }
 
-void build_vt_for_failed(sprite::compiler::ir_h const & ir)
+void build_vt_for_failed(rt_h const & rt)
 {
   build_vt_for_trivial_node(
-      ir, "failed", 0
-    , &get_vt_for_primitive_equality(ir, "failed")
-    , &get_vt_for_primitive_comparison(ir, "failed")
+      rt, "failed", 0
+    , &rt.CyVt_Equality("failed")
+    , &rt.CyVt_Compare("failed")
     );
 }
-void build_vt_for_success(sprite::compiler::ir_h const & ir)
-  { build_vt_for_trivial_node(ir, "success", 0); }
-void build_vt_for_freevar(sprite::compiler::ir_h const & ir)
-  { build_vt_for_trivial_node(ir, "freevar", 0); }
-void build_vt_for_PartialSpine(sprite::compiler::ir_h const & ir)
-  { build_vt_for_trivial_node(ir, "PartialSpine", 2); }
-void build_vt_for_PartialTerminus(sprite::compiler::ir_h const & ir)
-  { build_vt_for_trivial_node(ir, "PartialTerminus", 0); }
+void build_vt_for_success(rt_h const & rt)
+  { build_vt_for_trivial_node(rt, "success", 0); }
+void build_vt_for_freevar(rt_h const & rt)
+  { build_vt_for_trivial_node(rt, "freevar", 0); }
+void build_vt_for_PartialSpine(rt_h const & rt)
+  { build_vt_for_trivial_node(rt, "PartialSpine", 2); }
+void build_vt_for_PartialTerminus(rt_h const & rt)
+  { build_vt_for_trivial_node(rt, "PartialTerminus", 0); }
 
 int main()
 {
-	module module_b("sprit_runtime_part_b");
+	module module_b("sprite_runtime_llvm_part");
 	scope _ = module_b;
-	sprite::compiler::ir_h ir;
+	rt_h rt;
   sprite::backend::testing::clib_h clib;
-
-  // Declare the null step function.
-  extern_(ir.stepfun_t, ".nullstep", {}, []{});
 
   // Declare the predefined arity and successor functions.
   for(size_t i=0; i<SPRITE_PREDEF_ARITY_LIMIT; ++i)
   {
+    // Compile the arity function.
     extern_<function>(
-        ir.arityfun_t, ".arity." + std::to_string(i), {"node_p"}
+        rt.arityfun_t, ".arity." + std::to_string(i), {"node_p"}
       , [&] { return_(i); }
       );
 
-    function f = extern_<function>(
-        ir.rangefun_t, ".succ." + std::to_string(i)
-      , {"node_p", "begin_out_pp", "end_out_pp"}
-      );
-    make_succ_function(f, ir, i);
+    // Compile the succ function.
+    rt.Cy_Succ(i, /*force_compile*/ true);
   }
 
   // Build the vtables for built-in constructors.
-  #define SPRITE_HANDLE_BUILTIN(name, arity) build_vt_for_##name(ir);
+  #define SPRITE_HANDLE_BUILTIN(name, arity) build_vt_for_##name(rt);
   #include "sprite/builtins.def"
 
   // Create stubs for unimplemented external functions.
   #define DECLARE_EXTERNAL_STUB(name)                                   \
       extern_<function>(                                                \
-          ir.stepfun_t, #name, {}                                       \
+          rt.stepfun_t, "CyPrelude_" #name, {}                          \
         , [&] {                                                         \
             clib.fprintf(                                               \
                 clib.fdopen(2, "w")                                     \
@@ -105,11 +98,11 @@ int main()
 
   // CMC Prelude externals
   // =======================
-  DECLARE_EXTERNAL_STUB(ensureNotFree)
-  DECLARE_EXTERNAL_STUB($!)
-  DECLARE_EXTERNAL_STUB($!!)
-  DECLARE_EXTERNAL_STUB($##)
-  DECLARE_EXTERNAL_STUB(prim_error)
+  // DECLARE_EXTERNAL_STUB(ensureNotFree)
+  // DECLARE_EXTERNAL_STUB($!)
+  // DECLARE_EXTERNAL_STUB($!!)
+  // DECLARE_EXTERNAL_STUB($##)
+  // DECLARE_EXTERNAL_STUB(error)
   // DECLARE_EXTERNAL_STUB(failed)
   // DECLARE_EXTERNAL_STUB(==)
   // DECLARE_EXTERNAL_STUB(compare)
@@ -118,24 +111,24 @@ int main()
   // DECLARE_EXTERNAL_STUB(+)
   // DECLARE_EXTERNAL_STUB(-)
   // DECLARE_EXTERNAL_STUB(*)
-  DECLARE_EXTERNAL_STUB(div)
-  DECLARE_EXTERNAL_STUB(mod)
-  DECLARE_EXTERNAL_STUB(quot)
-  DECLARE_EXTERNAL_STUB(rem)
-  DECLARE_EXTERNAL_STUB(prim_negateFloat)
+  // DECLARE_EXTERNAL_STUB(div)
+  // DECLARE_EXTERNAL_STUB(mod)
+  // DECLARE_EXTERNAL_STUB(quot)
+  // DECLARE_EXTERNAL_STUB(rem)
+  // DECLARE_EXTERNAL_STUB(negateFloat)
   DECLARE_EXTERNAL_STUB(=:=)
   // DECLARE_EXTERNAL_STUB(success)
   DECLARE_EXTERNAL_STUB(&)
-  DECLARE_EXTERNAL_STUB(>>=)
+  // DECLARE_EXTERNAL_STUB(>>=)
   DECLARE_EXTERNAL_STUB(return)
-  DECLARE_EXTERNAL_STUB(prim_putChar)
+  // DECLARE_EXTERNAL_STUB(putChar)
   DECLARE_EXTERNAL_STUB(getChar)
   DECLARE_EXTERNAL_STUB(prim_readFile)
   DECLARE_EXTERNAL_STUB(prim_readFileContents)
   DECLARE_EXTERNAL_STUB(prim_writeFile)
   DECLARE_EXTERNAL_STUB(prim_appendFile)
   DECLARE_EXTERNAL_STUB(catch)
-  DECLARE_EXTERNAL_STUB(prim_show)
+  DECLARE_EXTERNAL_STUB(show)
   DECLARE_EXTERNAL_STUB(?)
   // DECLARE_EXTERNAL_STUB(apply)
   DECLARE_EXTERNAL_STUB(cond)

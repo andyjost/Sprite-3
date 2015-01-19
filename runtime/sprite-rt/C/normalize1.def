@@ -21,7 +21,7 @@
   node * lhs_choice, * rhs_choice;
   goto* (&table[4])[TAG(arg)];
 t_fail:
-  return failed(root);
+  return CyPrelude_failed(root);
 t_fwd:
   arg = reinterpret_cast<node *>(arg->slot0);
   goto* (&table[4])[TAG(arg)];
@@ -37,7 +37,7 @@ t_choice:
   rhs_choice->tag = root->tag;
   rhs_choice->slot0 = arg->slot1;
   rhs_choice->slot1 = 0;
-  root->vptr = &_vt_choice;
+  root->vptr = &CyVt_Choice;
   root->tag = CHOICE;
   root->aux = arg->aux; // copy choice id
   root->slot0 = lhs_choice;

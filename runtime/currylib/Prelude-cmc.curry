@@ -107,10 +107,11 @@ f $# x  = f $! (ensureNotFree x)
 
 --- Aborts the execution with an error message.
 error :: String -> _
-error x = prim_error $## x
+error external
+-- error x = prim_error $## x
 
-prim_error    :: String -> _
-prim_error external
+-- prim_error    :: String -> _
+-- prim_error external
 
 --- A non-reducible polymorphic function.
 --- It is useful to express a failure in a search branch of the execution.
@@ -555,11 +556,7 @@ negate x = 0 - x
 
 --- Unary minus on Floats. Usually written as "-e".
 negateFloat :: Float -> Float
-negateFloat x = prim_negateFloat $# x
-
-prim_negateFloat :: Float -> Float
-prim_negateFloat external
-
+negateFloat external
 
 -- Constraints
 data Success -- = Success
@@ -635,10 +632,11 @@ done              = return ()
 
 --- An action that puts its character argument on standard output.
 putChar           :: Char -> IO ()
-putChar c = prim_putChar $# c
+putChar external
+-- putChar c = prim_putChar $# c
 
-prim_putChar           :: Char -> IO ()
-prim_putChar external
+-- prim_putChar           :: Char -> IO ()
+-- prim_putChar external
 
 --- An action that reads a character from standard output and returns it.
 getChar           :: IO Char
@@ -734,10 +732,7 @@ catch external
 
 --- Converts an arbitrary term into an external string representation.
 show    :: _ -> String
-show x = prim_show $## x
-
-prim_show    :: _ -> String
-prim_show external
+show external
 
 --- Converts a term into a string and prints it.
 print   :: _ -> IO ()

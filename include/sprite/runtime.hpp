@@ -27,19 +27,19 @@ namespace sprite { namespace compiler
     type vtable_t = types::struct_("vtable");
 
     // The type of a step-performing function (i.e., N or H).
-    type stepfun_t = void_t(*node_t);
+    function_type stepfun_t = void_t(*node_t);
 
     // The type of a function returning the node's label.
-    type labelfun_t = (*char_t)(*node_t);
+    function_type labelfun_t = (*char_t)(*node_t);
 
     // The type of a function returning the node's arity.
-    type arityfun_t = i64_t(*node_t);
+    function_type arityfun_t = i64_t(*node_t);
 
     // The type of a function returning the node's children.
-    type rangefun_t = void_t(*node_t, ***node_t, ***node_t);
+    function_type rangefun_t = void_t(*node_t, ***node_t, ***node_t);
 
     // The type of a function that converts an expression into a string.
-    type showfun_t = void_t(*node_t, FILE_p, bool_t);
+    function_type reprfun_t = void_t(*node_t, FILE_p, bool_t);
 
     ir_h()
     {
@@ -67,7 +67,7 @@ namespace sprite { namespace compiler
             , *rangefun_t /*succ*/
             , *vtable_t   /*equality*/
             , *vtable_t   /*comparison*/
-            , *showfun_t  /*show*/
+            , *reprfun_t  /*repr*/
             , *stepfun_t  /*N*/
             , *stepfun_t  /*H*/
             }
@@ -91,96 +91,63 @@ namespace sprite { namespace compiler
   inline std::string get_vt_name(std::string const & basename)
     { return ".vt." + basename; }
 
-  // Returns an arity function for the specified arity.
-  function get_arity_function(ir_h const & ir, size_t arity);
-
-  // Returns a label function for a symbol with a fixed name.
-  function get_label_function(ir_h const & ir, std::string const & label);
-
-  // Returns a step function that does nothing.
-  function get_null_step_function(ir_h const & ir);
-
-  // Returns the generic show function.
-  function get_generic_show_function(ir_h const & ir);
-
-  // Makes a function that returns the successor range of a node.  Returns a
-  // pointer to that function.
-  function get_succ_function(ir_h const & ir, size_t arity);
-
   // LLVM declarations for the Sprite runtime.
-  struct rt_h
+  struct rt_h : ir_h
   {
-    type void_t = types::void_();
-    type char_t = types::char_();
-    type node_t = types::struct_("node");
+    function_type const yieldfun_t = void_t(*node_t);
 
-    function const printexpr =
-        extern_(void_t(*node_t, *char_t), "sprite_printexpr");
+    function const Cy_Eval = extern_(void_t(*node_t, *yieldfun_t), "Cy_Eval");
+    function const Cy_Normalize = extern_(void_t(*node_t), "Cy_Normalize");
+    function const Cy_Print = extern_(void_t(*node_t), "Cy_Print");
+    function const Cy_PrintWithSuffix =
+        extern_(void_t(*node_t, *char_t), "Cy_PrintWithSuffix");
+    function const Cy_NoAction = extern_(void_t(*node_t), "Cy_NoAction");
+    function const Cy_GenericRepr = extern_(reprfun_t, "Cy_GenericRepr");
 
-    function const normalize = extern_(void_t(*node_t), "sprite_normalize");
+    // Returns an arity function for the specified arity.
+    function Cy_Arity(size_t arity) const;
+  
+    // Returns a label function for a symbol with a fixed name.
+    function Cy_Label(std::string const & label) const;
+  
+    // Returns a function that returns the successor range of a node.  Returns
+    // a pointer to that function.  The second argument is for internal use only.
+    function Cy_Succ(size_t arity, bool=false) const;
 
-    function const evaluate = extern_(void_t(*node_t), "sprite_evaluate");
+    // Gets the vtable for equality.  For normal types, str1 is the module name
+    // and str2 is the type name.  For built-in types, str1 is the built-in
+    // type name and str2 is empty.
+    global CyVt_Equality(
+        std::string const & str1, std::string const & str2 = std::string()
+      ) const
+    { return CyVt_PolyFunction("==", str1, str2); }
+
+    // Gets the vtable for compare.
+    global CyVt_Compare(
+        std::string const & str1, std::string const & str2 = std::string()
+      ) const
+    { return CyVt_PolyFunction("compare", str1, str2); }
+
+    // Used to implement polymorphic functions.
+    global CyVt_PolyFunction(
+        std::string const & tag
+      , std::string const & str1, std::string const & str2
+      ) const;
 
     // The global counter giving the next available choice id.
     globalvar next_choice_id = extern_(
         types::int_(32), "next_choice_id"
       ).as_globalvar();
 
-    // Exists only to simply the macro expansion below.
-    char unused;
-
     // Built-in vtables.
     #define SPRITE_HANDLE_BUILTIN(name, _) global const name##_vt;
     #include "sprite/builtins.def"
 
-    rt_h(ir_h const & ir)
-      : unused()
-      #define SPRITE_HANDLE_BUILTIN(name, _)                  \
-        , name##_vt(extern_(ir.vtable_t, get_vt_name(#name))) \
+    rt_h() : ir_h()
+      #define SPRITE_HANDLE_BUILTIN(name, _)               \
+        , name##_vt(extern_(vtable_t, get_vt_name(#name))) \
         /**/
       #include "sprite/builtins.def"
     {}
   };
-
-  // ===============================
-  // ====== Utility functions ======
-  // ===============================
-
-  inline global get_vt_for_primitive_equality(
-      sprite::compiler::ir_h const & ir, std::string const & typename_
-    )
-  {
-    std::string const symbolname =
-        ".vt.OPER.Prelude.primitive.==." + typename_;
-    return extern_(ir.vtable_t, symbolname);
-  }
-
-  inline global get_vt_for_equality(
-      sprite::compiler::ir_h const & ir
-    , std::string const & module
-    , std::string const & label
-    )
-  {
-    std::string const symbolname = ".vt.OPER." + module + ".==." + label;
-    return extern_(ir.vtable_t, symbolname);
-  }
-
-  inline global get_vt_for_primitive_comparison(
-      sprite::compiler::ir_h const & ir, std::string const & typename_
-    )
-  {
-    std::string const symbolname =
-        ".vt.OPER.Prelude.primitive.compare." + typename_;
-    return extern_(ir.vtable_t, symbolname);
-  }
-
-  inline global get_vt_for_comparison(
-      sprite::compiler::ir_h const & ir
-    , std::string const & module
-    , std::string const & label
-    )
-  {
-    std::string const symbolname = ".vt.OPER." + module + ".compare." + label;
-    return extern_(ir.vtable_t, symbolname);
-  }
 }}

@@ -6,6 +6,7 @@
 
 using namespace sprite::backend;
 using namespace sprite::compiler::member_labels; // for ND_* and VT_* enums.
+using sprite::compiler::rt_h;
 
 #define PRINT_BUFFER_SIZE 64
 
@@ -39,15 +40,15 @@ struct Library
           .set_initializer(std::vector<char>(PRINT_BUFFER_SIZE, '\0'));
 };
 
-// Builds a show function for a node with no successor.
-function make_show_for_nullary_node(
-    sprite::compiler::ir_h const & ir
+// Builds a repr function for a node with no successor.
+function make_repr_for_nullary_node(
+    rt_h const & rt
   , Library const & lib
   , function const & label
   )
 {
   return extern_<function>(
-      ir.showfun_t, flexible(".show"), {"root", "stream", "is_outer"}
+      rt.reprfun_t, flexible(".repr"), {"root", "stream", "is_outer"}
     , [&] {
         value rv = lib.fprintf(arg("stream"), "%s", label(arg("root")));
         if_(rv <(signed_)(0)
@@ -60,12 +61,9 @@ function make_show_for_nullary_node(
     );
 }
 
-void build_vt_for_Char(sprite::compiler::ir_h const & ir)
+void build_vt_for_Char(rt_h const & rt)
 {
   Library lib;
-
-  // DEBUG
-  // synthesize_function_from_icurry();
 
   auto char_repr = extern_(lib.char_[7][256], ".Char_repr")
       .set_initializer({
@@ -74,7 +72,7 @@ void build_vt_for_Char(sprite::compiler::ir_h const & ir)
 
   // Create the vtable for Char nodes.
   function Char_name = inline_<function>(
-      ir.labelfun_t, ".name.Char", {"node_p"}
+      rt.labelfun_t, ".name.Char", {"node_p"}
     , [&] {
         value node_p = arg("node_p");
         value char_value = *bitcast(&node_p.arrow(ND_SLOT0), *lib.char_);
@@ -82,26 +80,26 @@ void build_vt_for_Char(sprite::compiler::ir_h const & ir)
       }
     );
 
-  extern_(ir.vtable_t, sprite::compiler::get_vt_name("Char"))
+  extern_(rt.vtable_t, sprite::compiler::get_vt_name("Char"))
       .set_initializer(_t(
           &Char_name
-        , &get_arity_function(ir, 0)
-        , &get_succ_function(ir, 0)
-        , &get_vt_for_primitive_equality(ir, "Char")
-        , &get_vt_for_primitive_comparison(ir, "Char")
-        , &make_show_for_nullary_node(ir, lib, Char_name)
-        , &get_null_step_function(ir)
-        , &get_null_step_function(ir)
+        , &rt.Cy_Arity(0)
+        , &rt.Cy_Succ(0)
+        , &rt.CyVt_Equality("Char")
+        , &rt.CyVt_Compare("Char")
+        , &make_repr_for_nullary_node(rt, lib, Char_name)
+        , &rt.Cy_NoAction
+        , &rt.Cy_NoAction
         ))
 	  ;
 }
-void build_vt_for_Int64(sprite::compiler::ir_h const & ir)
+void build_vt_for_Int64(rt_h const & rt)
 {
   Library lib;
 
   // Create the vtable for Int64 nodes.
   function Int64_name = inline_<function>(
-      ir.labelfun_t, ".name.Int64", {"node_p"}
+      rt.labelfun_t, ".name.Int64", {"node_p"}
     , [&] {
         value node_p = arg("node_p");
         value int_value = *bitcast(&node_p.arrow(ND_SLOT0), *types::int_(64));
@@ -125,27 +123,27 @@ void build_vt_for_Int64(sprite::compiler::ir_h const & ir)
       }
     );
 
-  extern_(ir.vtable_t, sprite::compiler::get_vt_name("Int64"))
+  extern_(rt.vtable_t, sprite::compiler::get_vt_name("Int64"))
       .set_initializer(_t(
           &Int64_name
-        , &get_arity_function(ir, 0)
-        , &get_succ_function(ir, 0)
-        , &get_vt_for_primitive_equality(ir, "Int")
-        , &get_vt_for_primitive_comparison(ir, "Int")
-        , &make_show_for_nullary_node(ir, lib, Int64_name)
-        , &get_null_step_function(ir)
-        , &get_null_step_function(ir)
+        , &rt.Cy_Arity(0)
+        , &rt.Cy_Succ(0)
+        , &rt.CyVt_Equality("Int")
+        , &rt.CyVt_Compare("Int")
+        , &make_repr_for_nullary_node(rt, lib, Int64_name)
+        , &rt.Cy_NoAction
+        , &rt.Cy_NoAction
         ))
 	  ;
 }
 
-void build_vt_for_Float(sprite::compiler::ir_h const & ir)
+void build_vt_for_Float(rt_h const & rt)
 {
   Library lib;
 
   // Create the vtable for Float nodes.
   function Float_name = inline_<function>(
-      ir.labelfun_t, ".name.Float", {"node_p"}
+      rt.labelfun_t, ".name.Float", {"node_p"}
     , [&] {
         value node_p = arg("node_p");
         value double_value = *bitcast(&node_p.arrow(ND_SLOT0), *types::double_());
@@ -168,26 +166,26 @@ void build_vt_for_Float(sprite::compiler::ir_h const & ir)
       }
     );
 
-  extern_(ir.vtable_t, sprite::compiler::get_vt_name("Float"))
+  extern_(rt.vtable_t, sprite::compiler::get_vt_name("Float"))
       .set_initializer(_t(
           &Float_name
-        , &get_arity_function(ir, 0)
-        , &get_succ_function(ir, 0)
-        , &get_vt_for_primitive_equality(ir, "Float")
-        , &get_vt_for_primitive_comparison(ir, "Float")
-        , &make_show_for_nullary_node(ir, lib, Float_name)
-        , &get_null_step_function(ir)
-        , &get_null_step_function(ir)
+        , &rt.Cy_Arity(0)
+        , &rt.Cy_Succ(0)
+        , &rt.CyVt_Equality("Float")
+        , &rt.CyVt_Compare("Float")
+        , &make_repr_for_nullary_node(rt, lib, Float_name)
+        , &rt.Cy_NoAction
+        , &rt.Cy_NoAction
         ))
 	  ;
 }
 
-void build_vt_for_choice(sprite::compiler::ir_h const & ir)
+void build_vt_for_choice(rt_h const & rt)
 {
   Library lib;
 
   function choice_name = inline_<function>(
-      ir.labelfun_t, ".name.choice", {"node_p"}
+      rt.labelfun_t, ".name.choice", {"node_p"}
     , [&] {
         value node_p = arg("node_p");
         value id = node_p.arrow(ND_AUX);
@@ -203,29 +201,29 @@ void build_vt_for_choice(sprite::compiler::ir_h const & ir)
         return_(&lib.printbuffer);
       }
     );
-  extern_(ir.vtable_t, sprite::compiler::get_vt_name("choice"))
+  extern_(rt.vtable_t, sprite::compiler::get_vt_name("choice"))
       .set_initializer(_t(
           &choice_name
-        , &get_arity_function(ir, 2)
-        , &get_succ_function(ir, 2)
-        , get_vt_for_primitive_equality(ir, "choice")
-        , get_vt_for_primitive_comparison(ir, "choice")
-        , &make_show_for_nullary_node(ir, lib, choice_name)
-        , &get_null_step_function(ir)
-        , &get_null_step_function(ir)
+        , &rt.Cy_Arity(2)
+        , &rt.Cy_Succ(2)
+        , rt.CyVt_Equality("choice")
+        , rt.CyVt_Compare("choice")
+        , &make_repr_for_nullary_node(rt, lib, choice_name)
+        , &rt.Cy_NoAction
+        , &rt.Cy_NoAction
         ))
 	  ;
 }
 
-void build_vt_for_fwd(sprite::compiler::ir_h const & ir)
+void build_vt_for_fwd(rt_h const & rt)
 {
   // Create the vtable for FWD nodes.
   function fwd_name = inline_<function>(
-      ir.labelfun_t, ".fwd.name", {"node_p"}
+      rt.labelfun_t, ".fwd.name", {"node_p"}
     , [&]
       {
         value node_p = arg("node_p");
-        node_p = bitcast(node_p.arrow(ND_SLOT0), *ir.node_t);
+        node_p = bitcast(node_p.arrow(ND_SLOT0), *rt.node_t);
         return_(
             node_p.arrow(ND_VPTR).arrow(VT_LABEL)(node_p)
                 .set_attribute(tailcall)
@@ -233,10 +231,10 @@ void build_vt_for_fwd(sprite::compiler::ir_h const & ir)
       }
     );
   function fwd_arity = inline_<function>(
-      ir.arityfun_t, "fwd.arity", {"node_p"}
+      rt.arityfun_t, "fwd.arity", {"node_p"}
     , [&]{
         value node_p = arg("node_p");
-        node_p = bitcast(node_p.arrow(ND_SLOT0), *ir.node_t);
+        node_p = bitcast(node_p.arrow(ND_SLOT0), *rt.node_t);
         return_(
             node_p.arrow(ND_VPTR).arrow(VT_ARITY)(node_p)
                 .set_attribute(tailcall)
@@ -244,23 +242,23 @@ void build_vt_for_fwd(sprite::compiler::ir_h const & ir)
       }
     );
   function fwd_succ = inline_<function>(
-      ir.rangefun_t, "fwd.succ"
+      rt.rangefun_t, "fwd.succ"
     , {"node_p", "begin_out_pp", "end_out_pp"}
     , [&]{
         value node_p = arg("node_p");
-        node_p = bitcast(node_p.arrow(ND_SLOT0), *ir.node_t);
+        node_p = bitcast(node_p.arrow(ND_SLOT0), *rt.node_t);
         node_p.arrow(ND_VPTR).arrow(VT_SUCC)(
             node_p, arg("begin_out_pp"), arg("end_out_pp")
           ).set_attribute(tailcall);
         return_();
       }
     );
-  function fwd_show = inline_<function>(
-      ir.showfun_t, "fwd.show"
+  function fwd_repr = inline_<function>(
+      rt.reprfun_t, "fwd.repr"
     , {"node_p", "stream", "is_outer"}
     , [&]{
         value node_p = arg("node_p");
-        node_p = bitcast(node_p.arrow(ND_SLOT0), *ir.node_t);
+        node_p = bitcast(node_p.arrow(ND_SLOT0), *rt.node_t);
         node_p.arrow(ND_VPTR).arrow(VT_SHOW)(
             node_p, arg("stream"), arg("is_outer")
           ).set_attribute(tailcall);
@@ -268,30 +266,30 @@ void build_vt_for_fwd(sprite::compiler::ir_h const & ir)
       }
     );
   function fwd_N = inline_(
-      ir.stepfun_t, ".fwd.N", {"node_p"}
+      rt.stepfun_t, ".fwd.N", {"node_p"}
     , [&]{
         value node_p = arg("node_p");
-        node_p = bitcast(node_p.arrow(ND_SLOT0), *ir.node_t);
+        node_p = bitcast(node_p.arrow(ND_SLOT0), *rt.node_t);
         sprite::compiler::vinvoke(node_p, VT_N, tailcall);
         return_();
       }
     );
   function fwd_H = inline_(
-      ir.stepfun_t, ".fwd.H", {"node_p"}
+      rt.stepfun_t, ".fwd.H", {"node_p"}
     , [&]{
         value node_p = arg("node_p");
-        node_p = bitcast(node_p.arrow(ND_SLOT0), *ir.node_t);
+        node_p = bitcast(node_p.arrow(ND_SLOT0), *rt.node_t);
         sprite::compiler::vinvoke(node_p, VT_H, tailcall);
         return_();
       }
     );
 
-  extern_(ir.vtable_t, sprite::compiler::get_vt_name("fwd"))
+  extern_(rt.vtable_t, sprite::compiler::get_vt_name("fwd"))
       .set_initializer(_t(
           &fwd_name, &fwd_arity, &fwd_succ
-        , get_vt_for_primitive_equality(ir, "fwd")
-        , get_vt_for_primitive_comparison(ir, "fwd")
-        , &fwd_show
+        , rt.CyVt_Equality("fwd")
+        , rt.CyVt_Compare("fwd")
+        , &fwd_repr
         , &fwd_N, &fwd_H
         ))
 	  ;

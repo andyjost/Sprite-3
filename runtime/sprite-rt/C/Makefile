@@ -14,7 +14,7 @@ LOCAL_CFLAGS += $(shell $(LLVM-CONFIG) --cppflags) -I.
 .DELETE_ON_ERROR :
 $(STATICLIB) : main.cpp main.o
 	# Note: pipefail is used because llvm-as returns non-error even if clang fails.
-	bash -o pipefail -c '$(CLANG) $(LOCAL_CFLAGS) -S -emit-llvm main.cpp -o - | $(LLVM-AS) > $(STATICLIB)'
+	bash -o pipefail -c '$(CLANG) $(LOCAL_CFLAGS) -std=c++11 -S -emit-llvm main.cpp -o - | $(LLVM-AS) > $(STATICLIB)'
 	$(CLANG) -MM $(LOCAL_CFLAGS) main.cpp > main.d
 
 # Import dependency info.

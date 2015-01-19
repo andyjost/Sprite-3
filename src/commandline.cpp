@@ -132,15 +132,25 @@ namespace sprite
     , curry::Qname const & start
     )
   {
-    backend::extern_(
-        backend::types::int_(32)(), "main", {}
+    using namespace backend;
+    auto const & rt = module_stab.rt();
+    function const print_action = extern_(
+        rt.stepfun_t, "main.print_action", {"root"}
+      , [&] {
+          rt.Cy_PrintWithSuffix(arg("root"), "\n");
+          return_();
+        }
+      );
+
+    extern_(
+        types::int_(32)(), "main", {}
       , [&]{
           // Construct the root expression (just the "main" symbol).
-          backend::value root_p = node_alloc(module_stab);
+          value root_p = node_alloc(module_stab);
           root_p = construct(module_stab, root_p, {start, {}});
 
           // Evaluate the root expression.
-          module_stab.rt().evaluate(root_p);
+          rt.Cy_Eval(root_p, &print_action);
           backend::return_(0);
         }
       );

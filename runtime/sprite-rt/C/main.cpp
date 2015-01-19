@@ -3,8 +3,10 @@
 #include "stdlib.h"
 #include <cassert>
 #include "llvm/ADT/SmallVector.h"
+#include <algorithm>
 #include <list>
 #include <iostream>
+#include <sstream>
 
 #define SUCC_0(root) reinterpret_cast<node*&>(root->slot0)
 #define SUCC_1(root) reinterpret_cast<node*&>(root->slot1)
@@ -19,7 +21,7 @@ namespace sprite { namespace compiler
   typedef uint64_t arityfun_t(node *);
   typedef void stepfun_t(node *);
   typedef void rangefun_t(node *, node ***, node ***);
-  typedef void showfun_t(node *, FILE*, bool is_outer);
+  typedef void reprfun_t(node *, FILE*, bool is_outer);
 
   struct vtable
   {
@@ -28,7 +30,7 @@ namespace sprite { namespace compiler
     rangefun_t * succ;       // Gives the range containing the successors.
     vtable     * equality;   // Type-specific equality function.
     vtable     * comparison; // Type-specific comparison function.
-    showfun_t  * show;       // Type-specific show function.
+    reprfun_t  * repr;       // Type-specific repr function.
     stepfun_t  * N;          // Normalization function.
     stepfun_t  * H;          // Head-normalization function.
   };
@@ -46,19 +48,21 @@ namespace sprite { namespace compiler
 extern "C"
 {
   // These are defined in the "LLVM part" of the runtime.
-  extern sprite::compiler::vtable _vt_Char __asm__(".vt.Char");
-  extern sprite::compiler::vtable _vt_choice __asm__(".vt.choice");
-  extern sprite::compiler::vtable _vt_failed __asm__(".vt.failed");
-  extern sprite::compiler::vtable _vt_fwd __asm__(".vt.fwd");
-  extern sprite::compiler::vtable _vt_Int64 __asm__(".vt.Int64");
-  extern sprite::compiler::vtable _vt_success __asm__(".vt.success");
-  extern sprite::compiler::vtable _vt_PartialSpine __asm__(".vt.PartialSpine");
-  extern sprite::compiler::vtable _vt_CTOR_Prelude_True __asm__(".vt.CTOR.Prelude.True");
-  extern sprite::compiler::vtable _vt_CTOR_Prelude_False __asm__(".vt.CTOR.Prelude.False");
-  extern sprite::compiler::vtable _vt_CTOR_Prelude_Nil __asm__(".vt.CTOR.Prelude.[]");
-  extern sprite::compiler::vtable _vt_CTOR_Prelude_LT __asm__(".vt.CTOR.Prelude.LT");
-  extern sprite::compiler::vtable _vt_CTOR_Prelude_EQ __asm__(".vt.CTOR.Prelude.EQ");
-  extern sprite::compiler::vtable _vt_CTOR_Prelude_GT __asm__(".vt.CTOR.Prelude.GT");
+  extern sprite::compiler::vtable CyVt_Char __asm__(".vt.Char");
+  extern sprite::compiler::vtable CyVt_Choice __asm__(".vt.choice");
+  extern sprite::compiler::vtable CyVt_Failed __asm__(".vt.failed");
+  extern sprite::compiler::vtable CyVt_Fwd __asm__(".vt.fwd");
+  extern sprite::compiler::vtable CyVt_Int64 __asm__(".vt.Int64");
+  extern sprite::compiler::vtable CyVt_Success __asm__(".vt.success");
+  extern sprite::compiler::vtable CyVt_PartialSpine __asm__(".vt.PartialSpine");
+  extern sprite::compiler::vtable CyVt_True __asm__(".vt.CTOR.Prelude.True");
+  extern sprite::compiler::vtable CyVt_False __asm__(".vt.CTOR.Prelude.False");
+  extern sprite::compiler::vtable CyVt_Nil __asm__(".vt.CTOR.Prelude.[]");
+  extern sprite::compiler::vtable CyVt_LT __asm__(".vt.CTOR.Prelude.LT");
+  extern sprite::compiler::vtable CyVt_EQ __asm__(".vt.CTOR.Prelude.EQ");
+  extern sprite::compiler::vtable CyVt_GT __asm__(".vt.CTOR.Prelude.GT");
+  extern sprite::compiler::vtable CyVt_Tuple0 __asm__(".vt.CTOR.Prelude.()");
+  extern sprite::compiler::vtable CyVt_apply __asm__(".vt.OPER.Prelude.apply");
 
   int32_t next_choice_id = 0;
 }
@@ -67,54 +71,82 @@ extern "C"
 {
   using namespace sprite::compiler;
 
-  void failed(node * root)
+  void CyPrelude_failed(node * root)
   {
-    root->vptr = &_vt_failed;
+    root->vptr = &CyVt_Failed;
     root->tag = FAIL;
     root->slot0 = 0;
     root->slot1 = 0;
   }
 
-  void success(node * root)
+  void CyPrelude_success(node * root)
   {
-    root->vptr = &_vt_success;
+    root->vptr = &CyVt_Success;
     root->tag = CTOR;
     root->slot0 = 0;
     root->slot1 = 0;
   }
 
-  void true_(node * root)
+  // (>>=) :: IO a -> (a -> IO b) -> IO b
+  void CyPrelude_RightRightEqual(node *) __asm__("CyPrelude_>>=");
+  void CyPrelude_RightRightEqual(node * root)
   {
-    root->vptr = &_vt_CTOR_Prelude_True;
+    // Normalize the first arg only.
+    #include "normalize1.def"
+    root->vptr = &CyVt_apply;
+    // tag == OPER already.
+    std::swap(SUCC_0(root), SUCC_1(root));
+  }
+
+  void CyPrelude_putChar(node * root)
+  {
+    #include "normalize1.def"
+    putc(DATA(arg, char), stdout);
+    root->vptr = &CyVt_Tuple0;
+    root->tag = CTOR;
+  }
+
+  // TODO
+  // void CyPrelude_show(node * root)
+  // {
+  //   #include "normalize1.def" // FIXME: should be ground normalize
+  // }
+
+  void CyPrelude_true(node * root)
+  {
+    root->vptr = &CyVt_True;
     root->tag = 1;
     root->slot0 = 0;
     root->slot1 = 0;
   }
 
-  void false_(node * root)
+  void CyPrelude_false(node * root)
   {
-    root->vptr = &_vt_CTOR_Prelude_False;
+    root->vptr = &CyVt_False;
     root->tag = 0;
     root->slot0 = 0;
     root->slot1 = 0;
   }
 
-  void eq(node * root)
+  void CyPrelude_eq(node * root)
   {
-    root->vptr = &_vt_CTOR_Prelude_EQ;
+    root->vptr = &CyVt_EQ;
     root->tag = 1;
     root->slot0 = 0;
     root->slot1 = 0;
   }
 
-  void sprite_printexpr(node * root, char const * suffix)
+  void Cy_PrintWithSuffix(node * root, char const * suffix=nullptr)
   {
-    root->vptr->show(root, stdout, true);
+    root->vptr->repr(root, stdout, true);
     if(suffix) fputs(suffix, stdout);
     fflush(0);
   }
 
-  void sprite_generic_show(node * root, FILE * stream, bool is_outer)
+  void Cy_Print(node * root) { Cy_PrintWithSuffix(root); }
+  void Cy_NoAction(node * root) {}
+
+  void Cy_GenericRepr(node * root, FILE * stream, bool is_outer)
   {
     node ** begin, ** end;
     root->vptr->succ(root, &begin, &end);
@@ -124,57 +156,56 @@ extern "C"
     for(; begin != end; ++begin)
     {
       fputs(" ", stream);
-      sprite_generic_show(*begin, stream, false);
+      Cy_GenericRepr(*begin, stream, false);
     }
     if(!is_outer && N > 0) fputs(")", stream);
   }
 
-  void show_Cons(node *, FILE *, bool) __asm__(".show.:");
-  void show_Cons(node * root, FILE * stream, bool /*is_outer*/)
+  void CyPrelude_ReprCons(node * root, FILE * stream, bool /*is_outer*/)
   {
     fputc('[', stream);
     node * arg = SUCC_0(root);
-    arg->vptr->show(arg, stream, true);
+    arg->vptr->repr(arg, stream, true);
     root = SUCC_1(root);
-    while(root->vptr != &_vt_CTOR_Prelude_Nil)
+    while(root->vptr != &CyVt_Nil)
     {
       fputc(',', stream);
       arg = SUCC_0(root);
-      arg->vptr->show(arg, stream, true);
+      arg->vptr->repr(arg, stream, true);
       root = SUCC_1(root);
     }
     fputc(']', stream);
   }
 
-  void show_tuple(node *, FILE *, bool) __asm__(".show.()");
-  void show_tuple(node * root, FILE * stream, bool /*is_outer*/)
+  void CyPrelude_ReprTuple(node * root, FILE * stream, bool /*is_outer*/)
   {
     fputc('(', stream);
     node ** begin, ** end;
     root->vptr->succ(root, &begin, &end);
     if(begin != end)
     {
-      (*begin)->vptr->show(*begin, stream, true);
+      (*begin)->vptr->repr(*begin, stream, true);
       for(begin++; begin!=end; begin++)
       {
         fputc(',', stream);
-        (*begin)->vptr->show(*begin, stream, true);
+        (*begin)->vptr->repr(*begin, stream, true);
       }
     }
     fputc(')', stream);
   }
 
-  void sprite_normalize(node * root)
+  void Cy_Normalize(node * root)
     { root->vptr->N(root); }
 
-  void sprite_evaluate(node * root)
+  // Evaluates an expression.  Calls yield(x) for each result x.
+  void Cy_Eval(node * root, void(*yield)(node * root))
   {
     std::list<node *> computation;
     computation.push_back(root);
     while(!computation.empty())
     {
       node * expr = computation.front();
-      sprite_normalize(expr);
+      Cy_Normalize(expr);
       redo: switch(expr->tag)
       {
         case FAIL:
@@ -195,66 +226,186 @@ extern "C"
           computation.pop_front();
           break;
         default:
-          sprite_printexpr(expr, "\n");
+          yield(expr);
           computation.pop_front();
       }
     }
   }
 
-  void Int_plus(node *) __asm__("+"); // Force the symbol name.
-  void Int_plus(node * root)
+  // Note: root is a [Char], already normalized.
+  void Cy_FPrint(node * root, FILE * stream)
+  {
+    std::stringstream ss;
+    while(root->vptr != &CyVt_Nil)
+    {
+      node * arg = SUCC_0(root);
+      ss << DATA(arg, char);
+      root = SUCC_1(root);
+    }
+    fputs(ss.str().c_str(), stream);
+  }
+
+  // Evaluates the argument to head normal form and returns it.  Suspends until
+  // the result is bound to a non-variable term.
+  void CyPrelude_ensureNotFree(node * root)
+  {
+    #include "normalize1.def"
+    // TODO: suspend.
+    return;
+  }
+
+  // Right-associative application with strict evaluation of its argument to
+  // head normal form.
+  void CyPrelude_DollarBang(node *) __asm__("CyPrelude_$!");
+  void CyPrelude_DollarBang(node * root)
+  {
+    #include "normalize1.def" // head-normalizes by default.
+    root->vptr = &CyVt_Fwd;
+    root->tag = FWD;
+  }
+
+  // Right-associative application with strict evaluation of its argument
+  // to normal form.
+  void CyPrelude_DollarBangBang(node *) __asm__("CyPrelude_$!!");
+  void CyPrelude_DollarBangBang(node * root)
+  {
+    #define NORMALIZE(arg) arg->vptr->N(arg)
+    #include "normalize1.def"
+    root->vptr = &CyVt_Fwd;
+    root->tag = FWD;
+  }
+
+  // Right-associative application with strict evaluation of its argument
+  // to ground normal form.
+  void CyPrelude_DollarHashHash(node *) __asm__("CyPrelude_$##");
+  void CyPrelude_DollarHashHash(node * root)
+  {
+    // FIXME: this is incorrect -- detect variables.
+    root->vptr = &CyVt_Fwd;
+    root->tag = FWD;
+  }
+
+  void CyPrelude_error(node * root)
+  {
+    node * arg = SUCC_0(root);
+    CyPrelude_DollarHashHash(arg);
+    Cy_FPrint(arg, stderr);
+    std::exit(EXIT_FAILURE); // FIXME: should throw or lngjump.
+  }
+
+  void CyPrelude_IntPlus(node *) __asm__("CyPrelude_+");
+  void CyPrelude_IntPlus(node * root)
   {
     #include "normalize2.def"
     int64_t const x = DATA(lhs, int64_t);
     int64_t const y = DATA(rhs, int64_t);
-    root->vptr = &_vt_Int64;
+    root->vptr = &CyVt_Int64;
     root->tag = CTOR;
     DATA(root, int64_t) = x + y;
   }
 
-  void Int_minus(node *) __asm__("-"); // Force the symbol name.
-  void Int_minus(node * root)
+  void CyPrelude_IntSub(node *) __asm__("CyPrelude_-");
+  void CyPrelude_IntSub(node * root)
   {
     #include "normalize2.def"
     int64_t const x = DATA(lhs, int64_t);
     int64_t const y = DATA(rhs, int64_t);
-    root->vptr = &_vt_Int64;
+    root->vptr = &CyVt_Int64;
     root->tag = CTOR;
     DATA(root, int64_t) = x - y;
   }
 
-  void Int_times(node *) __asm__("*"); // Force the symbol name.
-  void Int_times(node * root)
+  void CyPrelude_IntMul(node *) __asm__("CyPrelude_*");
+  void CyPrelude_IntMul(node * root)
   {
     #include "normalize2.def"
     int64_t const x = DATA(lhs, int64_t);
     int64_t const y = DATA(rhs, int64_t);
-    root->vptr = &_vt_Int64;
+    root->vptr = &CyVt_Int64;
     root->tag = CTOR;
     DATA(root, int64_t) = x * y;
   }
 
-  // Converts a character into its ASCII value.
-  void ord(node * root)
+  // Truncates towards negative infinity.
+  void CyPrelude_div(node * root)
+  {
+    #include "normalize2.def"
+    int64_t const x = DATA(lhs, int64_t);
+    int64_t const y = DATA(rhs, int64_t);
+    int64_t q = x/y;
+    int64_t const r = x%y;
+    if ((r!=0) && ((r<0) != (y<0))) --q;
+    root->vptr = &CyVt_Int64;
+    root->tag = CTOR;
+    DATA(root, int64_t) = q;
+  }
+
+  // Truncates towards negative infinity.
+  void CyPrelude_mod(node * root)
+  {
+    #include "normalize2.def"
+    int64_t const x = DATA(lhs, int64_t);
+    int64_t const y = DATA(rhs, int64_t);
+    int64_t r = x%y;
+    if ((r!=0) && ((r<0) != (y<0))) { r += y; }
+    root->vptr = &CyVt_Int64;
+    root->tag = CTOR;
+    DATA(root, int64_t) = r;
+  }
+
+  // Truncates towards zero (standard behavior in C++11).
+  void CyPrelude_quot(node * root)
+  {
+    #include "normalize2.def"
+    int64_t const x = DATA(lhs, int64_t);
+    int64_t const y = DATA(rhs, int64_t);
+    root->vptr = &CyVt_Int64;
+    root->tag = CTOR;
+    DATA(root, int64_t) = x/y;
+  }
+
+  // Truncates towards zero (standard behavior in C++11).
+  void CyPrelude_rem(node * root)
+  {
+    #include "normalize2.def"
+    int64_t const x = DATA(lhs, int64_t);
+    int64_t const y = DATA(rhs, int64_t);
+    root->vptr = &CyVt_Int64;
+    root->tag = CTOR;
+    DATA(root, int64_t) = x%y;
+  }
+
+  // Unary minus on Floats. Usually written as "-e".
+  void CyPrelude_negateFloat(node * root)
   {
     #include "normalize1.def"
-    root->vptr = &_vt_Int64;
+    double const x = DATA(arg, double);
+    root->vptr = &CyVt_Int64;
+    root->tag = CTOR;
+    DATA(root, double) = -x;
+  }
+
+  // Converts a character into its ASCII value.
+  void CyPrelude_ord(node * root)
+  {
+    #include "normalize1.def"
+    root->vptr = &CyVt_Int64;
     root->tag = CTOR;
     DATA(root, int64_t) = DATA(arg, char);
     root->slot1 = 0;
   }
 
   // Converts an ASCII value into a character.
-  void chr(node * root)
+  void CyPrelude_chr(node * root)
   {
     #include "normalize1.def"
-    root->vptr = &_vt_Char;
+    root->vptr = &CyVt_Char;
     root->tag = CTOR;
     DATA(root, char) = static_cast<char>(DATA(arg, int64_t));
     root->slot1 = 0;
   }
 
-  void apply(node * root)
+  void CyPrelude_apply(node * root)
   {
     #include "normalize_apply.def"
     int32_t const rem = arg->aux;
@@ -302,7 +453,7 @@ extern "C"
     // Handle incomplete calls.
     else
     {
-      root->vptr = &_vt_PartialSpine;
+      root->vptr = &CyVt_PartialSpine;
       root->tag = arg->tag;
       root->aux = rem - 1;
       // The successors do not need to be modified.
@@ -311,38 +462,27 @@ extern "C"
 
   // // Evaluates the first argument to head normal form (which could also be a free
   // // variable) and returns the second argument.
-  // void seq(node * root)
+  // void CyPrelude_seq(node * root)
   // {
   //   node * arg0 = SUCC_0(root);
   //   arg0->vptr->H(arg0);
   //   node * arg1 = SUCC_1(root);
-  //   root->vptr = &_vt_fwd;
+  //   root->vptr = &CyVt_Fwd;
   //   root->tag = FWD;
   //   root->slot0 = arg1;
   //   root->slot1 = 0;
   // }
 
-  // // Evaluates the argument to head normal form and returns it.  Suspends until
-  // // the result is bound to a non-variable term.
-  // void ensureNotFree(node * root)
-  // {
-  //   node * arg0 = SUCC_0(root);
-  //   arg0->vptr->H(arg0);
-  //   // TODO: suspend.
-  //   root->vptr = &_vt_fwd;
-  //   root->tag = FWD;
-  // }
-
-  void boolequal(node *) __asm__("==");
-  void boolequal(node * root)
+  void CyPrelude_Eq(node *) __asm__("CyPrelude_==");
+  void CyPrelude_Eq(node * root)
     { root->vptr = SUCC_0(root)->vptr->equality; }
 
-  void compare(node * root)
+  void CyPrelude_compare(node * root)
     { root->vptr = SUCC_0(root)->vptr->comparison; }
 
   // ==.fwd
-  void prim_equals_fwd(node *) __asm__("primitive.==.fwd");
-  void prim_equals_fwd(node * root)
+  void CyPrelude_FwdEq(node *) __asm__("CyPrelude_primitive.==.fwd");
+  void CyPrelude_FwdEq(node * root)
   {
     node *& arg0 = SUCC_0(root);
     arg0 = DATA(arg0, node *);
@@ -350,8 +490,8 @@ extern "C"
   }
 
   // compare.fwd
-  void prim_compare_fwd(node *) __asm__("primitive.compare.fwd");
-  void prim_compare_fwd(node * root)
+  void Cy_Fwd_compare(node *) __asm__("CyPrelude_primitive.compare.fwd");
+  void Cy_Fwd_compare(node * root)
   {
     node *& arg0 = SUCC_0(root);
     arg0 = DATA(arg0, node *);
@@ -359,8 +499,8 @@ extern "C"
   }
 
   // ==.choice
-  void prim_equals_choice(node *) __asm__("primitive.==.choice");
-  void prim_equals_choice(node * root)
+  void Cy_Choice_Eq(node *) __asm__("CyPrelude_primitive.==.choice");
+  void Cy_Choice_Eq(node * root)
   {
     node * arg0 = SUCC_0(root);
     node * lhs_choice, * rhs_choice;
@@ -372,7 +512,7 @@ extern "C"
     lhs_choice->slot0 = arg0->slot0;
     rhs_choice->slot0 = arg0->slot1;
     lhs_choice->slot1 = rhs_choice->slot1 = root->slot1;
-    root->vptr = &_vt_choice;
+    root->vptr = &CyVt_Choice;
     root->tag = CHOICE;
     root->aux = arg0->aux;
     root->slot0 = lhs_choice;
@@ -380,8 +520,8 @@ extern "C"
   }
 
   // compare.choice
-  void prim_compare_choice(node *) __asm__("primitive.compare.choice");
-  void prim_compare_choice(node * root)
+  void Cy_Choice_compare(node *) __asm__("CyPrelude_primitive.compare.choice");
+  void Cy_Choice_compare(node * root)
   {
     node * arg0 = SUCC_0(root);
     node * lhs_choice, * rhs_choice;
@@ -393,7 +533,7 @@ extern "C"
     lhs_choice->slot0 = arg0->slot0;
     rhs_choice->slot0 = arg0->slot1;
     lhs_choice->slot1 = rhs_choice->slot1 = root->slot1;
-    root->vptr = &_vt_choice;
+    root->vptr = &CyVt_Choice;
     root->tag = CHOICE;
     root->aux = arg0->aux;
     root->slot0 = lhs_choice;
@@ -401,8 +541,8 @@ extern "C"
   }
 
   // ==.oper
-  void prim_equals_oper(node *) __asm__("primitive.==.oper");
-  void prim_equals_oper(node * root)
+  void Cy_Oper_Eq(node *) __asm__("CyPrelude_primitive.==.oper");
+  void Cy_Oper_Eq(node * root)
   {
     node * arg0 = SUCC_0(root);
     arg0->vptr->H(arg0);
@@ -410,8 +550,8 @@ extern "C"
   }
 
   // compare.oper
-  void prim_compare_oper(node *) __asm__("primitive.compare.oper");
-  void prim_compare_oper(node * root)
+  void Cy_Oper_compare(node *) __asm__("CyPrelude_primitive.compare.oper");
+  void Cy_Oper_compare(node * root)
   {
     node * arg0 = SUCC_0(root);
     arg0->vptr->H(arg0);
@@ -419,22 +559,22 @@ extern "C"
   }
 
   // ==.Success
-  void prim_equals_Success(node *) __asm__("primitive.==.Success");
-  void prim_equals_Success(node * root)
+  void Cy_Success_Eq(node *) __asm__("CyPrelude_primitive.==.Success");
+  void Cy_Success_Eq(node * root)
   {
-    true_(root);
+    CyPrelude_true(root);
   }
 
   // compare.Success
-  void prim_compare_Success(node *) __asm__("primitive.compare.Success");
-  void prim_compare_Success(node * root)
+  void Cy_Success_compare(node *) __asm__("CyPrelude_primitive.compare.Success");
+  void Cy_Success_compare(node * root)
   {
-    eq(root);
+    CyPrelude_eq(root);
   }
 
   // ==.IO
-  void prim_equals_IO(node *) __asm__("primitive.==.IO");
-  void prim_equals_IO(node * root)
+  void Cy_IO_Eq(node *) __asm__("CyPrelude_primitive.==.IO");
+  void Cy_IO_Eq(node * root)
   {
     // TODO
     printf("Equality for IO is not implemented");
@@ -442,8 +582,8 @@ extern "C"
   }
 
   // compare.IO
-  void prim_compare_IO(node *) __asm__("primitive.compare.IO");
-  void prim_compare_IO(node * root)
+  void Cy_IO_compare(node *) __asm__("CyPrelude_primitive.compare.IO");
+  void Cy_IO_compare(node * root)
   {
     // TODO
     printf("Comparison for IO is not implemented");
@@ -454,15 +594,15 @@ extern "C"
   // Creates the lowest-level function implementing equality for a fundamental
   // type.  The successors are guaranteed to be normalized.
   #define DECLARE_PRIMITIVE_EQUALITY(curry_typename, c_type)            \
-      void prim_equals_ ## curry_typename(node *)                       \
-          __asm__("primitive.==." # curry_typename);                    \
-      void prim_equals_ ## curry_typename(node * root)                  \
+      void Cy_ ## curry_typename ## _Eq(node *)                         \
+          __asm__("CyPrelude_primitive.==." # curry_typename);          \
+      void Cy_ ## curry_typename ## _Eq(node * root)                    \
       {                                                                 \
         node * arg0 = SUCC_0(root);                                     \
         node * arg1 = SUCC_1(root);                                     \
         bool const result = (DATA(arg0, c_type) == DATA(arg1, c_type)); \
         vtable * const vptr = result                                    \
-            ? &_vt_CTOR_Prelude_True : &_vt_CTOR_Prelude_False;         \
+            ? &CyVt_True : &CyVt_False;                                 \
         int64_t const tag = result ? 1 : 0;                             \
         root->vptr = vptr;                                              \
         root->tag = tag;                                                \
@@ -475,29 +615,29 @@ extern "C"
   // compare.T
   // Creates the lowest-level function implementing comparison for a
   // fundamental type.  The successors are guaranteed to be normalized.
-  #define DECLARE_PRIMITIVE_COMPARE(curry_typename, c_type) \
-      void prim_compare_ ## curry_typename(node *)          \
-          __asm__("primitive.compare." # curry_typename);   \
-      void prim_compare_ ## curry_typename(node * root)     \
-      {                                                     \
-        c_type const lhs = DATA(SUCC_0(root), c_type);      \
-        c_type const rhs = DATA(SUCC_1(root), c_type);      \
-        if(lhs < rhs)                                       \
-        {                                                   \
-          root->vptr = &_vt_CTOR_Prelude_LT;                \
-          root->tag = 0;                                    \
-        }                                                   \
-        else if(rhs < lhs)                                  \
-        {                                                   \
-          root->vptr = &_vt_CTOR_Prelude_GT;                \
-          root->tag = 2;                                    \
-        }                                                   \
-        else                                                \
-        {                                                   \
-          root->vptr = &_vt_CTOR_Prelude_EQ;                \
-          root->tag = 1;                                    \
-        }                                                   \
-      }                                                     \
+  #define DECLARE_PRIMITIVE_COMPARE(curry_typename, c_type)         \
+      void Cy_ ## curry_typename ## _compare(node *)                \
+          __asm__("CyPrelude_primitive.compare." # curry_typename); \
+      void Cy_ ## curry_typename ## _compare(node * root)           \
+      {                                                             \
+        c_type const lhs = DATA(SUCC_0(root), c_type);              \
+        c_type const rhs = DATA(SUCC_1(root), c_type);              \
+        if(lhs < rhs)                                               \
+        {                                                           \
+          root->vptr = &CyVt_LT;                                    \
+          root->tag = 0;                                            \
+        }                                                           \
+        else if(rhs < lhs)                                          \
+        {                                                           \
+          root->vptr = &CyVt_GT;                                    \
+          root->tag = 2;                                            \
+        }                                                           \
+        else                                                        \
+        {                                                           \
+          root->vptr = &CyVt_EQ;                                    \
+          root->tag = 1;                                            \
+        }                                                           \
+      }                                                             \
     /**/
   DECLARE_PRIMITIVE_COMPARE(Char, char);
   DECLARE_PRIMITIVE_COMPARE(Int, int64_t);

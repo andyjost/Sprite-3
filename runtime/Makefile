@@ -41,6 +41,8 @@ uninstall :
 	-rm -rf $(LIBINSTALL)/cc
 	-rm -rf $(LIBINSTALL)/llc
 	-rm -rf $(LIBINSTALL)/currylib
+	-rm -rf $(LIBINSTALL)/pakcs
+	-rm -rf $(LIBINSTALL)/parsecurry
 
 -include ../Make.include
 

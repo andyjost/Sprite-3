@@ -68,7 +68,7 @@ namespace
     compiler::ModuleSTab const & module_stab;
 
     // Any needed types (for convenience).
-    tgt::type node_pointer_type = *module_stab.ir().node_t;
+    tgt::type node_pointer_type = *module_stab.rt().node_t;
 
     // A pointer in the target to the root node undergoing pattern matching
     // or rewriting.
@@ -401,8 +401,10 @@ namespace
 
     result_type operator()(curry::ExternalCall const & term)
     {
+      // E.g., "div" translates to "CyPrelude_div"
+      std::string const symbol = "Cy" + term.qname.module + "_" + term.qname.name;
       tgt::function fun = extern_<tgt::function>(
-          this->module_stab.ir().stepfun_t, term.qname.name
+          this->module_stab.rt().stepfun_t, symbol
         );
       fun(this->target_p);
     }
@@ -594,17 +596,17 @@ namespace
 
     result_type operator()(curry::Rule const & rule)
     {
-      // // Trace.
+      // Trace.
       // module_stab.clib().printf("S> --- ");
-      // module_stab.rt().printexpr(target_p, "\n");
+      // module_stab.rt().Cy_PrintWithSuffix(target_p, "\n");
       // module_stab.clib().fflush(nullptr);
 
       // Step.
       static_cast<Rewriter*>(this)->operator()(rule);
 
-      // // Trace.
+      // Trace.
       // module_stab.clib().printf("S> +++ ");
-      // module_stab.rt().printexpr(target_p, "\n");
+      // module_stab.rt().Cy_PrintWithSuffix(target_p, "\n");
       // module_stab.clib().fflush(nullptr);
       tgt::return_();
     }
@@ -631,48 +633,15 @@ namespace
     }
   }
 
-  // Returns the "show" function for a constructor.
-  function get_show_function_for(
-      compiler::ModuleSTab & module_stab
-    , curry::Constructor const & ctor
-    )
-  {
-    auto const & ir = module_stab.ir();
-    auto const & clib = module_stab.clib();
-    if(module_stab.source->name == "Prelude")
-    {
-      // Special case for Prelude.[]
-      if(ctor.name == "[]")
-      {
-        return extern_<function>(
-            ir.showfun_t, ".show.[]", {"root", "stream"}
-          , [&]{clib.fputs("[]", arg("stream"));}
-          );
-      }
-
-      // Special case for Prelude.:
-      else if(ctor.name == ":")
-        return extern_<function>(ir.showfun_t, ".show.:");
-
-      // Special case for tuples.  A type is a tuple if it is in the Prelude,
-      // its name begins with '(', and its name ends with ')'.
-      else if(
-          ctor.name.size()
-        && ctor.name.front() == '(' && ctor.name.back() == ')'
-        )
-      { return extern_<function>(ir.showfun_t, ".show.()"); }
-    }
-    return get_generic_show_function(ir);
-  }
-
   void compile_ctor_vtable(
       tgt::global & vt
     , curry::DataType const & dtype
     , size_t ictor
-    , compiler::ir_h const & ir
     , compiler::ModuleSTab & module_stab
     )
   {
+    compiler::rt_h const & rt = module_stab.rt();
+
     // Look up the N function and define it as needed.
     auto const & ctor = dtype.constructors[ictor];
     tgt::module & module_ir = module_stab.module_ir;
@@ -681,7 +650,7 @@ namespace
     if(!N.ptr())
     {
       N = static_<function>(
-          ir.stepfun_t, flexible(n_name), {"root_p"}
+          rt.stepfun_t, flexible(n_name), {"root_p"}
         , [&]{
             tgt::value root_p = arg("root_p");
             tgt::value child;
@@ -690,12 +659,12 @@ namespace
             {
               case 2:
                 child = bitcast(
-                    root_p.arrow(ND_SLOT1), *ir.node_t
+                    root_p.arrow(ND_SLOT1), *rt.node_t
                   );
                 child.arrow(ND_VPTR).arrow(VT_N)(child);
               case 1:
                 child = bitcast(
-                    root_p.arrow(ND_SLOT0), *ir.node_t
+                    root_p.arrow(ND_SLOT0), *rt.node_t
                   );
                 child.arrow(ND_VPTR).arrow(VT_N)(child)
                     .set_attribute(tailcall);
@@ -704,7 +673,7 @@ namespace
               default:
               {
                 tgt::value children = bitcast(
-                    root_p.arrow(ND_SLOT0), **ir.node_t
+                    root_p.arrow(ND_SLOT0), **rt.node_t
                   );
                 tgt::value last_call;
                 for(size_t i=0; i<ctor.arity; ++i)
@@ -722,36 +691,37 @@ namespace
     }
 
     vt.set_initializer(_t(
-        &get_label_function(ir, ctor.name)
-      , &get_arity_function(ir, ctor.arity)
-      , &get_succ_function(ir, ctor.arity)
-      , &get_vt_for_equality(ir, module_stab.source->name, dtype.name)
-      , &get_vt_for_comparison(ir, module_stab.source->name, dtype.name)
-      , &get_show_function_for(module_stab, ctor)
-      , &N, &get_null_step_function(ir)
+        &rt.Cy_Label(ctor.name)
+      , &rt.Cy_Arity(ctor.arity)
+      , &rt.Cy_Succ(ctor.arity)
+      , &rt.CyVt_Equality(module_stab.source->name, dtype.name)
+      , &rt.CyVt_Compare(module_stab.source->name, dtype.name)
+      , &Cy_Repr(module_stab, ctor)
+      , &N
+      , &rt.Cy_NoAction
       ));
   }
 
   void compile_function_vtable(
       tgt::global & vt
     , curry::Function const & fun
-    , compiler::ir_h const & ir
     , compiler::ModuleSTab & module_stab
     )
   {
-    // Forward declaration.
-    tgt::module & module_ir = module_stab.module_ir;
+    auto const & rt = module_stab.rt();
+    auto const & module_ir = module_stab.module_ir;
+
     std::string const stepname = ".step." + fun.name;
     function step(module_ir->getFunction(stepname.c_str()));
     if(!step.ptr())
-      step = static_<function>(ir.stepfun_t, stepname, {"root_p"});
+      step = static_<function>(rt.stepfun_t, stepname, {"root_p"});
 
     std::string const nname = ".N." + fun.name;
     function N(module_ir->getFunction(nname.c_str()));
     if(!N.ptr())
     {
       N = static_<function>(
-          ir.stepfun_t, nname, {"root_p"}
+          rt.stepfun_t, nname, {"root_p"}
         , [&]{
             tgt::value root_p = arg("root_p");
             step(root_p);
@@ -766,7 +736,7 @@ namespace
     if(!H.ptr())
     {
       H = static_<function>(
-          ir.stepfun_t, flexible(hname), {"root_p"}
+          rt.stepfun_t, flexible(hname), {"root_p"}
         , [&]{
             tgt::value root_p = arg("root_p");
             step(root_p);
@@ -777,12 +747,12 @@ namespace
     }
 
     vt.set_initializer(_t(
-        &get_label_function(ir, fun.name)
-      , &get_arity_function(ir, fun.arity)
-      , &get_succ_function(ir, fun.arity)
-      , &get_vt_for_primitive_equality(ir, "oper")
-      , &get_vt_for_primitive_comparison(ir, "oper")
-      , &get_generic_show_function(ir)
+        &rt.Cy_Label(fun.name)
+      , &rt.Cy_Arity(fun.arity)
+      , &rt.Cy_Succ(fun.arity)
+      , &rt.CyVt_Equality("oper")
+      , &rt.CyVt_Compare("oper")
+      , &rt.Cy_GenericRepr
       , &N, &H
       ));
   }
@@ -876,7 +846,7 @@ namespace sprite { namespace compiler
     compiler::ModuleSTab & module_stab = rv.first->second;
 
     tgt::module & module_ir = module_stab.module_ir;
-    compiler::ir_h const & ir = module_stab.ir();
+    auto const & rt = module_stab.rt();
     
     // Set the module as the current scope.  Subsequent statements will add
     // functions, type definitions, and data to this module.
@@ -898,9 +868,9 @@ namespace sprite { namespace compiler
           auto const & ctor = dtype.constructors[ictor];
           // Create or find the vtable and maybe compile code to fill it.
           std::string const vtname = ".vt.CTOR." + cymodule.name + "." + ctor.name;
-          tgt::global vt = extern_(ir.vtable_t, vtname);
+          tgt::global vt = extern_(rt.vtable_t, vtname);
           if(is_primary && !vt.has_initializer())
-            compile_ctor_vtable(vt, dtype, ictor, ir, module_stab);
+            compile_ctor_vtable(vt, dtype, ictor, module_stab);
   
           // Update the symbol tables.
           module_stab.nodes.emplace(
@@ -915,9 +885,9 @@ namespace sprite { namespace compiler
       {
         // Create or find the vtable and maybe compile code to fill it.
         std::string const vtname = ".vt.OPER." + cymodule.name + "." + fun.name;
-        tgt::global vt = extern_(ir.vtable_t, vtname);
+        tgt::global vt = extern_(rt.vtable_t, vtname);
         if(is_primary && !vt.has_initializer())
-          compile_function_vtable(vt, fun, ir, module_stab);
+          compile_function_vtable(vt, fun, module_stab);
 
         // Update the symbol tables.
         module_stab.nodes.emplace(
@@ -971,6 +941,42 @@ namespace sprite { namespace compiler
 
     // Process the primary module.
     process_module(cymodule, true);
+  }
+
+  // Compiles the "repr" function for a constructor.  This function is used to
+  // print the (non-normalized) representation of a term.  It is useful when
+  // tracing computations.
+  function Cy_Repr(
+      ModuleSTab const & module_stab
+    , curry::Constructor const & ctor
+    )
+  {
+    auto const & rt = module_stab.rt();
+    auto const & clib = module_stab.clib();
+    if(module_stab.source->name == "Prelude")
+    {
+      // Special case for Prelude.[]
+      if(ctor.name == "[]")
+      {
+        return extern_<function>(
+            rt.reprfun_t, "CyPrelude_ReprNil", {"root", "stream"}
+          , [&]{clib.fputs("[]", arg("stream"));}
+          );
+      }
+
+      // Special case for Prelude.:
+      else if(ctor.name == ":")
+        return extern_<function>(rt.reprfun_t, "CyPrelude_ReprCons");
+
+      // Special case for tuples.  A type is a tuple if it is in the Prelude,
+      // its name begins with '(', and its name ends with ')'.
+      else if(
+          ctor.name.size()
+        && ctor.name.front() == '(' && ctor.name.back() == ')'
+        )
+      { return extern_<function>(rt.reprfun_t, "CyPrelude_ReprTuple"); }
+    }
+    return rt.Cy_GenericRepr;
   }
 }}
 
