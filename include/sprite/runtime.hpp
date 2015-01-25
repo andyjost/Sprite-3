@@ -1,4 +1,5 @@
 #pragma once
+#include <unistd.h>
 #include "sprite/backend.hpp"
 
 // The number of pre-defined arity functions.
@@ -18,8 +19,10 @@ namespace sprite { namespace compiler
     type void_t = types::void_();
     type char_t = types::char_();
     type bool_t = types::bool_();
+    type int_t = get_type<int>();
     type i32_t = types::int_(32);
     type i64_t = types::int_(64);
+    type size_t_t = get_type<size_t>();
     type FILE_p = *types::struct_("FILE");
 
     // Forward declarations.
@@ -67,7 +70,7 @@ namespace sprite { namespace compiler
             , *rangefun_t /*succ*/
             , *vtable_t   /*equality*/
             , *vtable_t   /*comparison*/
-            , *reprfun_t  /*repr*/
+            , *vtable_t   /*show*/
             , *stepfun_t  /*N*/
             , *stepfun_t  /*H*/
             }
@@ -98,11 +101,10 @@ namespace sprite { namespace compiler
 
     function const Cy_Eval = extern_(void_t(*node_t, *yieldfun_t), "Cy_Eval");
     function const Cy_Normalize = extern_(void_t(*node_t), "Cy_Normalize");
-    function const Cy_Print = extern_(void_t(*node_t), "Cy_Print");
-    function const Cy_PrintWithSuffix =
-        extern_(void_t(*node_t, *char_t), "Cy_PrintWithSuffix");
+    function const Cy_CyStringToCString =
+        extern_(void_t(*node_t, FILE_p), "Cy_CyStringToCString");
     function const Cy_NoAction = extern_(void_t(*node_t), "Cy_NoAction");
-    function const Cy_GenericRepr = extern_(reprfun_t, "Cy_GenericRepr");
+    function const Cy_Repr = extern_(reprfun_t, "Cy_Repr");
 
     // Returns an arity function for the specified arity.
     function Cy_Arity(size_t arity) const;
@@ -128,6 +130,12 @@ namespace sprite { namespace compiler
       ) const
     { return CyVt_PolyFunction("compare", str1, str2); }
 
+    // Gets the vtable for show.
+    global CyVt_Show(
+        std::string const & str1, std::string const & str2 = std::string()
+      ) const
+    { return CyVt_PolyFunction("show", str1, str2); }
+
     // Used to implement polymorphic functions.
     global CyVt_PolyFunction(
         std::string const & tag
@@ -138,6 +146,38 @@ namespace sprite { namespace compiler
     globalvar next_choice_id = extern_(
         types::int_(32), "next_choice_id"
       ).as_globalvar();
+
+    // External functions.
+    // void exit(int status);
+    function const exit = extern_(void_t(int_t), "exit");
+    // FILE *fdopen(int fd, const char *mode);tp
+    function const fdopen = extern_(FILE_p(int_t, *char_t), "fdopen");
+    // int fflush(FILE *stream);
+    function const fflush = extern_(int_t(FILE_p), "fflush");
+    // int fprintf(FILE *stream, const char *format, ...);
+    function const fprintf = extern_(int_t(FILE_p, *char_t, dots), "fprintf");
+    // int fputs(const char *s, FILE *stream);
+    function const fputs = extern_(int_t(*char_t, FILE_p), "fputs");
+    // void free(void *ptr);
+    function const free = extern_(void_t(*char_t), "free");
+    // int isprint(int c);
+    function const isprint = extern_(int_t(int_t), "isprint");
+    // void *malloc(size_t size);
+    function const malloc = extern_((*char_t)(size_t_t), "malloc");
+    // void perror(char const *);
+    function const perror = extern_(void_t(*char_t), "perror");
+    // int printf(const char *format, ...);
+    function const printf = extern_(int_t(*char_t, dots), "printf");
+    // int putchar(int c);
+    function const putchar = extern_(int_t(int_t), "putchar");
+    // int puts(const char *s, FILE *stream);
+    function const puts = extern_(int_t(*char_t), "puts");
+    // int snprintf(char *str, size_t size, const char *format, ...);
+    function const snprintf = extern_(int_t(*char_t, size_t_t, *char_t, dots), "snprintf");
+
+    function const stdin_ = extern_(FILE_p(), "Cy_stdin");
+    function const stdout_ = extern_(FILE_p(), "Cy_stdout");
+    function const stderr_ = extern_(FILE_p(), "Cy_stderr");
 
     // Built-in vtables.
     #define SPRITE_HANDLE_BUILTIN(name, _) global const name##_vt;

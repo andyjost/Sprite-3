@@ -734,6 +734,38 @@ catch external
 show    :: _ -> String
 show external
 
+--- Returns the (head) node label as a string.
+prim_label    :: _ -> String
+prim_label external
+
+-- Only for internal use:
+prim_isChar :: _ -> Bool
+prim_isChar external
+
+-- Only for internal use:
+-- Gives the representation of a char in a double-quoted string.  The result
+-- may be a sequence of characters if an escape sequence is required.
+prim_char_repr :: Char -> String
+prim_char_repr external
+
+-- Only for internal use:
+-- Helps convert a list to a string.
+--- prim_show_list :: [a] -> String
+prim_show_list [] = "[]"
+prim_show_list p@(a:_)
+  -- Note: needing the first list element to distinguish strings from other
+  -- lists is incorrect.  But without typeclasses it's the best we can do.
+  | prim_isChar a = "\"" ++ (concat (map prim_char_repr p)) ++ "\""
+  | otherwise = "[" ++ intercalate "," (map show p) ++ "]"
+  where
+      -- These are in the list module, but list depends on Prelude.
+      intersperse               :: a -> [a] -> [a]
+      intersperse _   []         = []
+      intersperse _   [x]        = [x]
+      intersperse sep (x1:x2:xs) = x1 : sep : intersperse sep (x2:xs)
+      intercalate :: [a] -> [[a]] -> [a]
+      intercalate xs xss = concat (intersperse xs xss)
+
 --- Converts a term into a string and prints it.
 print   :: _ -> IO ()
 print t = putStrLn (show t)

@@ -30,6 +30,7 @@ $(STATICLIB_LLVM_PART) : llvm/*.[ch]pp
 	# Runtime LLVM part: bitcode generated directly using the C++ API.
 	$(MAKE) -C llvm
 
+.DELETE_ON_ERROR :
 $(STATICLIB) : $(STATICLIB_C_PART) $(STATICLIB_LLVM_PART)
 	$(LLVM-LINK) $^ > $@
 

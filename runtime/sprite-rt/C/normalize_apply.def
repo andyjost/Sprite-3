@@ -3,6 +3,9 @@
 // The apply built-in function is unusual.  The first successor's tag is either
 // a special value, or it encodes the artiy of the bound function (if the term
 // has been reduces to a constructor).
+//
+// Compared to normalize1.def, this file has a slightly different definition of
+// the pull-tab step.
 
 #define TAG(arg) (arg->tag < 0 ? arg->tag : 0)
 

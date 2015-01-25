@@ -15,33 +15,6 @@ namespace
 {
   using namespace sprite::compiler;
 
-  // Looks up a node symbol table from the library.
-  inline compiler::NodeSTab const &
-  lookup(compiler::ModuleSTab const & table, curry::Qname const & qname)
-  {
-    try
-      { return table.nodes.at(qname); }
-    catch(std::out_of_range const & e)
-    {
-      // DIAGNOSTIC
-      // std::cerr
-      //   << "Contents of symbol table for module " << table.source->name
-      //   << "\n";
-      // for(auto const & node: table.nodes)
-      // {
-      //   std::cerr << "  " << node.first.str();
-      //   if(node.second.tag == CTOR)
-      //     std::cerr << " (CONSTRUCTOR)\n";
-      //   else
-      //     std::cerr << " (FUNCTION)\n";
-      // }
-      // 
-      // std::cerr << "(End contents of symbol table)\n" << std::endl;
-      
-      throw compile_error("symbol '" + qname.str() + "' not found.");
-    }
-  }
-
   /**
    * @brief Composes an expression by rewriting the given root.
    *
@@ -179,9 +152,8 @@ namespace
         _resolve_path(this->fundef->paths.at(pathelem.base));
 
       // Add this index to the path.
-      size_t const term_arity = lookup(
-          this->module_stab, pathelem.typename_
-        ).source->arity;
+      size_t const term_arity = this->module_stab.lookup(pathelem.typename_)
+          .source->arity;
       assert(pathelem.idx < term_arity);
       switch(term_arity)
       {
@@ -293,7 +265,7 @@ namespace
     {
       // Use only the first 31 bits to avoid any possibility of interpreting
       // the tag as a negative value.
-      auto const & node_stab = lookup(this->module_stab, term.qname);
+      auto const & node_stab = this->module_stab.lookup(term.qname);
       size_t const N = node_stab.source->arity;
       if(N & ~0x7FFFFFFF)
         compile_error("Too many successors");
@@ -371,7 +343,7 @@ namespace
       node_init(
           this->target_p
         , this->module_stab
-        , lookup(module_stab, term.qname)
+        , module_stab.lookup(term.qname)
         );
 
       // Set the child pointers.
@@ -504,13 +476,13 @@ namespace
         tgt::scope _ = labels[TAGOFFSET + CHOICE];
         if(pathid >= LOCAL_ID_START)
         {
-          module_stab.clib().printf("Choice in branch expression.");
-          module_stab.clib().fflush(nullptr);
-          module_stab.clib().exit(1);
+          module_stab.rt().printf("Choice in branch expression.");
+          module_stab.rt().fflush(nullptr);
+          module_stab.rt().exit(1);
         }
         else
         {
-          module_stab.clib().fflush(nullptr);
+          module_stab.rt().fflush(nullptr);
           size_t const critical = this->fundef->paths.at(pathid).idx;
           size_t const n = this->fundef->arity;
           tgt::value lhs = node_alloc_typed(this->module_stab);
@@ -597,17 +569,20 @@ namespace
     result_type operator()(curry::Rule const & rule)
     {
       // Trace.
-      // module_stab.clib().printf("S> --- ");
-      // module_stab.rt().Cy_PrintWithSuffix(target_p, "\n");
-      // module_stab.clib().fflush(nullptr);
+      // auto const & rt = module_stab.rt();
+      // rt.printf("S> --- ");
+      // rt.Cy_Repr(target_p, rt.stdout_(), true);
+      // rt.putchar('\n');
+      // rt.fflush(nullptr);
 
       // Step.
       static_cast<Rewriter*>(this)->operator()(rule);
 
       // Trace.
-      // module_stab.clib().printf("S> +++ ");
-      // module_stab.rt().Cy_PrintWithSuffix(target_p, "\n");
-      // module_stab.clib().fflush(nullptr);
+      // rt.printf("S> +++ ");
+      // rt.Cy_Repr(target_p, rt.stdout_(), true);
+      // rt.putchar('\n');
+      // rt.fflush(nullptr);
       tgt::return_();
     }
   };
@@ -696,7 +671,7 @@ namespace
       , &rt.Cy_Succ(ctor.arity)
       , &rt.CyVt_Equality(module_stab.source->name, dtype.name)
       , &rt.CyVt_Compare(module_stab.source->name, dtype.name)
-      , &Cy_Repr(module_stab, ctor)
+      , &rt.CyVt_Show(module_stab.source->name, dtype.name)
       , &N
       , &rt.Cy_NoAction
       ));
@@ -752,7 +727,7 @@ namespace
       , &rt.Cy_Succ(fun.arity)
       , &rt.CyVt_Equality("oper")
       , &rt.CyVt_Compare("oper")
-      , &rt.Cy_GenericRepr
+      , &rt.CyVt_Show("oper")
       , &N, &H
       ));
   }
@@ -786,6 +761,33 @@ namespace sprite { namespace compiler
     // Load the compiler data (e.g., headers) with the module in scope.
     scope _ = module_ir;
     this->headers.reset(new Headers());
+  }
+
+  // Looks up a node symbol table from the library.
+  compiler::NodeSTab const &
+  ModuleSTab::lookup(curry::Qname const & qname) const
+  {
+    try
+      { return this->nodes.at(qname); }
+    catch(std::out_of_range const & e)
+    {
+      // DIAGNOSTIC
+      // std::cerr
+      //   << "Contents of symbol table for module " << this->source->name
+      //   << "\n";
+      // for(auto const & node: this->nodes)
+      // {
+      //   std::cerr << "  " << node.first.str();
+      //   if(node.second.tag == CTOR)
+      //     std::cerr << " (CONSTRUCTOR)\n";
+      //   else
+      //     std::cerr << " (FUNCTION)\n";
+      // }
+      // 
+      // std::cerr << "(End contents of symbol table)\n" << std::endl;
+      
+      throw compile_error("symbol '" + qname.str() + "' not found.");
+    }
   }
 
   // Constructs an expression at the given node address.
@@ -943,40 +945,5 @@ namespace sprite { namespace compiler
     process_module(cymodule, true);
   }
 
-  // Compiles the "repr" function for a constructor.  This function is used to
-  // print the (non-normalized) representation of a term.  It is useful when
-  // tracing computations.
-  function Cy_Repr(
-      ModuleSTab const & module_stab
-    , curry::Constructor const & ctor
-    )
-  {
-    auto const & rt = module_stab.rt();
-    auto const & clib = module_stab.clib();
-    if(module_stab.source->name == "Prelude")
-    {
-      // Special case for Prelude.[]
-      if(ctor.name == "[]")
-      {
-        return extern_<function>(
-            rt.reprfun_t, "CyPrelude_ReprNil", {"root", "stream"}
-          , [&]{clib.fputs("[]", arg("stream"));}
-          );
-      }
-
-      // Special case for Prelude.:
-      else if(ctor.name == ":")
-        return extern_<function>(rt.reprfun_t, "CyPrelude_ReprCons");
-
-      // Special case for tuples.  A type is a tuple if it is in the Prelude,
-      // its name begins with '(', and its name ends with ')'.
-      else if(
-          ctor.name.size()
-        && ctor.name.front() == '(' && ctor.name.back() == ')'
-        )
-      { return extern_<function>(rt.reprfun_t, "CyPrelude_ReprTuple"); }
-    }
-    return rt.Cy_GenericRepr;
-  }
 }}
 

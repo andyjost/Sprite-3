@@ -7,6 +7,7 @@
 #include <list>
 #include <iostream>
 #include <sstream>
+#include <limits>
 
 #define SUCC_0(root) reinterpret_cast<node*&>(root->slot0)
 #define SUCC_1(root) reinterpret_cast<node*&>(root->slot1)
@@ -21,18 +22,17 @@ namespace sprite { namespace compiler
   typedef uint64_t arityfun_t(node *);
   typedef void stepfun_t(node *);
   typedef void rangefun_t(node *, node ***, node ***);
-  typedef void reprfun_t(node *, FILE*, bool is_outer);
 
   struct vtable
   {
-    labelfun_t * label;      // Gives the string repr.
-    arityfun_t * arity;      // Gives the arity.
-    rangefun_t * succ;       // Gives the range containing the successors.
-    vtable     * equality;   // Type-specific equality function.
-    vtable     * comparison; // Type-specific comparison function.
-    reprfun_t  * repr;       // Type-specific repr function.
-    stepfun_t  * N;          // Normalization function.
-    stepfun_t  * H;          // Head-normalization function.
+    labelfun_t * label;   // Gives the string representation of the label.
+    arityfun_t * arity;   // Gives the arity.
+    rangefun_t * succ;    // Gives the range containing the successors.
+    vtable     * equals;  // Type-specific equality function.
+    vtable     * compare; // Type-specific comparison function.
+    vtable     * show;    // Type-specific show function.
+    stepfun_t  * N;       // Normalization function.
+    stepfun_t  * H;       // Head-normalization function.
   };
 
   struct node
@@ -53,10 +53,12 @@ extern "C"
   extern sprite::compiler::vtable CyVt_Failed __asm__(".vt.failed");
   extern sprite::compiler::vtable CyVt_Fwd __asm__(".vt.fwd");
   extern sprite::compiler::vtable CyVt_Int64 __asm__(".vt.Int64");
+  extern sprite::compiler::vtable CyVt_Float __asm__(".vt.Float");
   extern sprite::compiler::vtable CyVt_Success __asm__(".vt.success");
   extern sprite::compiler::vtable CyVt_PartialSpine __asm__(".vt.PartialSpine");
   extern sprite::compiler::vtable CyVt_True __asm__(".vt.CTOR.Prelude.True");
   extern sprite::compiler::vtable CyVt_False __asm__(".vt.CTOR.Prelude.False");
+  extern sprite::compiler::vtable CyVt_Cons __asm__(".vt.CTOR.Prelude.:");
   extern sprite::compiler::vtable CyVt_Nil __asm__(".vt.CTOR.Prelude.[]");
   extern sprite::compiler::vtable CyVt_LT __asm__(".vt.CTOR.Prelude.LT");
   extern sprite::compiler::vtable CyVt_EQ __asm__(".vt.CTOR.Prelude.EQ");
@@ -70,6 +72,13 @@ extern "C"
 extern "C"
 {
   using namespace sprite::compiler;
+
+  node * Cy_SkipFwd(node * root)
+  {
+    while(root->vptr == &CyVt_Fwd)
+      root = SUCC_0(root);
+    return root;
+  }
 
   void CyPrelude_failed(node * root)
   {
@@ -91,26 +100,27 @@ extern "C"
   void CyPrelude_RightRightEqual(node *) __asm__("CyPrelude_>>=");
   void CyPrelude_RightRightEqual(node * root)
   {
-    // Normalize the first arg only.
+    // Normalize the first arg to trigger its IO action.
     #include "normalize1.def"
     root->vptr = &CyVt_apply;
     // tag == OPER already.
     std::swap(SUCC_0(root), SUCC_1(root));
   }
 
+  void CyPrelude_return(node * root)
+  {
+    root->vptr = &CyVt_Fwd;
+    root->tag = FWD;
+  }
+
   void CyPrelude_putChar(node * root)
   {
+    #define TAG(arg) arg->tag
     #include "normalize1.def"
     putc(DATA(arg, char), stdout);
     root->vptr = &CyVt_Tuple0;
     root->tag = CTOR;
   }
-
-  // TODO
-  // void CyPrelude_show(node * root)
-  // {
-  //   #include "normalize1.def" // FIXME: should be ground normalize
-  // }
 
   void CyPrelude_true(node * root)
   {
@@ -136,17 +146,12 @@ extern "C"
     root->slot1 = 0;
   }
 
-  void Cy_PrintWithSuffix(node * root, char const * suffix=nullptr)
-  {
-    root->vptr->repr(root, stdout, true);
-    if(suffix) fputs(suffix, stdout);
-    fflush(0);
-  }
-
-  void Cy_Print(node * root) { Cy_PrintWithSuffix(root); }
   void Cy_NoAction(node * root) {}
 
-  void Cy_GenericRepr(node * root, FILE * stream, bool is_outer)
+  // Writes a representation of the expression to the given stream.  The
+  // representation is not normalized.  If is_outer, then the root is the
+  // outermost term and is never parenthesized.
+  void Cy_Repr(node * root, FILE * stream, bool is_outer)
   {
     node ** begin, ** end;
     root->vptr->succ(root, &begin, &end);
@@ -156,46 +161,60 @@ extern "C"
     for(; begin != end; ++begin)
     {
       fputs(" ", stream);
-      Cy_GenericRepr(*begin, stream, false);
+      Cy_Repr(*begin, stream, false);
     }
     if(!is_outer && N > 0) fputs(")", stream);
   }
 
-  void CyPrelude_ReprCons(node * root, FILE * stream, bool /*is_outer*/)
+  // Converts a C-string to a Curry string (list of Char).  Rewrites root to be
+  // the Curry string.  Returns the null terminator node of the Curry string.
+  node * Cy_CStringToCyString(
+      char const * str, node * root
+    , size_t max = std::numeric_limits<size_t>::max()
+    )
   {
-    fputc('[', stream);
-    node * arg = SUCC_0(root);
-    arg->vptr->repr(arg, stream, true);
-    root = SUCC_1(root);
-    while(root->vptr != &CyVt_Nil)
+    size_t n = 0;
+    while(*str && n++ != max)
     {
-      fputc(',', stream);
-      arg = SUCC_0(root);
-      arg->vptr->repr(arg, stream, true);
-      root = SUCC_1(root);
+      // FIXME: need to alloc with the correct function.
+      node * char_data = reinterpret_cast<node*>(malloc(sizeof(node)));
+      node * next = reinterpret_cast<node*>(malloc(sizeof(node)));
+      char_data->vptr = &CyVt_Char;
+      char_data->tag = CTOR;
+      DATA(char_data, char) = *str++;
+
+      root->vptr = &CyVt_Cons;
+      root->tag = CTOR + 1;
+      root->slot0 = char_data;
+      root->slot1 = next;
+
+      root = next;
     }
-    fputc(']', stream);
+    root->vptr = &CyVt_Nil;
+    root->tag = CTOR;
+    return root;
   }
 
-  void CyPrelude_ReprTuple(node * root, FILE * stream, bool /*is_outer*/)
+  void Cy_CyStringToCString(node * root, FILE * stream)
   {
-    fputc('(', stream);
-    node ** begin, ** end;
-    root->vptr->succ(root, &begin, &end);
-    if(begin != end)
+    while(root->vptr != &CyVt_Nil)
     {
-      (*begin)->vptr->repr(*begin, stream, true);
-      for(begin++; begin!=end; begin++)
+      if(root->vptr == &CyVt_Fwd)
+        root = SUCC_0(root);
+      else
       {
-        fputc(',', stream);
-        (*begin)->vptr->repr(*begin, stream, true);
+        fputc(DATA(SUCC_0(root), char), stream);
+        root = SUCC_1(root);
       }
     }
-    fputc(')', stream);
   }
 
   void Cy_Normalize(node * root)
     { root->vptr->N(root); }
+
+  FILE * Cy_stdin() { return stdin; }
+  FILE * Cy_stdout() { return stdout; }
+  FILE * Cy_stderr() { return stderr; }
 
   // Evaluates an expression.  Calls yield(x) for each result x.
   void Cy_Eval(node * root, void(*yield)(node * root))
@@ -243,6 +262,21 @@ extern "C"
       root = SUCC_1(root);
     }
     fputs(ss.str().c_str(), stream);
+  }
+
+  void CyPrelude_prim_isChar(node * root)
+  {
+    #include "normalize1.def"
+    if(arg->vptr == &CyVt_Char)
+    {
+      root->vptr = &CyVt_True;
+      root->tag = CTOR + 1;
+    }
+    else
+    {
+      root->vptr = &CyVt_False;
+      root->tag = CTOR;
+    }
   }
 
   // Evaluates the argument to head normal form and returns it.  Suspends until
@@ -296,6 +330,7 @@ extern "C"
   void CyPrelude_IntPlus(node *) __asm__("CyPrelude_+");
   void CyPrelude_IntPlus(node * root)
   {
+    #define TAG(arg) arg->tag
     #include "normalize2.def"
     int64_t const x = DATA(lhs, int64_t);
     int64_t const y = DATA(rhs, int64_t);
@@ -307,6 +342,7 @@ extern "C"
   void CyPrelude_IntSub(node *) __asm__("CyPrelude_-");
   void CyPrelude_IntSub(node * root)
   {
+    #define TAG(arg) arg->tag
     #include "normalize2.def"
     int64_t const x = DATA(lhs, int64_t);
     int64_t const y = DATA(rhs, int64_t);
@@ -318,6 +354,7 @@ extern "C"
   void CyPrelude_IntMul(node *) __asm__("CyPrelude_*");
   void CyPrelude_IntMul(node * root)
   {
+    #define TAG(arg) arg->tag
     #include "normalize2.def"
     int64_t const x = DATA(lhs, int64_t);
     int64_t const y = DATA(rhs, int64_t);
@@ -329,6 +366,7 @@ extern "C"
   // Truncates towards negative infinity.
   void CyPrelude_div(node * root)
   {
+    #define TAG(arg) arg->tag
     #include "normalize2.def"
     int64_t const x = DATA(lhs, int64_t);
     int64_t const y = DATA(rhs, int64_t);
@@ -343,6 +381,7 @@ extern "C"
   // Truncates towards negative infinity.
   void CyPrelude_mod(node * root)
   {
+    #define TAG(arg) arg->tag
     #include "normalize2.def"
     int64_t const x = DATA(lhs, int64_t);
     int64_t const y = DATA(rhs, int64_t);
@@ -356,6 +395,7 @@ extern "C"
   // Truncates towards zero (standard behavior in C++11).
   void CyPrelude_quot(node * root)
   {
+    #define TAG(arg) arg->tag
     #include "normalize2.def"
     int64_t const x = DATA(lhs, int64_t);
     int64_t const y = DATA(rhs, int64_t);
@@ -367,6 +407,7 @@ extern "C"
   // Truncates towards zero (standard behavior in C++11).
   void CyPrelude_rem(node * root)
   {
+    #define TAG(arg) arg->tag
     #include "normalize2.def"
     int64_t const x = DATA(lhs, int64_t);
     int64_t const y = DATA(rhs, int64_t);
@@ -378,9 +419,10 @@ extern "C"
   // Unary minus on Floats. Usually written as "-e".
   void CyPrelude_negateFloat(node * root)
   {
+    #define TAG(arg) arg->tag
     #include "normalize1.def"
     double const x = DATA(arg, double);
-    root->vptr = &CyVt_Int64;
+    root->vptr = &CyVt_Float;
     root->tag = CTOR;
     DATA(root, double) = -x;
   }
@@ -388,6 +430,7 @@ extern "C"
   // Converts a character into its ASCII value.
   void CyPrelude_ord(node * root)
   {
+    #define TAG(arg) arg->tag
     #include "normalize1.def"
     root->vptr = &CyVt_Int64;
     root->tag = CTOR;
@@ -398,6 +441,7 @@ extern "C"
   // Converts an ASCII value into a character.
   void CyPrelude_chr(node * root)
   {
+    #define TAG(arg) arg->tag
     #include "normalize1.def"
     root->vptr = &CyVt_Char;
     root->tag = CTOR;
@@ -420,7 +464,7 @@ extern "C"
           assert(0 && "applying argument to nullary function");
           break;
         case 1:
-          root->vptr = SUCC_0(arg)->vptr;
+          root->vptr = DATA(arg, vtable*);
           root->tag = OPER;
           root->slot0 = root->slot1;
           root->slot1 = 0;
@@ -475,10 +519,45 @@ extern "C"
 
   void CyPrelude_Eq(node *) __asm__("CyPrelude_==");
   void CyPrelude_Eq(node * root)
-    { root->vptr = SUCC_0(root)->vptr->equality; }
+    { root->vptr = SUCC_0(root)->vptr->equals; }
 
   void CyPrelude_compare(node * root)
-    { root->vptr = SUCC_0(root)->vptr->comparison; }
+    { root->vptr = SUCC_0(root)->vptr->compare; }
+
+  void CyPrelude_show(node * root)
+    { root->vptr = SUCC_0(root)->vptr->show; }
+
+  void CyPrelude_prim_label(node * root)
+  {
+    node * arg = SUCC_0(root);
+    char const * str = arg->vptr->label(arg);
+    Cy_CStringToCyString(str, root);
+  }
+
+  // Gives the representation of a char in a double-quoted string.
+  // GHC
+  void CyPrelude_prim_char_repr(node * root)
+  {
+    #define TAG(arg) arg->tag
+    #include "normalize1.def"
+    char const c = DATA(arg, char);
+    // Remove escape for single quote.
+    if(c == '\'')
+      Cy_CStringToCyString("'", root);
+    // Add escape for double quote.
+    else if (c == '"')
+      Cy_CStringToCyString("\\\"", root);
+    // Otherwise, use the same representation as for a single-quoted char
+    // (excluding the single quotes).
+    else
+    {
+      // str is the representation as a single-quoted character.
+      char const * str = arg->vptr->label(arg);
+      str++; // skip the initial single quote.
+      size_t len = std::strlen(str);
+      Cy_CStringToCyString(str, root, len-1); // skip the trailing single quote.
+    }
+  }
 
   // ==.fwd
   void CyPrelude_FwdEq(node *) __asm__("CyPrelude_primitive.==.fwd");
@@ -486,7 +565,7 @@ extern "C"
   {
     node *& arg0 = SUCC_0(root);
     arg0 = DATA(arg0, node *);
-    root->vptr = arg0->vptr->equality;
+    root->vptr = arg0->vptr->equals;
   }
 
   // compare.fwd
@@ -495,7 +574,16 @@ extern "C"
   {
     node *& arg0 = SUCC_0(root);
     arg0 = DATA(arg0, node *);
-    root->vptr = arg0->vptr->comparison;
+    root->vptr = arg0->vptr->compare;
+  }
+
+  // show.fwd
+  void Cy_Fwd_show(node *) __asm__("CyPrelude_primitive.show.fwd");
+  void Cy_Fwd_show(node * root)
+  {
+    node *& arg0 = SUCC_0(root);
+    arg0 = DATA(arg0, node *);
+    root->vptr = arg0->vptr->show;
   }
 
   // ==.choice
@@ -507,7 +595,7 @@ extern "C"
     // FIXME: need to alloc with the correct function.
     lhs_choice = reinterpret_cast<node*>(malloc(sizeof(node)));
     rhs_choice = reinterpret_cast<node*>(malloc(sizeof(node)));
-    lhs_choice->vptr = rhs_choice->vptr = SUCC_0(arg0)->vptr->equality;
+    lhs_choice->vptr = rhs_choice->vptr = SUCC_0(arg0)->vptr->equals;
     lhs_choice->tag = rhs_choice->tag = OPER;
     lhs_choice->slot0 = arg0->slot0;
     rhs_choice->slot0 = arg0->slot1;
@@ -528,7 +616,28 @@ extern "C"
     // FIXME: need to alloc with the correct function.
     lhs_choice = reinterpret_cast<node*>(malloc(sizeof(node)));
     rhs_choice = reinterpret_cast<node*>(malloc(sizeof(node)));
-    lhs_choice->vptr = rhs_choice->vptr = SUCC_0(arg0)->vptr->comparison;
+    lhs_choice->vptr = rhs_choice->vptr = SUCC_0(arg0)->vptr->compare;
+    lhs_choice->tag = rhs_choice->tag = OPER;
+    lhs_choice->slot0 = arg0->slot0;
+    rhs_choice->slot0 = arg0->slot1;
+    lhs_choice->slot1 = rhs_choice->slot1 = root->slot1;
+    root->vptr = &CyVt_Choice;
+    root->tag = CHOICE;
+    root->aux = arg0->aux;
+    root->slot0 = lhs_choice;
+    root->slot1 = rhs_choice;
+  }
+
+  // show.choice
+  void Cy_Choice_show(node *) __asm__("CyPrelude_primitive.show.choice");
+  void Cy_Choice_show(node * root)
+  {
+    node * arg0 = SUCC_0(root);
+    node * lhs_choice, * rhs_choice;
+    // FIXME: need to alloc with the correct function.
+    lhs_choice = reinterpret_cast<node*>(malloc(sizeof(node)));
+    rhs_choice = reinterpret_cast<node*>(malloc(sizeof(node)));
+    lhs_choice->vptr = rhs_choice->vptr = SUCC_0(arg0)->vptr->show;
     lhs_choice->tag = rhs_choice->tag = OPER;
     lhs_choice->slot0 = arg0->slot0;
     rhs_choice->slot0 = arg0->slot1;
@@ -546,7 +655,7 @@ extern "C"
   {
     node * arg0 = SUCC_0(root);
     arg0->vptr->H(arg0);
-    root->vptr = arg0->vptr->equality;
+    root->vptr = arg0->vptr->equals;
   }
 
   // compare.oper
@@ -555,7 +664,16 @@ extern "C"
   {
     node * arg0 = SUCC_0(root);
     arg0->vptr->H(arg0);
-    root->vptr = arg0->vptr->comparison;
+    root->vptr = arg0->vptr->compare;
+  }
+
+  // show.oper
+  void Cy_Oper_show(node *) __asm__("CyPrelude_primitive.show.oper");
+  void Cy_Oper_show(node * root)
+  {
+    node * arg0 = SUCC_0(root);
+    arg0->vptr->H(arg0);
+    root->vptr = arg0->vptr->show;
   }
 
   // ==.Success
@@ -570,6 +688,15 @@ extern "C"
   void Cy_Success_compare(node * root)
   {
     CyPrelude_eq(root);
+  }
+
+  // show.Success
+  void Cy_Success_show(node *) __asm__("CyPrelude_primitive.show.Success");
+  void Cy_Success_show(node * root)
+  {
+    // TODO
+    printf("Showing for success is not implemented");
+    std::exit(1);
   }
 
   // ==.IO
@@ -587,6 +714,15 @@ extern "C"
   {
     // TODO
     printf("Comparison for IO is not implemented");
+    std::exit(1);
+  }
+
+  // show.IO
+  void Cy_IO_show(node *) __asm__("CyPrelude_primitive.show.IO");
+  void Cy_IO_show(node * root)
+  {
+    // TODO
+    printf("Show for IO is not implemented");
     std::exit(1);
   }
 
@@ -642,5 +778,18 @@ extern "C"
   DECLARE_PRIMITIVE_COMPARE(Char, char);
   DECLARE_PRIMITIVE_COMPARE(Int, int64_t);
   DECLARE_PRIMITIVE_COMPARE(Float, double);
+
+  // show.T
+  // Creates the lowest-level function implementing comparison for a
+  // fundamental type.  The successors are guaranteed to be normalized.
+  #define DECLARE_PRIMITIVE_SHOW(curry_typename)                 \
+      void Cy_ ## curry_typename ## _show(node *)                \
+          __asm__("CyPrelude_primitive.show." # curry_typename); \
+      void Cy_ ## curry_typename ## _show(node * root)           \
+        { CyPrelude_prim_label(root); }                          \
+    /**/
+  DECLARE_PRIMITIVE_SHOW(Char);
+  DECLARE_PRIMITIVE_SHOW(Int);
+  DECLARE_PRIMITIVE_SHOW(Float);
 }
 

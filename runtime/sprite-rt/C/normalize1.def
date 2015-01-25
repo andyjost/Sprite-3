@@ -10,9 +10,10 @@
 #endif
 
 // The TAG macro may be defined to control how the tag of the inductive node is
-// obtained.
+// obtained.  When the argument being normalized is a type with only one
+// constructor (such as a built-in data type), then the call to min is not needed.
 #ifndef TAG
-#define TAG(arg) arg->tag
+#define TAG(arg) (arg->tag < 0 ? arg->tag : 0)
 #endif
 
   static void * table[] =

@@ -133,12 +133,20 @@ namespace sprite
     )
   {
     using namespace backend;
+    using namespace sprite::compiler::member_labels;
     auto const & rt = module_stab.rt();
+
     function const print_action = extern_(
         rt.stepfun_t, "main.print_action", {"root"}
       , [&] {
-          rt.Cy_PrintWithSuffix(arg("root"), "\n");
-          return_();
+          value show = node_alloc_typed(module_stab);
+          curry::Qname const lshow {"Prelude", "show"};
+          show.arrow(ND_VPTR) = &module_stab.lookup(lshow).vtable;
+          show.arrow(ND_TAG) = sprite::compiler::OPER;
+          show.arrow(ND_SLOT0) = bitcast(arg("root"), *rt.char_t);
+          rt.Cy_Normalize(show);
+          rt.Cy_CyStringToCString(show, rt.stdout_());
+          rt.puts("\n");
         }
       );
 

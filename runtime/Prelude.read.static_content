@@ -8,6 +8,11 @@
     code
       external "Prelude.failed"
 
+  function "Prelude.primitive.show.failed" 1
+    table
+    code
+      external "Prelude.failed"
+
   function "Prelude.primitive.==.fwd" 2
     table
     code
@@ -17,6 +22,11 @@
     table
     code
       external "Prelude.primitive.compare.fwd"
+
+  function "Prelude.primitive.show.fwd" 1
+    table
+    code
+      external "Prelude.primitive.show.fwd"
 
   function "Prelude.primitive.==.choice" 2
     table
@@ -28,6 +38,11 @@
     code
       external "Prelude.primitive.compare.choice"
 
+  function "Prelude.primitive.show.choice" 1
+    table
+    code
+      external "Prelude.primitive.show.choice"
+
   function "Prelude.primitive.==.oper" 2
     table
     code
@@ -37,3 +52,8 @@
     table
     code
       external "Prelude.primitive.compare.oper"
+
+  function "Prelude.primitive.show.oper" 1
+    table
+    code
+      external "Prelude.primitive.show.oper"
