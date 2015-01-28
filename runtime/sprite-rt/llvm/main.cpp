@@ -36,7 +36,6 @@ void build_vt_for_trivial_node(
 				, vptr_equals.ptr() ? vptr_equals : vptr_null
 				, vptr_compare.ptr() ? vptr_compare : vptr_null
 				, vptr_show.ptr() ? vptr_show : vptr_null
-        // , &rt.Cy_Repr
         , &rt.Cy_NoAction
         , &rt.Cy_NoAction
         ))
@@ -78,7 +77,6 @@ void build_vt_for_PartialTerminus(rt_h const & rt)
 				, nullptr
 				, nullptr
 				, nullptr
-        // , &rt.Cy_Repr
         , &rt.Cy_NoAction
         , &rt.Cy_NoAction
         ))

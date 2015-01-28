@@ -728,68 +728,129 @@ extern "C"
 
   // ==.T
   // Creates the lowest-level function implementing equality for a fundamental
-  // type.  The successors are guaranteed to be normalized.
-  #define DECLARE_PRIMITIVE_EQUALITY(curry_typename, c_type)            \
-      void Cy_ ## curry_typename ## _Eq(node *)                         \
-          __asm__("CyPrelude_primitive.==." # curry_typename);          \
-      void Cy_ ## curry_typename ## _Eq(node * root)                    \
-      {                                                                 \
-        node * arg0 = SUCC_0(root);                                     \
-        node * arg1 = SUCC_1(root);                                     \
-        bool const result = (DATA(arg0, c_type) == DATA(arg1, c_type)); \
-        vtable * const vptr = result                                    \
-            ? &CyVt_True : &CyVt_False;                                 \
-        int64_t const tag = result ? 1 : 0;                             \
-        root->vptr = vptr;                                              \
-        root->tag = tag;                                                \
-      }                                                                 \
-    /**/
-  DECLARE_PRIMITIVE_EQUALITY(Char, char);
-  DECLARE_PRIMITIVE_EQUALITY(Int, int64_t);
-  DECLARE_PRIMITIVE_EQUALITY(Float, double);
+  // type.
+
+  void Cy_Char_Eq(node *) __asm__("CyPrelude_primitive.==.Char");
+  void Cy_Char_Eq(node * root)
+  {
+    #define TAG(arg) arg->tag
+    #include "normalize2.def"
+    bool const result = (DATA(lhs, char) == DATA(rhs, char));
+    vtable * const vptr = result ? &CyVt_True : &CyVt_False;
+    int64_t const tag = result ? 1 : 0;
+    root->vptr = vptr;
+    root->tag = tag;
+  }
+
+  void Cy_Int_Eq(node *) __asm__("CyPrelude_primitive.==.Int");
+  void Cy_Int_Eq(node * root)
+  {
+    #define TAG(arg) arg->tag
+    #include "normalize2.def"
+    bool const result = (DATA(lhs, int64_t) == DATA(rhs, int64_t));
+    vtable * const vptr = result ? &CyVt_True : &CyVt_False;
+    int64_t const tag = result ? 1 : 0;
+    root->vptr = vptr;
+    root->tag = tag;
+  }
+
+  void Cy_Float_Eq(node *) __asm__("CyPrelude_primitive.==.Float");
+  void Cy_Float_Eq(node * root)
+  {
+    #define TAG(arg) arg->tag
+    #include "normalize2.def"
+    bool const result = (DATA(lhs, double) == DATA(rhs, double));
+    vtable * const vptr = result ? &CyVt_True : &CyVt_False;
+    int64_t const tag = result ? 1 : 0;
+    root->vptr = vptr;
+    root->tag = tag;
+  }
 
   // compare.T
   // Creates the lowest-level function implementing comparison for a
-  // fundamental type.  The successors are guaranteed to be normalized.
-  #define DECLARE_PRIMITIVE_COMPARE(curry_typename, c_type)         \
-      void Cy_ ## curry_typename ## _compare(node *)                \
-          __asm__("CyPrelude_primitive.compare." # curry_typename); \
-      void Cy_ ## curry_typename ## _compare(node * root)           \
-      {                                                             \
-        c_type const lhs = DATA(SUCC_0(root), c_type);              \
-        c_type const rhs = DATA(SUCC_1(root), c_type);              \
-        if(lhs < rhs)                                               \
-        {                                                           \
-          root->vptr = &CyVt_LT;                                    \
-          root->tag = 0;                                            \
-        }                                                           \
-        else if(rhs < lhs)                                          \
-        {                                                           \
-          root->vptr = &CyVt_GT;                                    \
-          root->tag = 2;                                            \
-        }                                                           \
-        else                                                        \
-        {                                                           \
-          root->vptr = &CyVt_EQ;                                    \
-          root->tag = 1;                                            \
-        }                                                           \
-      }                                                             \
-    /**/
-  DECLARE_PRIMITIVE_COMPARE(Char, char);
-  DECLARE_PRIMITIVE_COMPARE(Int, int64_t);
-  DECLARE_PRIMITIVE_COMPARE(Float, double);
+  // fundamental type.
+  void Cy_Char_compare(node *) __asm__("CyPrelude_primitive.compare.Char");
+  void Cy_Char_compare(node * root)
+  {
+    #define TAG(arg) arg->tag
+    #include "normalize2.def"
+    char const lhs_data = DATA(lhs, char);
+    char const rhs_data = DATA(rhs, char);
+    if(lhs_data < rhs_data)
+    {
+      root->vptr = &CyVt_LT;
+      root->tag = 0;
+    }
+    else if(rhs_data < lhs_data)
+    {
+      root->vptr = &CyVt_GT;
+      root->tag = 2;
+    }
+    else
+    {
+      root->vptr = &CyVt_EQ;
+      root->tag = 1;
+    }
+  }
+
+  void Cy_Int_compare(node *) __asm__("CyPrelude_primitive.compare.Int");
+  void Cy_Int_compare(node * root)
+  {
+    #define TAG(arg) arg->tag
+    #include "normalize2.def"
+    int64_t const lhs_data = DATA(lhs, int64_t);
+    int64_t const rhs_data = DATA(rhs, int64_t);
+    if(lhs_data < rhs_data)
+    {
+      root->vptr = &CyVt_LT;
+      root->tag = 0;
+    }
+    else if(rhs_data < lhs_data)
+    {
+      root->vptr = &CyVt_GT;
+      root->tag = 2;
+    }
+    else
+    {
+      root->vptr = &CyVt_EQ;
+      root->tag = 1;
+    }
+  }
+
+  void Cy_Float_compare(node *) __asm__("CyPrelude_primitive.compare.Float");
+  void Cy_Float_compare(node * root)
+  {
+    #define TAG(arg) arg->tag
+    #include "normalize2.def"
+    double const lhs_data = DATA(lhs, double);
+    double const rhs_data = DATA(rhs, double);
+    if(lhs_data < rhs_data)
+    {
+      root->vptr = &CyVt_LT;
+      root->tag = 0;
+    }
+    else if(rhs_data < lhs_data)
+    {
+      root->vptr = &CyVt_GT;
+      root->tag = 2;
+    }
+    else
+    {
+      root->vptr = &CyVt_EQ;
+      root->tag = 1;
+    }
+  }
 
   // show.T
   // Creates the lowest-level function implementing comparison for a
   // fundamental type.  The successors are guaranteed to be normalized.
-  #define DECLARE_PRIMITIVE_SHOW(curry_typename)                 \
-      void Cy_ ## curry_typename ## _show(node *)                \
-          __asm__("CyPrelude_primitive.show." # curry_typename); \
-      void Cy_ ## curry_typename ## _show(node * root)           \
-        { CyPrelude_prim_label(root); }                          \
-    /**/
-  DECLARE_PRIMITIVE_SHOW(Char);
-  DECLARE_PRIMITIVE_SHOW(Int);
-  DECLARE_PRIMITIVE_SHOW(Float);
+  void Cy_Char_show(node *) __asm__("CyPrelude_primitive.show.Char");
+  void Cy_Char_show(node * root) { CyPrelude_prim_label(root); }
+
+  void Cy_Int_show(node *) __asm__("CyPrelude_primitive.show.Int");
+  void Cy_Int_show(node * root) { CyPrelude_prim_label(root); }
+
+  void Cy_Float_show(node *) __asm__("CyPrelude_primitive.show.Float");
+  void Cy_Float_show(node * root) { CyPrelude_prim_label(root); }
 }
 

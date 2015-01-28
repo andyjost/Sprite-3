@@ -126,6 +126,14 @@ def getAnswers(filename):
 
   return pakcs_answer, sprite_answer
 
+def equalAnswers(tc, pakcs, sprite):
+  for p,s in zip(pakcs, sprite):
+    tc.assertTrue(
+        # Tolerate extra parens surrounding.
+        p == s or ('(%s)' % p) == s
+      , msg='PAKCS=%s  sprite=%s' % (p, s) 
+      )
+
 def runTestSuite(tc):
   suite = unittest.TestLoader().loadTestsFromTestCase(tc)
   return unittest.TextTestRunner(stream=sys.stdout, verbosity=2).run(suite)
@@ -148,7 +156,7 @@ def top_compare():
   class CompareTC(unittest.TestCase): pass
   for filename in sys.argv[2:]:
     base = os.path.splitext(os.path.basename(filename))[0]
-    def test(self): self.assertEquals(*getAnswers(filename))
+    def test(self): equalAnswers(self, *getAnswers(filename))
     setattr(CompareTC, 'test_' + base, test)
   rv = runTestSuite(CompareTC)
   # The compare step succeeds as long as the tests were run (regardless of

@@ -46,11 +46,14 @@ goldens :
 %.result : %.gold %.exe cytest.py
 	@python cytest.py compare $(<:.gold=.curry) > $@ 2>&1 || grep '\$$\$$' $@
 
-# Checks the test result.  If failing, move the test to known_failures.
+# Checks the test result.  If failing, move the source file (and other files)
+# to known_failures.
 $(CHECKCURRY) : cytest.py
-	@$(MAKE) $(@:.check=) || (                     \
-	    mv $(@:.check=.curry) known_failures;      \
-			rm -f $(@:.check=.exe) $(@:.check=.result) \
+	@$(MAKE) $(@:.check=) || (                                  \
+			mv $(@:.check=.curry) known_failures;                   \
+			mv $(@:.check=.exe) known_failures >/dev/null 2>&1;     \
+			mv $(@:.check=.result) known_failures > /dev/null 2>&1; \
+			true;                                                   \
 	  )
 
 $(BAREWORDS) : cytest.py

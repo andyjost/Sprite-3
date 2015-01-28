@@ -146,7 +146,7 @@ namespace sprite
           show.arrow(ND_SLOT0) = bitcast(arg("root"), *rt.char_t);
           rt.Cy_Normalize(show);
           rt.Cy_CyStringToCString(show, rt.stdout_());
-          rt.puts("\n");
+          rt.putchar('\n');
         }
       );
 
