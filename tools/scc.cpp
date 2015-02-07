@@ -61,6 +61,11 @@ namespace
       << "       Display this help message.\n"
       << "   -m MODULE, --main=MODULE\n"
       << "       Start the program using the 'main' function in MODULE.\n"
+      << "   -On, --optimize=n\n"
+      << "       Control optimizations.  Possible values of n are: 0, 1, 2, 3,\n"
+      << "       s, and z.  These correspond roughly to the same options for\n"
+      << "       the `clang` compiler.  If this option is not supplied, then\n"
+      << "       optimization level -O3 is assumed.\n"
       << "   -o FILE, --output=FILE\n"
       << "       Write the final program to FILE.\n"
       << "   --save-temps\n"
@@ -95,7 +100,7 @@ namespace
         {"preprocess",      no_argument,  0, 'E'},
         {"help",            no_argument,  0, 'h'},
         {"main",            no_argument,  0, 'm'},
-        {"optlvl",          no_argument,  0, 'O'},
+        {"optimize",        no_argument,  0, 'O'},
         {"output",          no_argument,  0, 'o'},
         {"output-assembly", no_argument,  0, 'S'},
         {"save-temps",      no_argument, &save_temps, 1},
@@ -105,7 +110,7 @@ namespace
       if(optind == argc)
         break;
 
-      int const i = getopt_long(argc, argv, "bcEhm:o:S", long_options, 0);
+      int const i = getopt_long(argc, argv, "bcEhm:O:o:S", long_options, 0);
 
       switch(i)
       {
