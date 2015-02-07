@@ -60,6 +60,7 @@ namespace sprite { namespace backend
   template<> struct globalobj<GlobalVariable> : basic_reference<globalvaraddr>
   {
     using basic_reference<globalvaraddr>::basic_reference;
+    using basic_reference<globalvaraddr>::operator=;
 
     /// Sets the initializer for a global variable (excluding arrays).
     template<typename U, typename = DISABLE_IF_ARRAY_LIKE(U)>

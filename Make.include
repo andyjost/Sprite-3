@@ -1,5 +1,6 @@
 # Requires make >=3.81 for lastword.
 TOPDIR := $(dir $(lastword $(MAKEFILE_LIST)))
+SHELL := /bin/bash
 
 # Get the tool configuration.
 -include $(TOPDIR)/Make.config

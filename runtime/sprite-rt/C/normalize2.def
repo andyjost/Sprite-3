@@ -33,9 +33,8 @@ t_fwd_rhs:
   rhs = reinterpret_cast<node *>(rhs->slot0);
   goto* (&table_rhs[4])[TAG(rhs)];
 t_choice_lhs:
-  // FIXME: need to alloc with the correct function.
-  lhs_choice = reinterpret_cast<node*>(malloc(sizeof(node)));
-  rhs_choice = reinterpret_cast<node*>(malloc(sizeof(node)));
+  NODE_ALLOC(lhs_choice, t_choice_lhs);
+  NODE_ALLOC(rhs_choice, t_choice_lhs);
   lhs_choice->vptr = root->vptr;
   lhs_choice->tag = root->tag;
   lhs_choice->slot0 = lhs->slot0;
@@ -51,9 +50,8 @@ t_choice_lhs:
   root->slot1 = rhs_choice;
   return;
 t_choice_rhs:
-  // FIXME: need to alloc with the correct function.
-  lhs_choice = reinterpret_cast<node*>(malloc(sizeof(node)));
-  rhs_choice = reinterpret_cast<node*>(malloc(sizeof(node)));
+  NODE_ALLOC(lhs_choice, t_choice_rhs);
+  NODE_ALLOC(rhs_choice, t_choice_rhs);
   lhs_choice->vptr = root->vptr;
   lhs_choice->tag = root->tag;
   lhs_choice->slot0 = lhs;

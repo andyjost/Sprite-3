@@ -30,14 +30,16 @@ void build_vt_for_trivial_node(
   value const vptr_null = (*rt.vtable_t)(nullptr);
   extern_(rt.vtable_t, sprite::compiler::get_vt_name(name))
       .set_initializer(_t(
-          &rt.Cy_Label(name)
+          &rt.Cy_NoAction
+        , &rt.Cy_NoAction
+        , &rt.Cy_Label(name)
+				, &rt.Cy_Sentinel()
         , &rt.Cy_Arity(arity)
         , &rt.Cy_Succ(arity)
+        , &rt.Cy_Destroy(arity)
 				, vptr_equals.ptr() ? vptr_equals : vptr_null
 				, vptr_compare.ptr() ? vptr_compare : vptr_null
 				, vptr_show.ptr() ? vptr_show : vptr_null
-        , &rt.Cy_NoAction
-        , &rt.Cy_NoAction
         ))
 	  ;
 }
@@ -71,14 +73,16 @@ void build_vt_for_PartialTerminus(rt_h const & rt)
 
   extern_(rt.vtable_t, sprite::compiler::get_vt_name("PartialTerminus"))
       .set_initializer(_t(
-          &label
+          &rt.Cy_NoAction
+        , &rt.Cy_NoAction
+        , &label
+				, &rt.Cy_Sentinel()
         , &rt.Cy_Arity(0)
         , &rt.Cy_Succ(0)
+        , &rt.Cy_Destroy(0)
 				, nullptr
 				, nullptr
 				, nullptr
-        , &rt.Cy_NoAction
-        , &rt.Cy_NoAction
         ))
 	  ;
 }

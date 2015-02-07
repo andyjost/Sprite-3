@@ -183,7 +183,7 @@ namespace sprite { namespace backend
     };
     //@}
 
-    inline void check_for_exactly_one_signed_flag(
+    inline void validate_signed_flags(
         operator_flags const & flags, string_ref const & what
       )
     {
@@ -193,7 +193,13 @@ namespace sprite { namespace backend
             "Got both signed_ and unsigned_ flags for " + what
           );
       }
+    }
 
+    inline void check_for_exactly_one_signed_flag(
+        operator_flags const & flags, string_ref const & what
+      )
+    {
+      validate_signed_flags(flags, what);
       if(!flags.signed_() && !flags.unsigned_())
       {
         throw parameter_error(

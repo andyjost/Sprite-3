@@ -78,6 +78,26 @@ namespace sprite { namespace compiler
       });
   }
 
+  function rt_h::Cy_Destroy(size_t arity) const
+  {
+    if(arity < 3)
+      return Cy_NoAction;
+    else
+    {
+      // FIXME: some (all?) of these should be defined in the runtime library.
+      function destroy = static_<function>(
+          stepfun_t, flexible(".destroy." + std::to_string(arity)), {"node_p"}
+        );
+      if(destroy->size() == 0) // no body
+      {
+        scope _ = destroy;
+        Cy_ArrayDealloc(arity, arg("node_p").arrow(ND_SLOT0));
+        return_();
+      }
+      return destroy;
+    }
+  }
+
   global rt_h::CyVt_PolyFunction(
       std::string const & tag
     , std::string const & str1, std::string const & str2
@@ -97,5 +117,24 @@ namespace sprite { namespace compiler
           vtable_t, ".vt.OPER." + str1 + "." + tag + "." + str2
         );
     }
+  }
+
+  label rt_h::make_restart_point() const
+  {
+    label redo;
+    goto_(redo);
+    scope::update_current_label_after_branch(redo);
+    return label([&]{ this->CyMem_Collect(); goto_(redo); });
+  }
+
+  value rt_h::node_alloc(type const & ty, label const & eh) const
+  {
+    value const head = CyMem_FreeList;
+    if_(
+        head == (*void_t)(nullptr)
+      , [&] { goto_(eh); }
+      , [&] { CyMem_FreeList = *bitcast(head, **void_t); }
+      );
+    return bitcast(head, ty);
   }
 }}

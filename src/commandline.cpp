@@ -8,17 +8,26 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/system_error.h"
 #include "llvm/Support/raw_ostream.h"
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <fstream>
 #include <cstdio>
 #include <cstdlib>
-#include <sstream>
 #include <cstring>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include <vector>
 
-#include <iostream> // DEBUG
+static bool remove_file(std::ostream & err, std::string const & file)
+{
+  if(std::remove(file.c_str()) != 0)
+  {
+    err << "Error removing \"" << file << "\": " << strerror(errno);
+    return false;
+  }
+  return true;
+}
 
 namespace sprite
 {
@@ -96,7 +105,7 @@ namespace sprite
 
       if(!errmsg.empty())
       {
-        std::remove(bitcodefile.c_str());
+        remove_file(std::cerr, bitcodefile);
         throw sprite::backend::compile_error(
             "Error while writing bitcode file \"" + bitcodefile + "\": "
           + errmsg
@@ -139,7 +148,8 @@ namespace sprite
     function const print_action = extern_(
         rt.stepfun_t, "main.print_action", {"root"}
       , [&] {
-          value show = node_alloc_typed(module_stab);
+          label redo = rt.make_restart_point();
+          value show = rt.node_alloc(*rt.node_t, redo);
           curry::Qname const lshow {"Prelude", "show"};
           show.arrow(ND_VPTR) = &module_stab.lookup(lshow).vtable;
           show.arrow(ND_TAG) = sprite::compiler::OPER;
@@ -153,13 +163,11 @@ namespace sprite
     extern_(
         types::int_(32)(), "main", {}
       , [&]{
-          // Construct the root expression (just the "main" symbol).
-          value root_p = node_alloc(module_stab);
+          label redo = rt.make_restart_point();
+          value root_p = rt.node_alloc(*rt.node_t, redo);
           root_p = construct(module_stab, root_p, {start, {}});
-
-          // Evaluate the root expression.
           rt.Cy_Eval(root_p, &print_action);
-          backend::return_(0);
+          return_(0);
         }
       );
   }
@@ -302,7 +310,17 @@ namespace sprite
       cmd << curry2read << " -q " << curryfile;
       int ok = std::system(cmd.str().c_str());
       if(ok != 0)
+      {
+        // Remove any files curry2read might have created.
+        std::string const base = remove_extension(readablefile);
+        remove_file(std::cerr, base + ".fcy");
+        remove_file(std::cerr, base + ".fint");
+        remove_file(std::cerr, base + ".icur");
+        remove_file(std::cerr, base + ".icurry");
+        remove_file(std::cerr, base + ".poly");
+        remove_file(std::cerr, base + ".read");
         throw backend::compile_error(curry2read + " failed");
+      }
     }
   }
 
@@ -315,12 +333,10 @@ namespace sprite
     std::string const & llc = sprite::get_llc();
     cmd << llc << " " << bitcodefile << " -o " << assemblyfile;
     int ok = std::system(cmd.str().c_str());
-    if(remove_source && std::remove(bitcodefile.c_str()) != 0 && ok != 0)
-    {
-      cmd.str("");
-      cmd << "Error removing \"" << bitcodefile << "\": " << strerror(errno);
+
+    cmd.str("");
+    if(remove_source && !remove_file(cmd, bitcodefile) && ok != 0)
       throw backend::compile_error(cmd.str());
-    }
     if(ok != 0)
       throw backend::compile_error(llc + " failed");
   }
@@ -335,12 +351,9 @@ namespace sprite
     std::string const & cc = sprite::get_cc();
     cmd << cc << " " << assemblyfile << " -o " << executablefile;
     int ok = std::system(cmd.str().c_str());
-    if(remove_source && std::remove(assemblyfile.c_str()) != 0 && ok != 0)
-    {
-      cmd.str("");
-      cmd << "Error removing \"" << assemblyfile << "\": " << strerror(errno);
+    cmd.str("");
+    if(remove_source && !remove_file(cmd, assemblyfile) && ok != 0)
       throw backend::compile_error(cmd.str());
-    }
     if(ok != 0)
       throw backend::compile_error(cc + " failed");
   }

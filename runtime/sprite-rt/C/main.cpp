@@ -1,77 +1,97 @@
-#include "stdio.h"
-#include "stdint.h"
-#include "stdlib.h"
-#include <cassert>
-#include "llvm/ADT/SmallVector.h"
+#include "basic_runtime.hpp"
 #include <algorithm>
-#include <list>
+#include <cassert>
 #include <iostream>
-#include <sstream>
 #include <limits>
+#include <list>
+#include "llvm/ADT/SmallVector.h"
+#include <sstream>
+#include <stack>
+#include "stdio.h"
+#include "stdlib.h"
+#include "cymemory.hpp"
 
 #define SUCC_0(root) reinterpret_cast<node*&>(root->slot0)
 #define SUCC_1(root) reinterpret_cast<node*&>(root->slot1)
 #define DATA(root, type) (*reinterpret_cast<type *>(&root->slot0))
 
+#define NODE_ALLOC(variable, label)                                 \
+    do {                                                            \
+      if(CyMem_FreeList)                                            \
+      {                                                             \
+        variable = reinterpret_cast<node*>(CyMem_FreeList);         \
+        CyMem_FreeList = *reinterpret_cast<void**>(CyMem_FreeList); \
+      }                                                             \
+      else                                                          \
+        { CyMem_NodePool->collect(); goto label; }                  \
+    } while(0)                                                      \
+  /**/
+
+// The maximum arity of any node, plus one.
+#ifndef SPRITE_ARITY_BOUND
+#define SPRITE_ARITY_BOUND 50
+#endif
+
+// The maximum number of children stored within a node, plus one.
+#ifndef SPRITE_INPLACE_BOUND
+#define SPRITE_INPLACE_BOUND 3
+#endif
+
 namespace sprite { namespace compiler
 {
-  struct node;
-  enum Tag { FAIL= -4, FWD= -3, CHOICE= -2, OPER= -1, CTOR=0 };
+  /// The pool for allocating new nodes.
+  typedef NodePool<GlobalAllocator> node_pool_type;
+  node_pool_type * CyMem_NodePool = new node_pool_type(NODE_BYTES, 256);
 
-  typedef char * labelfun_t(node *);
-  typedef uint64_t arityfun_t(node *);
-  typedef void stepfun_t(node *);
-  typedef void rangefun_t(node *, node ***, node ***);
-
-  struct vtable
+  /// An array of pools for allocating successor arrays of length 3,4,...,n.
+  boost::pool<> * Cy_ArrayPool = []
   {
-    labelfun_t * label;   // Gives the string representation of the label.
-    arityfun_t * arity;   // Gives the arity.
-    rangefun_t * succ;    // Gives the range containing the successors.
-    vtable     * equals;  // Type-specific equality function.
-    vtable     * compare; // Type-specific comparison function.
-    vtable     * show;    // Type-specific show function.
-    stepfun_t  * N;       // Normalization function.
-    stepfun_t  * H;       // Head-normalization function.
-  };
+    boost::pool<> * p = reinterpret_cast<boost::pool<> *>(
+        new char[sizeof(boost::pool<>) * SPRITE_ARITY_BOUND]
+      );
+    for(size_t i=SPRITE_INPLACE_BOUND; i<SPRITE_ARITY_BOUND; ++i)
+      new(&p[i]) boost::pool<>(i * sizeof(void *));
+    return p;
+  }();
 
-  struct node
-  {
-    vtable * vptr; // Pointer to the vtable.
-    int32_t tag;   // Node type tag.
-    int32_t aux;   // Aux space.
-    void * slot0;  // First successor or start of data area.
-    void * slot1;  // Second successor.
-  };
+  // The memory roots, used for gc.
+  NodeStack CyMem_Roots;
 }}
 
 extern "C"
 {
-  // These are defined in the "LLVM part" of the runtime.
-  extern sprite::compiler::vtable CyVt_Char __asm__(".vt.Char");
-  extern sprite::compiler::vtable CyVt_Choice __asm__(".vt.choice");
-  extern sprite::compiler::vtable CyVt_Failed __asm__(".vt.failed");
-  extern sprite::compiler::vtable CyVt_Fwd __asm__(".vt.fwd");
-  extern sprite::compiler::vtable CyVt_Int64 __asm__(".vt.Int64");
-  extern sprite::compiler::vtable CyVt_Float __asm__(".vt.Float");
-  extern sprite::compiler::vtable CyVt_Success __asm__(".vt.success");
-  extern sprite::compiler::vtable CyVt_PartialSpine __asm__(".vt.PartialSpine");
-  extern sprite::compiler::vtable CyVt_True __asm__(".vt.CTOR.Prelude.True");
-  extern sprite::compiler::vtable CyVt_False __asm__(".vt.CTOR.Prelude.False");
-  extern sprite::compiler::vtable CyVt_Cons __asm__(".vt.CTOR.Prelude.:");
-  extern sprite::compiler::vtable CyVt_Nil __asm__(".vt.CTOR.Prelude.[]");
-  extern sprite::compiler::vtable CyVt_LT __asm__(".vt.CTOR.Prelude.LT");
-  extern sprite::compiler::vtable CyVt_EQ __asm__(".vt.CTOR.Prelude.EQ");
-  extern sprite::compiler::vtable CyVt_GT __asm__(".vt.CTOR.Prelude.GT");
-  extern sprite::compiler::vtable CyVt_Tuple0 __asm__(".vt.CTOR.Prelude.()");
-  extern sprite::compiler::vtable CyVt_apply __asm__(".vt.OPER.Prelude.apply");
-
-  int32_t next_choice_id = 0;
-}
-
-extern "C"
-{
   using namespace sprite::compiler;
+
+  // These are defined in the "LLVM part" of the runtime.
+  extern vtable CyVt_Char __asm__(".vt.Char");
+  extern vtable CyVt_Choice __asm__(".vt.choice");
+  extern vtable CyVt_Failed __asm__(".vt.failed");
+  extern vtable CyVt_Fwd __asm__(".vt.fwd");
+  extern vtable CyVt_Int64 __asm__(".vt.Int64");
+  extern vtable CyVt_Float __asm__(".vt.Float");
+  extern vtable CyVt_Success __asm__(".vt.success");
+  extern vtable CyVt_PartialSpine __asm__(".vt.PartialSpine");
+  extern vtable CyVt_True __asm__(".vt.CTOR.Prelude.True");
+  extern vtable CyVt_False __asm__(".vt.CTOR.Prelude.False");
+  extern vtable CyVt_Cons __asm__(".vt.CTOR.Prelude.:");
+  extern vtable CyVt_Nil __asm__(".vt.CTOR.Prelude.[]");
+  extern vtable CyVt_LT __asm__(".vt.CTOR.Prelude.LT");
+  extern vtable CyVt_EQ __asm__(".vt.CTOR.Prelude.EQ");
+  extern vtable CyVt_GT __asm__(".vt.CTOR.Prelude.GT");
+  extern vtable CyVt_Tuple0 __asm__(".vt.CTOR.Prelude.()");
+  extern vtable CyVt_apply __asm__(".vt.OPER.Prelude.apply");
+
+  aux_t next_choice_id = 0;
+
+  void CyMem_PushRoot(node * p) { CyMem_Roots.push(p); }
+  void CyMem_PopRoot() { CyMem_Roots.pop(); }
+  void CyMem_Collect() { CyMem_NodePool->collect(); }
+
+  node ** Cy_ArrayAllocTyped(aux_t n)
+    { return reinterpret_cast<node**>(Cy_ArrayPool[n].malloc()); }
+
+  void Cy_ArrayDealloc(aux_t n, void * px)
+    { Cy_ArrayPool[n].free(px); }
 
   node * Cy_SkipFwd(node * root)
   {
@@ -82,18 +102,16 @@ extern "C"
 
   void CyPrelude_failed(node * root)
   {
+    root->vptr->destroy(root);
     root->vptr = &CyVt_Failed;
     root->tag = FAIL;
-    root->slot0 = 0;
-    root->slot1 = 0;
   }
 
   void CyPrelude_success(node * root)
   {
+    root->vptr->destroy(root);
     root->vptr = &CyVt_Success;
     root->tag = CTOR;
-    root->slot0 = 0;
-    root->slot1 = 0;
   }
 
   // (>>=) :: IO a -> (a -> IO b) -> IO b
@@ -124,26 +142,23 @@ extern "C"
 
   void CyPrelude_true(node * root)
   {
+    root->vptr->destroy(root);
     root->vptr = &CyVt_True;
     root->tag = 1;
-    root->slot0 = 0;
-    root->slot1 = 0;
   }
 
   void CyPrelude_false(node * root)
   {
+    root->vptr->destroy(root);
     root->vptr = &CyVt_False;
     root->tag = 0;
-    root->slot0 = 0;
-    root->slot1 = 0;
   }
 
   void CyPrelude_eq(node * root)
   {
+    root->vptr->destroy(root);
     root->vptr = &CyVt_EQ;
     root->tag = 1;
-    root->slot0 = 0;
-    root->slot1 = 0;
   }
 
   void Cy_NoAction(node * root) {}
@@ -174,11 +189,15 @@ extern "C"
     )
   {
     size_t n = 0;
+    node * char_data;
+    node * next;
+    root->vptr->destroy(root);
     while(*str && n++ != max)
     {
-      // FIXME: need to alloc with the correct function.
-      node * char_data = reinterpret_cast<node*>(malloc(sizeof(node)));
-      node * next = reinterpret_cast<node*>(malloc(sizeof(node)));
+    redo:
+      NODE_ALLOC(char_data, redo);
+      NODE_ALLOC(next, redo);
+
       char_data->vptr = &CyVt_Char;
       char_data->tag = CTOR;
       DATA(char_data, char) = *str++;
@@ -210,7 +229,11 @@ extern "C"
   }
 
   void Cy_Normalize(node * root)
-    { root->vptr->N(root); }
+  {
+    CyMem_PushRoot(root);
+    root->vptr->N(root);
+    CyMem_PopRoot();
+  }
 
   FILE * Cy_stdin() { return stdin; }
   FILE * Cy_stdout() { return stdout; }
@@ -219,12 +242,13 @@ extern "C"
   // Evaluates an expression.  Calls yield(x) for each result x.
   void Cy_Eval(node * root, void(*yield)(node * root))
   {
+    CyMem_PushRoot(root);
     std::list<node *> computation;
     computation.push_back(root);
     while(!computation.empty())
     {
       node * expr = computation.front();
-      Cy_Normalize(expr);
+      expr->vptr->N(expr);
       redo: switch(expr->tag)
       {
         case FAIL:
@@ -249,6 +273,7 @@ extern "C"
           computation.pop_front();
       }
     }
+    CyMem_PopRoot();
   }
 
   // Note: root is a [Char], already normalized.
@@ -452,12 +477,12 @@ extern "C"
   void CyPrelude_apply(node * root)
   {
     #include "normalize_apply.def"
-    int32_t const rem = arg->aux;
+    aux_t const rem = arg->aux;
     // Handle complete calls.  There is one argument, i.e., this one,
     // remaining.
     if(rem == 1)
     {
-      int32_t const n = arg->tag;
+      tag_t const n = arg->tag;
       switch(n)
       {
         case 0:
@@ -467,7 +492,6 @@ extern "C"
           root->vptr = DATA(arg, vtable*);
           root->tag = OPER;
           root->slot0 = root->slot1;
-          root->slot1 = 0;
           break;
         case 2:
           root->vptr = DATA(SUCC_0(arg), vtable*);
@@ -477,8 +501,7 @@ extern "C"
           break;
         default:
         {
-          // FIXME: need to alloc with the correct function.
-          node ** args = reinterpret_cast<node**>(malloc(sizeof(node*) * n));
+          node ** args = Cy_ArrayAllocTyped(n);
           node ** pos = args + n - 1;
           node * current = root;
           for(int16_t i=0; i<n; ++i)
@@ -503,19 +526,6 @@ extern "C"
       // The successors do not need to be modified.
     }
   }
-
-  // // Evaluates the first argument to head normal form (which could also be a free
-  // // variable) and returns the second argument.
-  // void CyPrelude_seq(node * root)
-  // {
-  //   node * arg0 = SUCC_0(root);
-  //   arg0->vptr->H(arg0);
-  //   node * arg1 = SUCC_1(root);
-  //   root->vptr = &CyVt_Fwd;
-  //   root->tag = FWD;
-  //   root->slot0 = arg1;
-  //   root->slot1 = 0;
-  // }
 
   void CyPrelude_Eq(node *) __asm__("CyPrelude_==");
   void CyPrelude_Eq(node * root)
@@ -592,9 +602,9 @@ extern "C"
   {
     node * arg0 = SUCC_0(root);
     node * lhs_choice, * rhs_choice;
-    // FIXME: need to alloc with the correct function.
-    lhs_choice = reinterpret_cast<node*>(malloc(sizeof(node)));
-    rhs_choice = reinterpret_cast<node*>(malloc(sizeof(node)));
+  redo:
+    NODE_ALLOC(lhs_choice, redo);
+    NODE_ALLOC(rhs_choice, redo);
     lhs_choice->vptr = rhs_choice->vptr = SUCC_0(arg0)->vptr->equals;
     lhs_choice->tag = rhs_choice->tag = OPER;
     lhs_choice->slot0 = arg0->slot0;
@@ -613,9 +623,9 @@ extern "C"
   {
     node * arg0 = SUCC_0(root);
     node * lhs_choice, * rhs_choice;
-    // FIXME: need to alloc with the correct function.
-    lhs_choice = reinterpret_cast<node*>(malloc(sizeof(node)));
-    rhs_choice = reinterpret_cast<node*>(malloc(sizeof(node)));
+  redo:
+    NODE_ALLOC(lhs_choice, redo);
+    NODE_ALLOC(rhs_choice, redo);
     lhs_choice->vptr = rhs_choice->vptr = SUCC_0(arg0)->vptr->compare;
     lhs_choice->tag = rhs_choice->tag = OPER;
     lhs_choice->slot0 = arg0->slot0;
@@ -634,9 +644,9 @@ extern "C"
   {
     node * arg0 = SUCC_0(root);
     node * lhs_choice, * rhs_choice;
-    // FIXME: need to alloc with the correct function.
-    lhs_choice = reinterpret_cast<node*>(malloc(sizeof(node)));
-    rhs_choice = reinterpret_cast<node*>(malloc(sizeof(node)));
+  redo:
+    NODE_ALLOC(lhs_choice, redo);
+    NODE_ALLOC(rhs_choice, redo);
     lhs_choice->vptr = rhs_choice->vptr = SUCC_0(arg0)->vptr->show;
     lhs_choice->tag = rhs_choice->tag = OPER;
     lhs_choice->slot0 = arg0->slot0;

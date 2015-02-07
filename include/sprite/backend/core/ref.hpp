@@ -36,6 +36,12 @@ namespace sprite { namespace backend
     basic_reference const & operator=(basic_reference const & arg) const
       { return (*this = AddressType(arg)); }
 
+    template<typename AddressType2, typename ValueType2>
+    basic_reference const & operator=(
+        basic_reference<AddressType2, ValueType2> const & arg
+      ) const
+    { return (*this = AddressType2(arg)); }
+
     template<typename T, SPRITE_ENABLE_FOR_ALL_VALUE_INITIALIZERS(T)>
     basic_reference const & operator=(T const & arg) const;
 

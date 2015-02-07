@@ -21,7 +21,7 @@ operator SPRITE_CMPOP(Lhs const & lhs, aux::arg_with_flags<Rhs> const & rhs)
     SPRITE_REQUIRE_SIGNED_UNSIGNED_FLAG
         (flags, "integer " SPRITE_OP_NAME " comparison")
 #else
-    SPRITE_REQUIRE_SIGNED_UNSIGNED_FLAG
+    SPRITE_VALIDATE_SIGNED_UNSIGNED_FLAG
         (flags, "integer " SPRITE_OP_NAME " comparison")
 #endif
     return constant(SPRITE_APICALL(
@@ -30,6 +30,21 @@ operator SPRITE_CMPOP(Lhs const & lhs, aux::arg_with_flags<Rhs> const & rhs)
             flags.signed_()
                 ? BOOST_PP_CAT(llvm::CmpInst::ICMP_S, SPRITE_CMPOP_CODE)
                 : BOOST_PP_CAT(llvm::CmpInst::ICMP_U, SPRITE_CMPOP_CODE)
+#else
+            BOOST_PP_CAT(llvm::CmpInst::ICMP_, SPRITE_CMPOP_CODE)
+#endif
+          , lhs_.ptr(), rhs_.ptr())
+          )
+      );
+  }
+  else if(ty->isPointerTy())
+  {
+    SPRITE_ALLOW_UNSIGNED_FLAG
+        (flags, "pointer " SPRITE_OP_NAME " comparison")
+    return constant(SPRITE_APICALL(
+        llvm::ConstantExpr::getICmp(
+#if SPRITE_CMPOP_IS_ORDERING
+            BOOST_PP_CAT(llvm::CmpInst::ICMP_U, SPRITE_CMPOP_CODE)
 #else
             BOOST_PP_CAT(llvm::CmpInst::ICMP_, SPRITE_CMPOP_CODE)
 #endif
@@ -48,7 +63,7 @@ operator SPRITE_CMPOP(Lhs const & lhs, aux::arg_with_flags<Rhs> const & rhs)
           )
       );
   }
-  throw compile_error("Expected an integer or floating-point type.");
+  throw compile_error("Expected integer, pointer, or floating-point types.");
 }
 
 // Value comparison.
@@ -70,7 +85,7 @@ operator SPRITE_CMPOP(Lhs const & lhs, aux::arg_with_flags<Rhs> const & rhs)
     SPRITE_REQUIRE_SIGNED_UNSIGNED_FLAG
         (flags, "integer " SPRITE_OP_NAME " comparison")
 #else
-    SPRITE_REQUIRE_SIGNED_UNSIGNED_FLAG
+    SPRITE_VALIDATE_SIGNED_UNSIGNED_FLAG
         (flags, "integer " SPRITE_OP_NAME " comparison")
 #endif
     return value(SPRITE_APICALL(
@@ -79,6 +94,21 @@ operator SPRITE_CMPOP(Lhs const & lhs, aux::arg_with_flags<Rhs> const & rhs)
             flags.signed_()
                 ? BOOST_PP_CAT(llvm::CmpInst::ICMP_S, SPRITE_CMPOP_CODE)
                 : BOOST_PP_CAT(llvm::CmpInst::ICMP_U, SPRITE_CMPOP_CODE)
+#else
+            BOOST_PP_CAT(llvm::CmpInst::ICMP_, SPRITE_CMPOP_CODE)
+#endif
+          , lhs_.ptr(), rhs_.ptr())
+          )
+      );
+  }
+  else if(ty->isPointerTy())
+  {
+    SPRITE_ALLOW_UNSIGNED_FLAG
+        (flags, "pointer " SPRITE_OP_NAME " comparison")
+    return value(SPRITE_APICALL(
+        current_builder().CreateICmp(
+#if SPRITE_CMPOP_IS_ORDERING
+            BOOST_PP_CAT(llvm::CmpInst::ICMP_U, SPRITE_CMPOP_CODE)
 #else
             BOOST_PP_CAT(llvm::CmpInst::ICMP_, SPRITE_CMPOP_CODE)
 #endif
@@ -97,7 +127,7 @@ operator SPRITE_CMPOP(Lhs const & lhs, aux::arg_with_flags<Rhs> const & rhs)
           )
       );
   }
-  throw compile_error("Expected an integer or floating-point type.");
+  throw compile_error("Expected integer, pointer, or floating-point types.");
 }
 
 // Constant or value comparison.

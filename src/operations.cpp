@@ -63,6 +63,25 @@ namespace sprite { namespace backend
     return instruction(rv);
   }
 
+  instruction goto_(label const & target)
+  {
+    llvm::IRBuilder<> & bldr = current_builder();
+    return instruction(SPRITE_APICALL(bldr.CreateBr(target.ptr())));
+  }
+
+  /// Appends an indirect branch instruction to the active label scope.
+  instruction goto_(value const & target, array_ref<label> const & labels)
+  {
+    // Note: no update to the current label.
+    llvm::IRBuilder<> & bldr = current_builder();
+    llvm::IndirectBrInst * rv = SPRITE_APICALL(
+        bldr.CreateIndirectBr(target.ptr(), labels.size())
+      );
+    for(label const & l : labels)
+      rv->addDestination(l.ptr());
+    return instruction(rv);
+  }
+
   instruction while_(loop_condition const & cond, labeldescr const & body)
   {
     label test, next;

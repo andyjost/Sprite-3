@@ -25,6 +25,11 @@
     SPRITE_ALLOW_FLAGS(flags, name, operator_flags::SIGNED) \
   /**/
 
+#define SPRITE_ALLOW_UNSIGNED_FLAG(flags, name)               \
+    SPRITE_ALLOW_FLAGS(flags, name, operator_flags::UNSIGNED) \
+  /**/
+
+
 #define SPRITE_ALLOW_DIV_FLAGS(flags, name)               \
     SPRITE_ALLOW_FLAGS(flags, name                        \
       , operator_flags::SIGNED | operator_flags::UNSIGNED \
@@ -46,5 +51,12 @@
       , operator_flags::SIGNED | operator_flags::UNSIGNED \
       )                                                   \
    check_for_exactly_one_signed_flag(flags, name);        \
+  /**/
+
+#define SPRITE_VALIDATE_SIGNED_UNSIGNED_FLAG(flags, name) \
+    SPRITE_ALLOW_FLAGS(flags, name                        \
+      , operator_flags::SIGNED | operator_flags::UNSIGNED \
+      )                                                   \
+   validate_signed_flags(flags, name);                    \
   /**/
 

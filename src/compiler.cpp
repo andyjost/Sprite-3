@@ -40,6 +40,8 @@ namespace
 
     compiler::ModuleSTab const & module_stab;
 
+    rt_h const & rt = module_stab.rt();
+
     // Any needed types (for convenience).
     tgt::type node_pointer_type = *module_stab.rt().node_t;
 
@@ -69,6 +71,33 @@ namespace
     // The next available local ID.
     size_t next_local_id = LOCAL_ID_START;
 
+    // The label containing code to handle the out-of-memory condition.  It
+    // changes while compiling a function.  In general, is is the most recent
+    // safe point crossed just before allocating one or more nodes.  If the
+    // garbage collector run, then all of the nodes after this point were
+    // collected, since have not yet been attached to a root.
+    mutable label out_of_memory_handler = nullptr;
+
+    // Sets a "safe point".  If the garbage collector runs in subsequent code,
+    // then after the collector runs, execution resumes at the point where this
+    // was most recently called.  (Actually, it resumes at the entry to the
+    // current basic block, which is good enough.)
+    void set_out_of_memory_handler_returning_here()
+      { this->out_of_memory_handler = rt.make_restart_point(); }
+
+    // Emits code to clean up any function-specific allocations and then return.
+    void clean_up_and_return()
+    {
+      for(size_t i=LOCAL_ID_START; i<next_local_id; ++i)
+        rt.CyMem_PopRoot();
+      return_();
+    }
+
+    // Node allocator for use in the rewriter.  Automatically uses this
+    // object's out-of-memory handler.
+    value node_alloc(type const & ty) const
+      { return rt.node_alloc(ty, this->out_of_memory_handler); }
+
     // Places an expression at an uninitialized location.
     tgt::value new_(tgt::value const & data, curry::Rule const & rule)
     {
@@ -82,7 +111,7 @@ namespace
     // Allocates a new node and places an expression there.
     tgt::value new_(curry::Rule const & rule)
     {
-      tgt::value data = node_alloc_typed(this->module_stab);
+      tgt::value data = this->node_alloc(*rt.node_t);
       return this->new_(data, rule);
     }
 
@@ -95,6 +124,13 @@ namespace
       ref slot0 = node.arrow(ND_SLOT0);
       slot0 = array;
       return bitcast(slot0, **types::char_());
+    }
+
+    // Deallocates the extended child array stored in the root node, if present.
+    void destroy_target()
+    {
+      if(root_p.ptr() == target_p.ptr() && fundef && fundef->arity > 2)
+        vinvoke(this->target_p, VT_DESTROY);
     }
 
     // Looks up a node using the function paths and path reference.  The result
@@ -123,7 +159,7 @@ namespace
                 pathid, tgt::local(node_pointer_type)
               );
             // Allocate a new node and store its address on the stack.
-            pair.first->second = node_alloc_typed(this->module_stab);
+            pair.first->second = this->node_alloc(*rt.node_t);
             this->resolved_path_alloca = pair.first->second;
           }
           else
@@ -181,7 +217,7 @@ namespace
           // FIXME: no signed/unsigned flag is really required, here, is it?
           [&]{
               this->resolved_path_alloca.arrow(ND_TAG)
-                  ==(tgt::signed_) ((int)FWD);
+                  ==(tgt::signed_) (static_cast<tag_t>(FWD));
             }
         , [&]{
               this->resolved_path_alloca = bitcast(
@@ -200,6 +236,7 @@ namespace
     template<typename Data>
     void rewrite_integer_data_ctor(Data data, tgt::value const & vt)
     {
+      this->destroy_target();
       this->target_p.arrow(ND_VPTR) = vt;
       this->target_p.arrow(ND_TAG) = compiler::CTOR;
       auto slot0 = this->target_p.arrow(ND_SLOT0);
@@ -211,18 +248,19 @@ namespace
   
     // Subcases of Rule.
     result_type operator()(char data)
-      { return rewrite_integer_data_ctor(data, module_stab.rt().Char_vt); }
+      { return rewrite_integer_data_ctor(data, rt.Char_vt); }
 
     result_type operator()(int64_t data)
-      { return rewrite_integer_data_ctor(data, module_stab.rt().Int64_vt); }
+      { return rewrite_integer_data_ctor(data, rt.Int64_vt); }
 
     result_type operator()(double data)
-      { return rewrite_integer_data_ctor(data, module_stab.rt().Float_vt); }
+      { return rewrite_integer_data_ctor(data, rt.Float_vt); }
 
     // Rewrites the root as a FAIL node.
     result_type operator()(curry::Fail const &)
     {
-      this->target_p.arrow(ND_VPTR) = module_stab.rt().failed_vt;
+      this->destroy_target();
+      this->target_p.arrow(ND_VPTR) = rt.failed_vt;
       this->target_p.arrow(ND_TAG) = compiler::FAIL;
     }
 
@@ -230,7 +268,8 @@ namespace
     result_type operator()(curry::Ref rule)
     {
       tgt::value target = this->resolve_path_char_p(rule.pathid);
-      this->target_p.arrow(ND_VPTR) = module_stab.rt().fwd_vt;
+      this->destroy_target();
+      this->target_p.arrow(ND_VPTR) = rt.fwd_vt;
       this->target_p.arrow(ND_TAG) = compiler::FWD;
       this->target_p.arrow(ND_SLOT0) = target;
     }
@@ -263,13 +302,14 @@ namespace
     //
     result_type operator()(curry::Partial const & term)
     {
-      // Use only the first 31 bits to avoid any possibility of interpreting
-      // the tag as a negative value.
+      // Use only the least significant n-1 bits to avoid any possibility of
+      // interpreting the tag as a negative value.
       auto const & node_stab = this->module_stab.lookup(term.qname);
       size_t const N = node_stab.source->arity;
-      if(N & ~0x7FFFFFFF)
+      aux_t constexpr signbit = 1 << (sizeof(aux_t) * 8 - 1);
+      if(N & signbit)
         compile_error("Too many successors");
-      int32_t const n = static_cast<int32_t>(N & 0x7FFFFFFF);
+      aux_t const n = static_cast<aux_t>(N & ~signbit);
       size_t const niter = term.args.size() + 1;
       size_t i = 0;
 
@@ -277,14 +317,17 @@ namespace
       // allocate a new node.
       auto choose_storage = [&] {
           if(i+1 == niter)
+          {
+            this->destroy_target();
             return this->target_p;
+          }
           else
-            return node_alloc_typed(this->module_stab);
+            return this->node_alloc(*rt.node_t);
         };
 
       // Create the terminal node, which has the function's vtable as its data.
       tgt::value prev_node = choose_storage();
-      prev_node.arrow(ND_VPTR) = module_stab.rt().PartialTerminus_vt;
+      prev_node.arrow(ND_VPTR) = rt.PartialTerminus_vt;
       prev_node.arrow(ND_TAG) = n;
       prev_node.arrow(ND_AUX) = n;
       prev_node.arrow(ND_SLOT0) = &node_stab.vtable;
@@ -297,7 +340,7 @@ namespace
 
         // Build the spine node.
         tgt::value this_node = choose_storage();
-        this_node.arrow(ND_VPTR) = module_stab.rt().PartialSpine_vt;
+        this_node.arrow(ND_VPTR) = rt.PartialSpine_vt;
         this_node.arrow(ND_TAG) = n;
         this_node.arrow(ND_AUX) = (n-i);
         this_node.arrow(ND_SLOT0) = prev_node;
@@ -312,7 +355,7 @@ namespace
       // Save it for below.
       tgt::value orig_target_p = this->target_p;
 
-      // Each child needs to be allocated and initialized.  This children are
+      // Each child needs to be allocated and initialized.  The children are
       // stored as i8* pointers.
       std::vector<tgt::value> child_data;
       child_data.reserve(term.args.size());
@@ -328,7 +371,7 @@ namespace
         // Allocate a new node and place its contents with a recursive call.
         else
         {
-          tgt::value child = node_alloc(this->module_stab);
+          tgt::value child = this->node_alloc(*rt.char_t);
           child_data.push_back(child);
           // Clobber the root so the recursive call works.
           this->target_p = bitcast(child, node_pointer_type);
@@ -356,7 +399,7 @@ namespace
         // char *& aux = node->slot0;
         ref aux = this->target_p.arrow(ND_SLOT0);
         // aux = array_alloc(n);
-        aux = array_alloc(this->module_stab, child_data.size());
+        aux = rt.Cy_ArrayAllocTyped(static_cast<aux_t>(child_data.size()));
         // char ** children = (char **)aux;
         value children = bitcast(aux, **types::char_());
         for(size_t i=0; i<child_data.size(); ++i)
@@ -375,9 +418,7 @@ namespace
     {
       // E.g., "div" translates to "CyPrelude_div"
       std::string const symbol = "Cy" + term.qname.module + "_" + term.qname.name;
-      tgt::function fun = extern_<tgt::function>(
-          this->module_stab.rt().stepfun_t, symbol
-        );
+      tgt::function fun = extern_<tgt::function>(rt.stepfun_t, symbol);
       fun(this->target_p);
     }
   };
@@ -413,7 +454,10 @@ namespace
         return cond->pathid;
       else if(condition.getterm())
       {
-        this->new_(this->resolve_path(next_local_id), condition);
+        this->set_out_of_memory_handler_returning_here();
+        value p = this->new_(this->resolve_path(next_local_id), condition);
+        // Add the local allocation, p, as a new root for gc.
+        rt.CyMem_PushRoot(p);
         return next_local_id++;
       }
       else
@@ -422,6 +466,33 @@ namespace
 
     result_type operator()(curry::Branch const & branch)
     {
+      // Save and resove the next_local_id variable and manage freevar_alloca.
+      // ATables are nested.  When a table is traversed, it may create a local
+      // allocation for the branch condition.  That node is detached from the
+      // main computation, so the compiler must emit calls to CyMem_PushRoot
+      // upon allocation and matching calls to CyMem_PopRoot just before any
+      // return.  Keeping track of the next_local_id variable is used to emit
+      // the proper number of CyMem_PopRoot calls.  Additionally, when a local
+      // allocation expires in this way, it is erased from the freevar_alloca
+      // list so that a fresh alloca occurs if the local ID is reused.
+      struct FreevarAllocaManager
+      {
+        FreevarAllocaManager(Rewriter & r)
+          : rewriter(r), prev(r.next_local_id)
+        {}
+        ~FreevarAllocaManager()
+        {
+          while(rewriter.next_local_id > prev)
+          {
+            rewriter.next_local_id--;
+            rewriter.freevar_alloca.erase(rewriter.next_local_id);
+          }
+        }
+      private:
+        Rewriter & rewriter;
+        size_t prev;
+      } _freevar_alloca_manager(*this);
+
       // Look up the inductive node.
       size_t const pathid = build_condition(branch.condition);
       tgt::value const inductive = this->resolve_path(pathid);
@@ -456,7 +527,7 @@ namespace
       {
         tgt::scope _ = labels[TAGOFFSET + FAIL];
         (this->Rewriter::operator())(curry::Fail());
-        tgt::return_();
+        clean_up_and_return();
       }
 
       // FWD case
@@ -476,17 +547,16 @@ namespace
         tgt::scope _ = labels[TAGOFFSET + CHOICE];
         if(pathid >= LOCAL_ID_START)
         {
-          module_stab.rt().printf("Choice in branch expression.");
-          module_stab.rt().fflush(nullptr);
-          module_stab.rt().exit(1);
+          rt.printf("Choice in branch expression.");
+          rt.fflush(nullptr);
+          rt.exit(1);
         }
         else
         {
-          module_stab.rt().fflush(nullptr);
           size_t const critical = this->fundef->paths.at(pathid).idx;
           size_t const n = this->fundef->arity;
-          tgt::value lhs = node_alloc_typed(this->module_stab);
-          tgt::value rhs = node_alloc_typed(this->module_stab);
+          tgt::value lhs = this->node_alloc(*rt.node_t);
+          tgt::value rhs = this->node_alloc(*rt.node_t);
 
           lhs.arrow(ND_VPTR) = this->target_p.arrow(ND_VPTR);
           lhs.arrow(ND_TAG) = this->target_p.arrow(ND_TAG);
@@ -519,7 +589,7 @@ namespace
               );
             // The RHS argument array is allocated.
             value rhs_children = set_extended_child_array(
-                rhs, array_alloc(this->module_stab, n)
+                rhs, rt.Cy_ArrayAllocTyped(static_cast<aux_t>(n))
               );
 
             for(size_t i=0; i<n; ++i)
@@ -536,13 +606,14 @@ namespace
               }
             }
           }
-          this->target_p.arrow(ND_VPTR) = module_stab.rt().choice_vt;
+          // Do not call this->destroy_target.  The successor list was stolen.
+          this->target_p.arrow(ND_VPTR) = rt.choice_vt;
           this->target_p.arrow(ND_TAG) = compiler::CHOICE;
           this->target_p.arrow(ND_AUX) = inductive.arrow(ND_AUX);
           this->target_p.arrow(ND_SLOT0) = bitcast(lhs, *types::char_());
           this->target_p.arrow(ND_SLOT1) = bitcast(rhs, *types::char_());
         }
-        tgt::return_();
+        clean_up_and_return();
       }
 
       // OPER case
@@ -569,11 +640,15 @@ namespace
     result_type operator()(curry::Rule const & rule)
     {
       // Trace.
-      // auto const & rt = module_stab.rt();
       // rt.printf("S> --- ");
       // rt.Cy_Repr(target_p, rt.stdout_(), true);
       // rt.putchar('\n');
       // rt.fflush(nullptr);
+
+      // The rewrite step is always a series of allocations and memory stores
+      // that finishes by attaching all allocated nodes to the root.  If memory
+      // allocation fails, causing gc to run, restart here.
+      this->set_out_of_memory_handler_returning_here();
 
       // Step.
       static_cast<Rewriter*>(this)->operator()(rule);
@@ -583,7 +658,7 @@ namespace
       // rt.Cy_Repr(target_p, rt.stdout_(), true);
       // rt.putchar('\n');
       // rt.fflush(nullptr);
-      tgt::return_();
+      clean_up_and_return();
     }
   };
 
@@ -666,14 +741,16 @@ namespace
     }
 
     vt.set_initializer(_t(
-        &rt.Cy_Label(ctor.name)
+        &rt.Cy_NoAction
+      , &N
+      , &rt.Cy_Label(ctor.name)
+      , &rt.Cy_Sentinel()
       , &rt.Cy_Arity(ctor.arity)
       , &rt.Cy_Succ(ctor.arity)
+      , &rt.Cy_Destroy(ctor.arity)
       , &rt.CyVt_Equality(module_stab.source->name, dtype.name)
       , &rt.CyVt_Compare(module_stab.source->name, dtype.name)
       , &rt.CyVt_Show(module_stab.source->name, dtype.name)
-      , &N
-      , &rt.Cy_NoAction
       ));
   }
 
@@ -722,13 +799,16 @@ namespace
     }
 
     vt.set_initializer(_t(
-        &rt.Cy_Label(fun.name)
+        &H
+      , &N
+      , &rt.Cy_Label(fun.name)
+      , &rt.Cy_Sentinel()
       , &rt.Cy_Arity(fun.arity)
       , &rt.Cy_Succ(fun.arity)
+      , &rt.Cy_Destroy(fun.arity)
       , &rt.CyVt_Equality("oper")
       , &rt.CyVt_Compare("oper")
       , &rt.CyVt_Show("oper")
-      , &N, &H
       ));
   }
 }
@@ -907,7 +987,10 @@ namespace sprite { namespace compiler
           function stepf = dyn_cast<function>(step);
           if(stepf->size() == 0) // function has no body
           {
-            tgt::scope _ = dyn_cast<function>(step);
+            tgt::scope fscope = dyn_cast<function>(step);
+            label entry_;
+            goto_(entry_);
+            tgt::scope _ = entry_;
             ::compile_function(module_stab, arg("root_p"), fun);
           }
         }
@@ -944,6 +1027,5 @@ namespace sprite { namespace compiler
     // Process the primary module.
     process_module(cymodule, true);
   }
-
 }}
 

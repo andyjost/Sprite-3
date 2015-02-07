@@ -27,9 +27,8 @@ t_fwd:
   arg = reinterpret_cast<node *>(arg->slot0);
   goto* (&table[4])[TAG(arg)];
 t_choice:
-  // FIXME: need to alloc with the correct function.
-  lhs_choice = reinterpret_cast<node*>(malloc(sizeof(node)));
-  rhs_choice = reinterpret_cast<node*>(malloc(sizeof(node)));
+  NODE_ALLOC(lhs_choice, t_choice);
+  NODE_ALLOC(rhs_choice, t_choice);
   lhs_choice->vptr = root->vptr;
   lhs_choice->tag = root->tag;
   lhs_choice->slot0 = arg->slot0;

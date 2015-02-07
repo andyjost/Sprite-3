@@ -3,15 +3,13 @@
 #include "sprite/backend/support/testing.hpp"
 #include "sprite/curryinput.hpp"
 #include "sprite/runtime.hpp"
+#include "sprite/basic_runtime.hpp"
 #include <unordered_map>
 #include <iterator>
 
 namespace sprite { namespace compiler
 {
   using namespace sprite::backend;
-
-  enum Tag { FAIL= -4, FWD= -3, CHOICE= -2, OPER= -1, CTOR=0 };
-  enum { TAGOFFSET = 4 };
 
   // ===========================
   // ====== Symbol tables ======
@@ -25,7 +23,7 @@ namespace sprite { namespace compiler
     NodeSTab(
         curry::Constructor const & source_
       , sprite::backend::globalvar const & vtable_
-      , int32_t tag_
+      , tag_t tag_
       )
       : source(&source_), vtable(vtable_), tag(tag_)
     {}
@@ -33,7 +31,7 @@ namespace sprite { namespace compiler
     NodeSTab(
         curry::Function const & source_
       , sprite::backend::globalvar const & vtable_
-      , int32_t tag_
+      , tag_t tag_
       )
       : source(reinterpret_cast<curry::Constructor const *>(&source_))
       , vtable(vtable_), tag(tag_)
@@ -53,7 +51,7 @@ namespace sprite { namespace compiler
 
     // The tag associated with the node.  Note: tag==OPER indicates a function;
     // other tag values (i.e., tag>=CTOR) indicate constructors.
-    int32_t tag;
+    tag_t tag;
   };
 
   struct LibrarySTab;
@@ -153,18 +151,6 @@ namespace sprite { namespace compiler
 
   /// Gets the vtable pointer from a node pointer.  Skips FWD nodes.
   value get_vtable(value node_p);
-
-  /// Allocates storage for a node.  The return type is i8*.
-  inline value node_alloc(ModuleSTab const & module_stab)
-    { return module_stab.rt().malloc(sizeof_(module_stab.rt().node_t)); }
-
-  /// Allocates storage for a node.  The return type is node*.
-  inline value node_alloc_typed(ModuleSTab const & module_stab)
-    { return bitcast(node_alloc(module_stab), *module_stab.rt().node_t); }
-
-  /// Allocates storage for @p n pointers.
-  inline value array_alloc(ModuleSTab const & module_stab, size_t n)
-    { return module_stab.rt().malloc(sizeof_(module_stab.rt().node_t) * n); }
 
   /// Initializes a node.
   inline void node_init(

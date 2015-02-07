@@ -47,7 +47,6 @@ uninstall :
 -include ../Make.include
 
 # Compile the Prelude and append static content.
-.DELETE_ON_ERROR :
 $(LIBINSTALL)/currylib/.curry/Prelude.read : $(LIBINSTALL)/currylib/Prelude.curry
 	$(BININSTALL)/scc -c $(LIBINSTALL)/currylib/Prelude.curry
 	cat Prelude.read.static_content >> $(LIBINSTALL)/currylib/.curry/Prelude.read

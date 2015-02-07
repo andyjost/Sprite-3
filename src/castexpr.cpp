@@ -202,7 +202,13 @@ namespace sprite { namespace backend
       else if(rhs->isFloatingPointTy())
         return getFPBitWidth(lhs.ptr()) < getFPBitWidth(rhs.ptr()) ? rhs : lhs;
     }
-    throw type_error("Expected an integer or floating-point type in coerce");
+    else if(lhs->isPointerTy() && rhs->isPointerTy())
+    {
+      if(lhs.ptr() == rhs.ptr())
+        return lhs;
+      throw type_error("Cannot coerce pointers to different types");
+    }
+    throw type_error("Expected integer, pointer, or floating-point types in coerce");
   }
 }}
 

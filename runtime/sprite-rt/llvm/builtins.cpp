@@ -36,16 +36,18 @@ void build_vt_for_Char(rt_h const & rt)
 
   extern_(rt.vtable_t, sprite::compiler::get_vt_name("Char"))
       .set_initializer(_t(
-          &Char_name
+          &rt.Cy_NoAction
+        , &rt.Cy_NoAction
+        , &Char_name
+				, &rt.Cy_Sentinel()
         , &rt.Cy_Arity(0)
         , &rt.Cy_Succ(0)
+        , &rt.Cy_Destroy(0)
         , &rt.CyVt_Equality("Char")
         , &rt.CyVt_Compare("Char")
         , &rt.CyVt_Show("Char")
-        , &rt.Cy_NoAction
-        , &rt.Cy_NoAction
         ))
-	  ;
+		;
 }
 void build_vt_for_Int64(rt_h const & rt)
 {
@@ -77,16 +79,18 @@ void build_vt_for_Int64(rt_h const & rt)
 
   extern_(rt.vtable_t, sprite::compiler::get_vt_name("Int64"))
       .set_initializer(_t(
-          &Int64_name
+          &rt.Cy_NoAction
+        , &rt.Cy_NoAction
+        , &Int64_name
+				, &rt.Cy_Sentinel()
         , &rt.Cy_Arity(0)
         , &rt.Cy_Succ(0)
+        , &rt.Cy_Destroy(0)
         , &rt.CyVt_Equality("Int")
         , &rt.CyVt_Compare("Int")
         , &rt.CyVt_Show("Int")
-        , &rt.Cy_NoAction
-        , &rt.Cy_NoAction
         ))
-	  ;
+		;
 }
 
 void build_vt_for_Float(rt_h const & rt)
@@ -118,16 +122,18 @@ void build_vt_for_Float(rt_h const & rt)
 
   extern_(rt.vtable_t, sprite::compiler::get_vt_name("Float"))
       .set_initializer(_t(
-          &Float_name
+          &rt.Cy_NoAction
+        , &rt.Cy_NoAction
+        , &Float_name
+				, &rt.Cy_Sentinel()
         , &rt.Cy_Arity(0)
         , &rt.Cy_Succ(0)
+        , &rt.Cy_Destroy(0)
         , &rt.CyVt_Equality("Float")
         , &rt.CyVt_Compare("Float")
         , &rt.CyVt_Show("Float")
-        , &rt.Cy_NoAction
-        , &rt.Cy_NoAction
         ))
-	  ;
+		;
 }
 
 void build_vt_for_choice(rt_h const & rt)
@@ -151,16 +157,18 @@ void build_vt_for_choice(rt_h const & rt)
     );
   extern_(rt.vtable_t, sprite::compiler::get_vt_name("choice"))
       .set_initializer(_t(
-          &choice_name
+          &rt.Cy_NoAction
+        , &rt.Cy_NoAction
+        , &choice_name
+				, &rt.Cy_Sentinel()
         , &rt.Cy_Arity(2)
         , &rt.Cy_Succ(2)
+        , &rt.Cy_Destroy(2)
         , rt.CyVt_Equality("choice")
         , rt.CyVt_Compare("choice")
         , rt.CyVt_Show("choice")
-        , &rt.Cy_NoAction
-        , &rt.Cy_NoAction
         ))
-	  ;
+		;
 }
 
 void build_vt_for_fwd(rt_h const & rt)
@@ -222,11 +230,16 @@ void build_vt_for_fwd(rt_h const & rt)
 
   extern_(rt.vtable_t, sprite::compiler::get_vt_name("fwd"))
       .set_initializer(_t(
-          &fwd_name, &fwd_arity, &fwd_succ
+          &fwd_H
+        , &fwd_N
+        , &fwd_name
+        , &rt.Cy_Sentinel()
+        , &fwd_arity
+        , &fwd_succ
+        , &rt.Cy_Destroy(1)
         , rt.CyVt_Equality("fwd")
         , rt.CyVt_Compare("fwd")
         , rt.CyVt_Show("fwd")
-        , &fwd_N, &fwd_H
         ))
-	  ;
+		;
 }

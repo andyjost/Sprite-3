@@ -1,4 +1,4 @@
-// Tests branch instructions.
+// Tests the ref class.
 #include "sprite/backend/support/testing.hpp"
 
 using namespace sprite::backend;
