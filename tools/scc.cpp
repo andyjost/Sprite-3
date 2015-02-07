@@ -10,12 +10,17 @@
 #include <set>
 #include <vector>
 #include <cstdio>
+#include <unistd.h>
+#include <sys/types.h>
+#include <fcntl.h>
 
 namespace
 {
   llvm::LLVMContext & context = llvm::getGlobalContext();
   bool compile_only = false;
+  bool preprocess_only = false;
   int save_temps = 0;
+  char optlvl = '3'; // 0, 1, 2, 3, s, or z
   std::string mainmodule;
   std::string outputfile = "a.out";
   std::vector<std::string> files;
@@ -50,6 +55,8 @@ namespace
       << "       Write out the final program as LLVM bitcode.\n"
       << "   -c, --compile\n"
       << "       Compile only (do not link).\n"
+      << "   -E, --preprocess\n"
+      << "       Proprocess the source into ICurry only.\n"
       << "   -h, --help\n"
       << "       Display this help message.\n"
       << "   -m MODULE, --main=MODULE\n"
@@ -83,20 +90,22 @@ namespace
     {
       static option long_options[] =
       {
-        {"output-bitcode", no_argument,  0, 'b'},
-        {"compile", no_argument,  0, 'c'},
-        {"help",    no_argument,  0, 'h'},
-        {"main",    no_argument,  0, 'm'},
-        {"output",  no_argument,  0, 'o'},
+        {"output-bitcode",  no_argument,  0, 'b'},
+        {"compile",         no_argument,  0, 'c'},
+        {"preprocess",      no_argument,  0, 'E'},
+        {"help",            no_argument,  0, 'h'},
+        {"main",            no_argument,  0, 'm'},
+        {"optlvl",          no_argument,  0, 'O'},
+        {"output",          no_argument,  0, 'o'},
         {"output-assembly", no_argument,  0, 'S'},
-        {"save-temps", no_argument, &save_temps, 1},
+        {"save-temps",      no_argument, &save_temps, 1},
         {0, 0, 0, 0}
       };
 
       if(optind == argc)
         break;
 
-      int const i = getopt_long(argc, argv, "bchm:o:S", long_options, 0);
+      int const i = getopt_long(argc, argv, "bcEhm:o:S", long_options, 0);
 
       switch(i)
       {
@@ -112,12 +121,27 @@ namespace
         case 'c':
           compile_only = true;
           break;
+        case 'E':
+          preprocess_only = true;
+          break;
         case 'h':
           say_usage(std::cout);
           exit(EXIT_SUCCESS);
         case 'm':
           mainmodule = optarg;
           files.push_back(mainmodule);
+          break;
+        case 'O':
+          optlvl = optarg[0];
+          if(optlvl == '\0' || optarg[1] != '\0' ||
+              (optlvl != '0' && optlvl != '1' && optlvl != '2'
+                && optlvl != '3' && optlvl != 's' && optlvl != 'z'
+                )
+            )
+          {
+            std::cerr << "invalid optimization level: -O" << optarg << std::endl;
+            exit(EXIT_FAILURE);
+          }
           break;
         case 'o':
           outputfile = optarg;
@@ -195,7 +219,9 @@ namespace
     sprite::compiler::LibrarySTab stab;
     for(auto const & file: files)
     {
-      sprite::compile_file(file, lib, stab, context, compile_only);
+      sprite::make_readable_file(file);
+      if(!preprocess_only)
+        sprite::compile_file(file, lib, stab, context, compile_only);
     }
 
     // Link the program, if requested.  By default, add a main symbol to any
@@ -205,7 +231,7 @@ namespace
     // have ignored main functions (say, for module-level unit tests).
     // Detecting the main function only works if the input was Curry rather
     // than bitcode.
-    if(!compile_only)
+    if(!preprocess_only && !compile_only)
     {
       for(sprite::curry::Module const & mod: lib.modules)
       {
@@ -260,7 +286,14 @@ namespace
       }
 
       // Write out the program file(s).
-      write_bitcode_to_file(pgm, final_bitcode);
+      if(optlvl == '0')
+        write_bitcode_to_file(pgm, final_bitcode);
+      else
+      {
+        std::string const unopt_bitcode = final_base + "-unopt.bc";
+        write_bitcode_to_file(pgm, unopt_bitcode);
+        sprite::make_optimized_bitcode(unopt_bitcode, final_bitcode, optlvl, !save_temps);
+      }
 
       if(output_type > OUTPUT_BITCODE)
         sprite::make_assembly_file(final_bitcode, final_assembly, !save_temps);

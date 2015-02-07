@@ -30,6 +30,12 @@ namespace sprite
    */
   void make_readable_file(std::string const & curryfile);
 
+  /// Uses opt to optimize bitcode.  The optlvl is in {'0', '1', '2', '3', 's', 'z'}.
+  void make_optimized_bitcode(
+      std::string const & unoptbitcodefile, std::string const & bitcodefile
+    , char optlvl, bool remove_source
+    );
+
   /// Uses llc to compile bitcode to assembly.
   void make_assembly_file(
       std::string const & bitcodefile, std::string const & assemblyfile
@@ -157,6 +163,9 @@ namespace sprite
 
   /// Gets the path to the llc program.
   std::string const & get_llc();
+
+  /// Gets the path to the opt program.
+  std::string const & get_opt();
 
   /// Gets the path to a C compiler.
   std::string const & get_cc();

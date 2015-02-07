@@ -43,8 +43,6 @@ namespace sprite
     std::string const readablefile = sprite::get_readablefile(curryfile);
     std::string const bitcodefile = sprite::get_bitcodefile(curryfile);
 
-    // Generate the readable Curry file.
-    sprite::make_readable_file(curryfile);
     std::ifstream input(readablefile);
     if(!input)
       throw backend::compile_error("Could not open \"" + readablefile + "\"");
@@ -290,6 +288,12 @@ namespace sprite
     return llc;
   }
 
+  std::string const & get_opt()
+  {
+    static std::string opt = join_path(SPRITE_LIBINSTALL, "opt");
+    return opt;
+  }
+
   std::string const & get_cc()
   {
     static std::string cc = join_path(SPRITE_LIBINSTALL, "cc");
@@ -322,6 +326,23 @@ namespace sprite
         throw backend::compile_error(curry2read + " failed");
       }
     }
+  }
+
+  void make_optimized_bitcode(
+      std::string const & unoptbitcodefile, std::string const & bitcodefile
+    , char optlvl, bool remove_source
+    )
+  {
+    std::stringstream cmd;
+    std::string const & opt = sprite::get_opt();
+    cmd << opt << " -O" << optlvl << " " << unoptbitcodefile << " > " << bitcodefile;
+    int ok = std::system(cmd.str().c_str());
+
+    cmd.str("");
+    if(remove_source && !remove_file(cmd, unoptbitcodefile) && ok != 0)
+      throw backend::compile_error(cmd.str());
+    if(ok != 0)
+      throw backend::compile_error(opt + " failed");
   }
 
   void make_assembly_file(
