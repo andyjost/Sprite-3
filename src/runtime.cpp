@@ -131,9 +131,9 @@ namespace sprite { namespace compiler
   {
     value const head = CyMem_FreeList;
     if_(
-        head == (*void_t)(nullptr)
+        head == (*char_t)(nullptr)
       , [&] { goto_(eh); }
-      , [&] { CyMem_FreeList = *bitcast(head, **void_t); }
+      , [&] { CyMem_FreeList = *bitcast(head, **char_t); }
       );
     return bitcast(head, ty);
   }

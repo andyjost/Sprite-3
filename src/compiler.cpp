@@ -432,9 +432,11 @@ namespace
         compiler::ModuleSTab const & module_stab_
       , tgt::value const & root_p_
       , curry::Function const * fundef_ = nullptr
+      , bool enable_tracing_ = false
       )
       : Rewriter(module_stab_, root_p_, fundef_)
       , inductive_alloca(tgt::local(node_pointer_type))
+      , enable_tracing(enable_tracing_)
     {}
 
   private:
@@ -444,6 +446,8 @@ namespace
     // encountered, so that it can communicate the new target to other sections
     // of code.
     tgt::ref inductive_alloca;
+
+    bool enable_tracing;
 
   public:
 
@@ -620,7 +624,7 @@ namespace
       {
         tgt::scope _ = labels[TAGOFFSET + OPER];
         // Head-normalize the inductive node.
-        vinvoke(this->inductive_alloca, VT_H, tailcall);
+        vinvoke(this->inductive_alloca, VT_H);
         // Repeat the previous jump.
         tgt::value const index = inductive.arrow(ND_TAG) + TAGOFFSET;
         tgt::goto_(jumptable[index], labels);
@@ -639,11 +643,13 @@ namespace
 
     result_type operator()(curry::Rule const & rule)
     {
-      // Trace.
-      // rt.printf("S> --- ");
-      // rt.Cy_Repr(target_p, rt.stdout_(), true);
-      // rt.putchar('\n');
-      // rt.fflush(nullptr);
+      if(enable_tracing)
+      {
+        rt.printf("S> --- ");
+        rt.Cy_Repr(target_p, rt.stdout_(), true);
+        rt.putchar('\n');
+        rt.fflush(nullptr);
+      }
 
       // The rewrite step is always a series of allocations and memory stores
       // that finishes by attaching all allocated nodes to the root.  If memory
@@ -653,11 +659,13 @@ namespace
       // Step.
       static_cast<Rewriter*>(this)->operator()(rule);
 
-      // Trace.
-      // rt.printf("S> +++ ");
-      // rt.Cy_Repr(target_p, rt.stdout_(), true);
-      // rt.putchar('\n');
-      // rt.fflush(nullptr);
+      if(enable_tracing)
+      {
+        rt.printf("S> +++ ");
+        rt.Cy_Repr(target_p, rt.stdout_(), true);
+        rt.putchar('\n');
+        rt.fflush(nullptr);
+      }
       clean_up_and_return();
     }
   };
@@ -667,11 +675,12 @@ namespace
       compiler::ModuleSTab const & module_stab
     , tgt::value const & root_p
     , curry::Function const & fun
+    , bool enable_tracing
     )
   {
     try
     {
-      ::FunctionCompiler c(module_stab, root_p, &fun);
+      ::FunctionCompiler c(module_stab, root_p, &fun, enable_tracing);
       return fun.def.visit(c);
     }
     catch(...)
@@ -747,6 +756,7 @@ namespace
       , &rt.Cy_Sentinel()
       , &rt.Cy_Arity(ctor.arity)
       , &rt.Cy_Succ(ctor.arity)
+      , &rt.Cy_Succ(ctor.arity)
       , &rt.Cy_Destroy(ctor.arity)
       , &rt.CyVt_Equality(module_stab.source->name, dtype.name)
       , &rt.CyVt_Compare(module_stab.source->name, dtype.name)
@@ -804,6 +814,7 @@ namespace
       , &rt.Cy_Label(fun.name)
       , &rt.Cy_Sentinel()
       , &rt.Cy_Arity(fun.arity)
+      , &rt.Cy_Succ(fun.arity)
       , &rt.Cy_Succ(fun.arity)
       , &rt.Cy_Destroy(fun.arity)
       , &rt.CyVt_Equality("oper")
@@ -917,6 +928,7 @@ namespace sprite { namespace compiler
       curry::Module const & cymodule
     , compiler::LibrarySTab & stab
     , llvm::LLVMContext & context
+    , bool enable_tracing
     )
   {
     // Create a new LLVM module and symbol table entry.
@@ -991,7 +1003,7 @@ namespace sprite { namespace compiler
             label entry_;
             goto_(entry_);
             tgt::scope _ = entry_;
-            ::compile_function(module_stab, arg("root_p"), fun);
+            ::compile_function(module_stab, arg("root_p"), fun, enable_tracing);
           }
         }
       }

@@ -36,6 +36,7 @@ void build_vt_for_trivial_node(
 				, &rt.Cy_Sentinel()
         , &rt.Cy_Arity(arity)
         , &rt.Cy_Succ(arity)
+        , &rt.Cy_Succ(arity)
         , &rt.Cy_Destroy(arity)
 				, vptr_equals.ptr() ? vptr_equals : vptr_null
 				, vptr_compare.ptr() ? vptr_compare : vptr_null
@@ -78,6 +79,7 @@ void build_vt_for_PartialTerminus(rt_h const & rt)
         , &label
 				, &rt.Cy_Sentinel()
         , &rt.Cy_Arity(0)
+        , &rt.Cy_Succ(0)
         , &rt.Cy_Succ(0)
         , &rt.Cy_Destroy(0)
 				, nullptr

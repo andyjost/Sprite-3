@@ -32,7 +32,7 @@ namespace
     // Compile the input file.
     sprite::curry::Library lib;
     sprite::compiler::LibrarySTab stab;
-    sprite::compile_file(argv[1], lib, stab, context, false);
+    sprite::compile_file(argv[1], lib, stab, context, false, false);
     std::string topmodule = lib.modules.front().name;
   
     // Declare the main function.

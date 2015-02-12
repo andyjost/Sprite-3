@@ -55,7 +55,7 @@ namespace sprite { namespace compiler
   }();
 
   // The memory roots, used for gc.
-  NodeStack CyMem_Roots;
+  std::deque<node*> CyMem_Roots;
 }}
 
 extern "C"
@@ -83,8 +83,8 @@ extern "C"
 
   aux_t next_choice_id = 0;
 
-  void CyMem_PushRoot(node * p) { CyMem_Roots.push(p); }
-  void CyMem_PopRoot() { CyMem_Roots.pop(); }
+  void CyMem_PushRoot(node * p) { CyMem_Roots.push_back(p); }
+  void CyMem_PopRoot() { CyMem_Roots.pop_back(); }
   void CyMem_Collect() { CyMem_NodePool->collect(); }
 
   node ** Cy_ArrayAllocTyped(aux_t n)

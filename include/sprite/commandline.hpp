@@ -62,6 +62,7 @@ namespace sprite
     , compiler::LibrarySTab &
     , llvm::LLVMContext & context
     , bool save_bitcode
+    , bool enable_tracing
     );
 
   /**

@@ -17,8 +17,11 @@
 namespace
 {
   llvm::LLVMContext & context = llvm::getGlobalContext();
+
+  // Control variables set by the parser.
   bool compile_only = false;
   bool preprocess_only = false;
+  bool enable_tracing = false;
   int save_temps = 0;
   char optlvl = '3'; // 0, 1, 2, 3, s, or z
   std::string mainmodule;
@@ -95,22 +98,23 @@ namespace
     {
       static option long_options[] =
       {
-        {"output-bitcode",  no_argument,  0, 'b'},
-        {"compile",         no_argument,  0, 'c'},
-        {"preprocess",      no_argument,  0, 'E'},
-        {"help",            no_argument,  0, 'h'},
-        {"main",            no_argument,  0, 'm'},
-        {"optimize",        no_argument,  0, 'O'},
-        {"output",          no_argument,  0, 'o'},
-        {"output-assembly", no_argument,  0, 'S'},
+        {"output-bitcode",  no_argument, 0, 'b'},
+        {"compile",         no_argument, 0, 'c'},
+        {"preprocess",      no_argument, 0, 'E'},
+        {"help",            no_argument, 0, 'h'},
+        {"main",            no_argument, 0, 'm'},
+        {"optimize",        no_argument, 0, 'O'},
+        {"output",          no_argument, 0, 'o'},
+        {"output-assembly", no_argument, 0, 'S'},
         {"save-temps",      no_argument, &save_temps, 1},
+        {"trace",           no_argument, 0, 'T'},
         {0, 0, 0, 0}
       };
 
       if(optind == argc)
         break;
 
-      int const i = getopt_long(argc, argv, "bcEhm:O:o:S", long_options, 0);
+      int const i = getopt_long(argc, argv, "bcEhm:O:o:ST", long_options, 0);
 
       switch(i)
       {
@@ -153,6 +157,9 @@ namespace
           break;
         case 'S':
           output_type = OUTPUT_ASSEMBLY;
+          break;
+        case 'T':
+          enable_tracing = true;
           break;
         default:
           std::exit(EXIT_FAILURE);
@@ -226,7 +233,11 @@ namespace
     {
       sprite::make_readable_file(file);
       if(!preprocess_only)
-        sprite::compile_file(file, lib, stab, context, compile_only);
+      {
+        sprite::compile_file(
+           file, lib, stab, context, compile_only, enable_tracing
+         );
+      }
     }
 
     // Link the program, if requested.  By default, add a main symbol to any

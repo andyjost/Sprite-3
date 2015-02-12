@@ -1,9 +1,12 @@
 // This file may only be included from main.cpp.
 #include <boost/pool/pool.hpp>
 #include "basic_runtime.hpp"
+#include <deque>
 
 #ifdef VERBOSEGC
 #include <iostream>
+#include <fstream>
+#include <string>
 #endif
 
 // Size of a node in bytes.
@@ -18,40 +21,7 @@ extern "C"
 
 namespace sprite { namespace compiler
 {
-  // Similar to std::stack<node *>, but faster.
-  struct NodeStack
-  {
-    NodeStack() : pool(sizeof(link), 16) {}
-
-    struct link
-    {
-      node * item;
-      link * next;
-    };
-
-    void push(node * p)
-    {
-      link * a = reinterpret_cast<link *>(pool.malloc());
-      a->item = p;
-      a->next = head;
-      head = a;
-    }
-
-    void pop()
-    {
-      link * a = head;
-      head = a->next;
-      pool.free(a);
-    }
-
-    node * top() const { return head->item; }
-    bool empty() const { return !head; }
-    
-    link * head = nullptr;
-    boost::pool<> pool;
-  };
-
-  extern NodeStack CyMem_Roots;
+  extern std::deque<node*> CyMem_Roots;
 
   #ifdef VERBOSEGC
   // This debugging timer is specific to x86_64 architecture.
@@ -62,6 +32,56 @@ namespace sprite { namespace compiler
     asm volatile("rdtsc" : "=a" (a), "=d" (d)); // x86-64
     return ((ticks)a) | (((ticks)d) << 32);
   }
+
+  size_t n_gc = 0;
+  ticks gc_time = 0;
+  double gc_pct_sum = 0;
+
+  static struct GcReport
+  {
+    static long double get_cpu_frequency()
+    {
+      try
+      {
+        std::ifstream in("/proc/cpuinfo");
+        std::string line;
+        while(std::getline(in, line))
+        {
+          if(line.substr(0, 7) == "cpu MHz")
+          {
+            size_t const n = line.find_first_of("0123456789", 8);
+            if(n == line.npos) return 1.0;
+            return std::stold(line.substr(n)) * 1000000;
+          }
+        }
+      }
+      catch(...) { /* ignore errors */ }
+      return 1.0;
+    }
+
+    ~GcReport()
+    {
+      try
+      {
+        ticks const elapsed = (getticks() - start_time);
+        long double const freq = get_cpu_frequency();
+        std::cout
+          << "====== Garbage Collection Summary ======\n"
+          << "    Program elapsed time (s) : " << (elapsed/freq) << "\n"
+          << "    CPU MHz                  : " << freq << "\n"
+          << "    GC elapsed time (s)      : " << (gc_time/freq) << "\n"
+          << "    GC % elapsed time        : " << ((double)gc_time/elapsed)*100 << "\n"
+          << "    GC # calls               : " << n_gc << "\n"
+          << "    GC avg % freed           : " << (gc_pct_sum/n_gc) << "\n"
+          << std::endl;
+      }
+      catch(...) {}
+    }
+
+  private:
+    ticks start_time = getticks();
+
+  } _gc_report;
   #endif
 
   /**
@@ -109,46 +129,44 @@ namespace sprite { namespace compiler
   std::pair<typename NodePool<UserAllocator>::size_type, void *>
   NodePool<UserAllocator>::collect_only()
   {
-    #if VERBOSEGC
-      std::cout << "\nStarting collection." << std::endl;
+    #if VERBOSEGC > 0
+      n_gc++;
       ticks t0 = getticks();
-      ticks t1;
+    #endif
+
+    #if VERBOSEGC > 1
+      std::cout << "\nStarting collection." << std::endl;
     #endif
   
     // Mark phase.
-    NodeStack roots;
-    for(NodeStack::link * p = CyMem_Roots.head; p; p = p->next)
-      roots.push(p->item);
+    std::deque<node*> roots;
+    for(node * p: CyMem_Roots)
+      roots.push_back(p);
     while(!roots.empty())
     {
-      node * parent = roots.top();
-      roots.pop();
-      #if VERBOSEGC > 1
+      node * parent = roots.back();
+      roots.pop_back();
+
+      #if VERBOSEGC > 2
         std::cout
             << "   [mark] @" << parent << " " << parent->vptr->label(parent)
             << std::endl;
       #endif
 
         parent->mark = 1;
-        if(parent->vptr == &CyVt_Fwd)
-          roots.push(reinterpret_cast<node*>(parent->slot0));
-        else
-        {
-          node ** begin, ** end;
-          parent->vptr->succ(parent, &begin, &end);
-          for(; begin!=end; ++begin)
-            roots.push(*begin);
-        }
+        node ** begin, ** end;
+        parent->vptr->gcsucc(parent, &begin, &end);
+        for(; begin!=end; ++begin)
+          roots.push_back(*begin);
     }
 
-    #if VERBOSEGC
-      t1 = getticks();
-      std::cout << "Mark phase takes " << (t1-t0) << " ticks." << std::endl;
-      t0 = getticks();
+    #if VERBOSEGC > 1
+      ticks tm = getticks();
+      std::cout << "Mark phase takes " << (tm-t0) << " ticks." << std::endl;
     #endif
   
     // Sweep phase.
-    #if VERBOSEGC
+    #if VERBOSEGC > 0
       size_t total = 0;
     #endif
     size_t n = 0;
@@ -158,7 +176,7 @@ namespace sprite { namespace compiler
     const size_type partition_size = this->alloc_size();
     for(blockptr ptr = this->list; ptr.valid(); ptr = ptr.next())
     {
-      #if VERBOSEGC
+      #if VERBOSEGC > 0
         total += (ptr.end() - ptr.begin());
       #endif
       for(char * i = ptr.begin(); i != ptr.end(); i += partition_size)
@@ -166,7 +184,7 @@ namespace sprite { namespace compiler
         node * const node_p = reinterpret_cast<node *>(i);
         if(node_p->mark == 0)
         {
-          #if VERBOSEGC > 1
+          #if VERBOSEGC > 2
             std::cout << "   [free] @" << node_p << std::endl;
           #endif
           ++n;
@@ -194,7 +212,7 @@ namespace sprite { namespace compiler
         }
         else
         {
-          #if VERBOSEGC > 1
+          #if VERBOSEGC > 2
             std::cout
                 << "   [keep] @" << node_p << " " << node_p->vptr->label(node_p)
                 << std::endl;
@@ -203,12 +221,16 @@ namespace sprite { namespace compiler
         }
       }
     }
-    #if VERBOSEGC
-      t1 = getticks();
-      std::cout << "Sweep phase takes " << (t1-t0) << " ticks." << std::endl;
-
+    #if VERBOSEGC > 0
+      ticks t1 = getticks();
+      gc_time += (t1-t0);
       total /= partition_size;
-      float const pct =  total == 0 ? 0 : 100.0 * n / total;
+      float const pct = total == 0 ? 0 : 100.0 * n / total;
+      gc_pct_sum += pct;
+    #endif
+
+    #if VERBOSEGC > 1
+      std::cout << "Sweep phase takes " << (t1-tm) << " ticks." << std::endl;
       std::cout << "Done collecting: freed " << n << " out of "
         << total << " chunks (" << pct << "%); " << (total-n) << " remain."
         << std::endl;
@@ -260,7 +282,7 @@ namespace sprite { namespace compiler
 
     static char * malloc(size_type const bytes)
     {
-      #ifdef VERBOSEGC
+      #if VERBOSEGC > 1
         float const n = bytes / NODE_BYTES;
         std::cout
             << "Request for a block of " << bytes
@@ -268,7 +290,7 @@ namespace sprite { namespace compiler
             << std::endl;
       #endif
       char * p = new (std::nothrow) char[bytes]();
-      #ifdef VERBOSEGC
+      #if VERBOSEGC > 1
         std::cout
             << "block-alloc(("
             << reinterpret_cast<void *>(p) << ","
@@ -280,7 +302,7 @@ namespace sprite { namespace compiler
     }
     static void free(char * const p)
     {
-      #ifdef VERBOSEGC
+      #if VERBOSEGC > 1
       std::cout << "block-free " << reinterpret_cast<void *>(p) << std::endl;
       #endif
       delete[] p;

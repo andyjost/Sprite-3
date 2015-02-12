@@ -130,6 +130,7 @@ namespace sprite { namespace compiler
       sprite::curry::Module const &
     , sprite::compiler::LibrarySTab &
     , llvm::LLVMContext &
+    , bool enable_tracing
     );
 
   /// Constructs an expression at the given node address.

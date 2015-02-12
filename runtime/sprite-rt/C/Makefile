@@ -10,7 +10,10 @@ clean :
 -include ../../../Make.include
 
 # Additional options that may be added to LOCAL_CFLAGS:
-#     -DVERBOSEGC=1  Verbose garbage collector (use =2 for more verbosity).
+#     -DVERBOSEGC=1  Verbose garbage collector.
+#         =1  Prints a summary of the time spent collecting.
+#         =2  Prints information every time the collector runs.
+#         =3  Prints information about every node during collection.
 LOCAL_CFLAGS += $(shell $(LLVM-CONFIG) --cppflags) -I.
 
 .DELETE_ON_ERROR :

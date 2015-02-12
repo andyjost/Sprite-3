@@ -37,6 +37,7 @@ namespace sprite
     , compiler::LibrarySTab & stab
     , llvm::LLVMContext & context
     , bool save_bitcode
+    , bool enable_tracing
     )
   {
     std::string const modulename = sprite::get_modulename(curryfile);
@@ -62,7 +63,11 @@ namespace sprite
     for(std::string const & import: cymodule.imports)
     {
       if(stab.modules.count(import) == 0)
-        compile_file(get_module_file(import), lib, stab, context, false);
+      {
+        compile_file(
+            get_module_file(import), lib, stab, context, false, enable_tracing
+          );
+      }
     }
 
     // Read the program IR from the .bc file, if possible.  Update the symbol
@@ -88,7 +93,7 @@ namespace sprite
         );
     }
 
-    compiler::compile(cymodule, stab, context);
+    compiler::compile(cymodule, stab, context, enable_tracing);
 
     // If asked to, write out the .bc file.
     if(save_bitcode && !bitcode_is_up_to_date)

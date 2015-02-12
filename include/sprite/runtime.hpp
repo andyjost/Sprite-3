@@ -76,6 +76,7 @@ namespace sprite { namespace compiler
             , *vtable_t   /*sentinel -- must be fourth!*/
             , *arityfun_t /*arity*/
             , *rangefun_t /*succ*/
+            , *rangefun_t /*gcsucc*/
             , *stepfun_t  /*destroy*/
             , *vtable_t   /*equality*/
             , *vtable_t   /*comparison*/
@@ -92,7 +93,7 @@ namespace sprite { namespace compiler
   namespace member_labels
   {
     enum VtMember {
-        VT_H, VT_N, VT_LABEL, VT_SENTINEL, VT_ARITY, VT_SUCC, VT_DESTROY
+        VT_H, VT_N, VT_LABEL, VT_SENTINEL, VT_ARITY, VT_SUCC, VT_GCSUCC, VT_DESTROY
       , VT_EQUALITY, VT_COMPARISON, VT_SHOW
       };
     enum NdMember { ND_VPTR, ND_TAG, ND_MARK, ND_AUX, ND_SLOT0, ND_SLOT1 };
@@ -108,12 +109,12 @@ namespace sprite { namespace compiler
   struct rt_h : ir_h
   {
     // Memory system.
-    function const Cy_ArrayAllocTyped = extern_((**node_t)(aux_t), "Cy_ArrayAllocTyped"); // deleteme?
-    function const Cy_ArrayDealloc = extern_(void_t(aux_t, *void_t), "Cy_ArrayDealloc"); // deleteme?
+    function const Cy_ArrayAllocTyped = extern_((**node_t)(aux_t), "Cy_ArrayAllocTyped");
+    function const Cy_ArrayDealloc = extern_(void_t(aux_t, *char_t), "Cy_ArrayDealloc");
     function const CyMem_Collect = extern_(void_t(), "CyMem_Collect");
     function const CyMem_PushRoot = extern_(void_t(*node_t), "CyMem_PushRoot");
     function const CyMem_PopRoot = extern_(void_t(), "CyMem_PopRoot");
-    globalvar const CyMem_FreeList = extern_(*void_t, "CyMem_FreeList").as_globalvar();
+    globalvar const CyMem_FreeList = extern_(*char_t, "CyMem_FreeList").as_globalvar();
 
     // Creates a new basic block at the current point in the code stream and
     // makes it the default insertion point.  Creates another basic block that
