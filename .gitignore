@@ -22,3 +22,6 @@ include/sprite/config.hpp
 runtime/sprite-rt/llvm/generate-llvm
 tests/*.exe
 tests/*.result
+tests/*/*.exe
+tests/*/*.result
+

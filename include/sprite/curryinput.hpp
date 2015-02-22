@@ -6,6 +6,7 @@
 #include <iterator>
 #include <limits>
 #include <list>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -94,14 +95,17 @@ namespace sprite { namespace curry
    * specified as a series of steps that define intermediate values, and a
    * final step that produces the result.
    */
-  struct NLTerm
+  template<typename Rule_ = Rule>
+  struct NLTerm_
   {
     // Each step creates a new variable binding associated with varid.
-    struct Step { size_t varid; Term term; };
+    struct Step { size_t varid; Term_<Rule_> term; };
     std::list<Step> steps;
-    // The result is the value of the term.
-    Term result;
+    // The result is the value of the term.  The pointer is used to break an
+    // instantiation cycle with Rule.
+    std::shared_ptr<Rule_> result;
   };
+  using NLTerm = NLTerm_<>;
 
   /// Represents a variable reference.
   struct Ref { size_t pathid; };

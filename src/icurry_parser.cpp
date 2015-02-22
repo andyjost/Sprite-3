@@ -367,29 +367,41 @@ namespace sprite { namespace curry
       ifs >> word;
       return read_rule(ifs);
     }
-    else if(word == "initialize")
+    else if(word == "initialize" || word == "forward")
     {
       NLTerm nlterm;
-      while(word == "initialize")
+      while(word == "initialize" || word == "forward" || word == "assign")
       {
+        bool const was_forward = word == "forward";
         NLTerm::Step step;
-        // Parse (varid,_,'IBind').
-        int c = ifs.get();
-        SPRITE_SKIPSPACE_EXPECTING('(')
-        step.varid = read_variable_ref(ifs);
-        c = ifs.get();
-        SPRITE_SKIPSPACE_EXPECTING(',')
-        size_t unused;
-        ifs >> unused;
-        c = ifs.get();
-        SPRITE_SKIPSPACE_EXPECTING(',')
-        char cword[6];
-        ifs.get(cword, sizeof(cword));
-        if(std::string(cword) != "IBind") throw ParseError();
-        c = ifs.get();
-        SPRITE_SKIPSPACE_EXPECTING(')')
+        if(word == "assign")
+        {
+          // Parse: varid
+          step.varid = read_variable_ref(ifs);
+        }
+        else
+        {
+          // Parse: (varid,_,'IBind').
+          int c = ifs.get();
+          SPRITE_SKIPSPACE_EXPECTING('(')
+          step.varid = read_variable_ref(ifs);
+          c = ifs.get();
+          SPRITE_SKIPSPACE_EXPECTING(',')
+          size_t unused;
+          ifs >> unused;
+          c = ifs.get();
+          SPRITE_SKIPSPACE_EXPECTING(',')
+          char cword[6];
+          ifs.get(cword, sizeof(cword));
+          if(std::string(cword) != "IBind") throw ParseError();
+          c = ifs.get();
+          SPRITE_SKIPSPACE_EXPECTING(')')
+        }
 
+        // Skip "forward" lines.
         ifs >> word;
+        if(was_forward) continue;
+
         if(word != "Node") throw ParseError();
         step.term = read_term(ifs);
         nlterm.steps.push_back(step);
@@ -397,10 +409,25 @@ namespace sprite { namespace curry
         ifs >> word;
       }
 
+      // Skip "fill" lines.
+      while(word == "fill")
+      {
+        // Parse: varid 'in' varid' \n at ... \n
+        read_variable_ref(ifs);
+        ifs >> word;
+        if(word != "in") throw ParseError();
+        read_variable_ref(ifs);
+        ifs >> word;
+        if(word != "at") throw ParseError();
+        ifs.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        ifs >> word;
+      }
+
       // Parse the result term.
       if(word != "return") throw ParseError();
       ifs >> word;
-      nlterm.result = read_term(ifs);
+      // nlterm.result = read_term(ifs);
+      nlterm.result.reset(new Rule(read_rule(ifs)));
       return Rule(nlterm);
     }
     else if(

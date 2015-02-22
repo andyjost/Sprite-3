@@ -170,5 +170,14 @@ namespace sprite { namespace compiler
     if(node_stab.tag == CHOICE)
       node_p.arrow(ND_AUX) = module_stab.rt().next_choice_id++;
   }
+
+  // Sets the extended child array to the given value, and returns the same,
+  // cast to char**.
+  inline value set_extended_child_array(value const & node, value const & array)
+  {
+    ref slot0 = node.arrow(ND_SLOT0);
+    slot0 = array;
+    return bitcast(slot0, **types::char_());
+  }
 }}
 

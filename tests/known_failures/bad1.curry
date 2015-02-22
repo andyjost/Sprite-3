@@ -3,6 +3,8 @@ f x
         z = y + x
     in z + 1
 
+main = f 5
+
 {-
 
 Flat reverse engineered

@@ -14,12 +14,12 @@ clean :
 #         =1  Prints a summary of the time spent collecting.
 #         =2  Prints information every time the collector runs.
 #         =3  Prints information about every node during collection.
-LOCAL_CFLAGS += $(shell $(LLVM-CONFIG) --cppflags) -I.
+LOCAL_CFLAGS += $(shell $(LLVM-CONFIG) --cppflags) -std=c++11 -I.
 
 .DELETE_ON_ERROR :
 $(STATICLIB) : main.o
 	# Note: pipefail is used because llvm-as returns non-error even if clang fails.
-	bash -o pipefail -c '$(CLANG) $(LOCAL_CFLAGS) -std=c++11 -S -emit-llvm main.cpp -o - | $(LLVM-AS) > $(STATICLIB)'
+	bash -o pipefail -c '$(CLANG) $(LOCAL_CFLAGS) -S -emit-llvm main.cpp -o - | $(LLVM-AS) > $(STATICLIB)'
 	$(CLANG) -MM $(LOCAL_CFLAGS) main.cpp > main.d
 
 # Import dependency info.

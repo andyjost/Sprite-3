@@ -5,6 +5,7 @@
 #include <limits>
 #include <list>
 #include "llvm/ADT/SmallVector.h"
+#include <unordered_set>
 #include <sstream>
 #include <stack>
 #include "stdio.h"
@@ -15,7 +16,11 @@
 #define SUCC_1(root) reinterpret_cast<node*&>(root->slot1)
 #define DATA(root, type) (*reinterpret_cast<type *>(&root->slot0))
 
-#define NODE_ALLOC(variable, label)                                 \
+#define NODE_ALLOC(variable, label)            \
+    NODE_ALLOC_WITH_ACTIONS(variable, label, ) \
+  /**/
+
+#define NODE_ALLOC_WITH_ACTIONS(variable, label, actions)           \
     do {                                                            \
       if(CyMem_FreeList)                                            \
       {                                                             \
@@ -23,9 +28,10 @@
         CyMem_FreeList = *reinterpret_cast<void**>(CyMem_FreeList); \
       }                                                             \
       else                                                          \
-        { CyMem_NodePool->collect(); goto label; }                  \
+        { {actions}; CyMem_NodePool->collect(); goto label; }       \
     } while(0)                                                      \
   /**/
+
 
 // The maximum arity of any node, plus one.
 #ifndef SPRITE_ARITY_BOUND
@@ -163,22 +169,35 @@ extern "C"
 
   void Cy_NoAction(node * root) {}
 
-  // Writes a representation of the expression to the given stream.  The
-  // representation is not normalized.  If is_outer, then the root is the
-  // outermost term and is never parenthesized.
-  void Cy_Repr(node * root, FILE * stream, bool is_outer)
+  void _Cy_Repr(
+      std::unordered_set<node *> & seen, node * root, FILE * stream
+    , bool is_outer
+    )
   {
     node ** begin, ** end;
     root->vptr->succ(root, &begin, &end);
     size_t const N = end - begin;
     if(!is_outer && N > 0) fputs("(", stream);
     fputs(root->vptr->label(root), stream);
+    seen.insert(root);
     for(; begin != end; ++begin)
     {
       fputs(" ", stream);
-      Cy_Repr(*begin, stream, false);
+      if(seen.count(*begin))
+        fputs("...", stream);
+      else
+        _Cy_Repr(seen, *begin, stream, false);
     }
     if(!is_outer && N > 0) fputs(")", stream);
+  }
+
+  // Writes a representation of the expression to the given stream.  The
+  // representation is not normalized.  If is_outer, then the root is the
+  // outermost term and is never parenthesized.
+  void Cy_Repr(node * root, FILE * stream, bool is_outer)
+  {
+    std::unordered_set<node *> seen;
+    _Cy_Repr(seen, root, stream, is_outer);
   }
 
   // Converts a C-string to a Curry string (list of Char).  Rewrites root to be
@@ -191,12 +210,15 @@ extern "C"
     size_t n = 0;
     node * char_data;
     node * next;
-    root->vptr->destroy(root);
-    while(*str && n++ != max)
+
+    // Before the first character is created, the root node must be destroyed.
+    if(*str && n++ != max)
     {
-    redo:
-      NODE_ALLOC(char_data, redo);
-      NODE_ALLOC(next, redo);
+    redo0:
+      NODE_ALLOC(char_data, redo0);
+      NODE_ALLOC(next, redo0);
+
+      root->vptr->destroy(root);
 
       char_data->vptr = &CyVt_Char;
       char_data->tag = CTOR;
@@ -209,8 +231,30 @@ extern "C"
 
       root = next;
     }
-    root->vptr = &CyVt_Nil;
-    root->tag = CTOR;
+
+    // For subsequent characters, the string must be terminated just before
+    // running garbage collection.
+    #define TERMINATE_STRING root->vptr = &CyVt_Nil; root->tag = CTOR;
+    while(*str && n++ != max)
+    {
+    redo:
+      NODE_ALLOC_WITH_ACTIONS(char_data, redo, TERMINATE_STRING);
+      NODE_ALLOC_WITH_ACTIONS(next, redo, TERMINATE_STRING);
+
+      char_data->vptr = &CyVt_Char;
+      char_data->tag = CTOR;
+      DATA(char_data, char) = *str++;
+
+      root->vptr = &CyVt_Cons;
+      root->tag = CTOR + 1;
+      root->slot0 = char_data;
+      root->slot1 = next;
+
+      root = next;
+    }
+
+    TERMINATE_STRING
+    #undef TERMINATE_STRING
     return root;
   }
 

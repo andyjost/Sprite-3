@@ -15,6 +15,88 @@ namespace
 {
   using namespace sprite::compiler;
 
+  void trace_step_start(rt_h const & rt, value const & root_p)
+  {
+    rt.printf("S> --- ");
+    rt.Cy_Repr(root_p, rt.stdout_(), true);
+    rt.putchar('\n');
+    rt.fflush(nullptr);
+  }
+
+  void trace_step_end(rt_h const & rt, value const & root_p)
+  {
+    rt.printf("S> +++ ");
+    rt.Cy_Repr(root_p, rt.stdout_(), true);
+    rt.putchar('\n');
+    rt.fflush(nullptr);
+  }
+
+  // Performs a pull tab at node * src, having the specified arity.  itgt is
+  // the index of the successor that is a choice.
+  void exec_pulltab(
+      rt_h const & rt, value const & src, value const & tgt, size_t arity
+    , size_t itgt, label const & out_of_memory_handler
+    )
+  {
+    value lhs = rt.node_alloc(*rt.node_t, out_of_memory_handler);
+    value rhs = rt.node_alloc(*rt.node_t, out_of_memory_handler);
+    lhs.arrow(ND_VPTR) = src.arrow(ND_VPTR);
+    lhs.arrow(ND_TAG) = src.arrow(ND_TAG);
+    rhs.arrow(ND_VPTR) = src.arrow(ND_VPTR);
+    rhs.arrow(ND_TAG) = src.arrow(ND_TAG);
+    // OK to ignore aux.  The root cannot be a choice because a choice
+    // has no step function.
+
+    if(arity < 3)
+    {
+      for(size_t i=0; i<arity; ++i)
+      {
+        if(i == itgt)
+        {
+          lhs.arrow(ND_SLOT0+i) = tgt.arrow(ND_SLOT0);
+          rhs.arrow(ND_SLOT0+i) = tgt.arrow(ND_SLOT1);
+        }
+        else
+        {
+          value tmp = src.arrow(ND_SLOT0+i);
+          lhs.arrow(ND_SLOT0+i) = tmp;
+          rhs.arrow(ND_SLOT0+i) = tmp;
+        }
+      }
+    }
+    else
+    {
+      // The LHS argument array is stolen from the root node.
+      value lhs_children = set_extended_child_array(
+          lhs, src.arrow(ND_SLOT0)
+        );
+      // The RHS argument array is allocated.
+      value rhs_children = set_extended_child_array(
+          rhs, rt.Cy_ArrayAllocTyped(static_cast<aux_t>(arity))
+        );
+
+      for(size_t i=0; i<arity; ++i)
+      {
+        if(i == itgt)
+        {
+          lhs_children[i] = tgt.arrow(ND_SLOT0);
+          rhs_children[i] = tgt.arrow(ND_SLOT1);
+        }
+        else
+        {
+          // Nothing to do for LHS.
+          rhs_children[i] = lhs_children[i];
+        }
+      }
+    }
+    // Do not call this->destroy_target.  The successor list was stolen.
+    src.arrow(ND_VPTR) = rt.choice_vt;
+    src.arrow(ND_TAG) = compiler::CHOICE;
+    src.arrow(ND_AUX) = tgt.arrow(ND_AUX);
+    src.arrow(ND_SLOT0) = bitcast(lhs, *types::char_());
+    src.arrow(ND_SLOT1) = bitcast(rhs, *types::char_());
+  }
+
   /**
    * @brief Composes an expression by rewriting the given root.
    *
@@ -113,17 +195,6 @@ namespace
     {
       tgt::value data = this->node_alloc(*rt.node_t);
       return this->new_(data, rule);
-    }
-
-    // Sets the extended child array to the given value, and returns the same,
-    // cast to char**.
-    tgt::value set_extended_child_array(
-        tgt::value const & node, tgt::value const & array
-      )
-    {
-      ref slot0 = node.arrow(ND_SLOT0);
-      slot0 = array;
-      return bitcast(slot0, **types::char_());
     }
 
     // Deallocates the extended child array stored in the root node, if present.
@@ -411,7 +482,7 @@ namespace
     {
       for(curry::NLTerm::Step const & step: term.steps)
         this->new_(this->resolve_path(step.varid), step.term);
-      return (*this)(term.result);
+      return (*this)(*term.result);
     }
 
     result_type operator()(curry::ExternalCall const & term)
@@ -502,10 +573,9 @@ namespace
       tgt::value const inductive = this->resolve_path(pathid);
 
       // Declare the jump table in the target program.
-      tgt::type char_p = *tgt::types::char_();
       size_t const table_size = TAGOFFSET + branch.cases.size();
       tgt::globalvar jumptable =
-          tgt::static_(char_p[table_size], tgt::flexible(".jtable"))
+          tgt::static_((*rt.char_t)[table_size], tgt::flexible(".jtable"))
               .as_globalvar();
 
       // Declare placeholders for the pre-defined special labels.  Definitions
@@ -557,65 +627,11 @@ namespace
         }
         else
         {
-          size_t const critical = this->fundef->paths.at(pathid).idx;
-          size_t const n = this->fundef->arity;
-          tgt::value lhs = this->node_alloc(*rt.node_t);
-          tgt::value rhs = this->node_alloc(*rt.node_t);
-
-          lhs.arrow(ND_VPTR) = this->target_p.arrow(ND_VPTR);
-          lhs.arrow(ND_TAG) = this->target_p.arrow(ND_TAG);
-          rhs.arrow(ND_VPTR) = this->target_p.arrow(ND_VPTR);
-          rhs.arrow(ND_TAG) = this->target_p.arrow(ND_TAG);
-          // OK to ignore aux.  The root cannot be a choice because a choice
-          // has no step function.
-
-          if(n < 3)
-          {
-            for(size_t i=0; i<n; ++i)
-            {
-              if(i == critical)
-              {
-                lhs.arrow(ND_SLOT0+i) = inductive.arrow(ND_SLOT0);
-                rhs.arrow(ND_SLOT0+i) = inductive.arrow(ND_SLOT1);
-              }
-              else
-              {
-                lhs.arrow(ND_SLOT0+i) = this->target_p.arrow(ND_SLOT0+i);
-                rhs.arrow(ND_SLOT0+i) = lhs.arrow(ND_SLOT0+i);
-              }
-            }
-          }
-          else
-          {
-            // The LHS argument array is stolen from the root node.
-            value lhs_children = set_extended_child_array(
-                lhs, this->target_p.arrow(ND_SLOT0)
-              );
-            // The RHS argument array is allocated.
-            value rhs_children = set_extended_child_array(
-                rhs, rt.Cy_ArrayAllocTyped(static_cast<aux_t>(n))
-              );
-
-            for(size_t i=0; i<n; ++i)
-            {
-              if(i == critical)
-              {
-                lhs_children[i] = inductive.arrow(ND_SLOT0);
-                rhs_children[i] = inductive.arrow(ND_SLOT1);
-              }
-              else
-              {
-                // Nothing to do for LHS.
-                rhs_children[i] = lhs_children[i];
-              }
-            }
-          }
-          // Do not call this->destroy_target.  The successor list was stolen.
-          this->target_p.arrow(ND_VPTR) = rt.choice_vt;
-          this->target_p.arrow(ND_TAG) = compiler::CHOICE;
-          this->target_p.arrow(ND_AUX) = inductive.arrow(ND_AUX);
-          this->target_p.arrow(ND_SLOT0) = bitcast(lhs, *types::char_());
-          this->target_p.arrow(ND_SLOT1) = bitcast(rhs, *types::char_());
+          size_t const itgt = this->fundef->paths.at(pathid).idx;
+          exec_pulltab(
+              this->rt, this->target_p, inductive, this->fundef->arity, itgt
+            , this->out_of_memory_handler
+            );
         }
         clean_up_and_return();
       }
@@ -643,13 +659,7 @@ namespace
 
     result_type operator()(curry::Rule const & rule)
     {
-      if(enable_tracing)
-      {
-        rt.printf("S> --- ");
-        rt.Cy_Repr(target_p, rt.stdout_(), true);
-        rt.putchar('\n');
-        rt.fflush(nullptr);
-      }
+      if(enable_tracing) trace_step_start(rt, target_p);
 
       // The rewrite step is always a series of allocations and memory stores
       // that finishes by attaching all allocated nodes to the root.  If memory
@@ -659,13 +669,7 @@ namespace
       // Step.
       static_cast<Rewriter*>(this)->operator()(rule);
 
-      if(enable_tracing)
-      {
-        rt.printf("S> +++ ");
-        rt.Cy_Repr(target_p, rt.stdout_(), true);
-        rt.putchar('\n');
-        rt.fflush(nullptr);
-      }
+      if(enable_tracing) trace_step_end(rt, target_p);
       clean_up_and_return();
     }
   };
@@ -692,16 +696,129 @@ namespace
     }
   }
 
+  void compile_ctor_N_function_body(
+      rt_h const & rt, size_t arity, bool enable_tracing
+    )
+  {
+    value root_p = arg("root_p");
+    ref child = local(*rt.node_t);
+    label current = scope::current_label();
+
+    auto handle_child = [&](size_t ichild){
+      value call;
+      size_t constexpr table_size = 5; // FAIL, FWD, CHOICE, OPER, CTOR
+      label labels[table_size];
+      globalvar jumptable =
+          static_((*rt.char_t)[table_size], flexible(".jtable"))
+              .as_globalvar();
+
+      auto make_jump = [&]{
+        ref index = local(rt.tag_t);
+        index = child.arrow(ND_TAG) + TAGOFFSET;
+        if_(
+            index >(signed_) (rt.tag_t(table_size-1))
+          , [&]{ index = rt.tag_t(table_size-1); }
+          );
+        goto_(jumptable[index], labels);
+      };
+
+      // FAIL case.
+      {
+        scope _ = labels[TAGOFFSET + FAIL];
+        if(arity > 2) vinvoke(root_p, VT_DESTROY);
+        root_p.arrow(ND_VPTR) = rt.failed_vt;
+        root_p.arrow(ND_TAG) = compiler::FAIL;
+        return_();
+      }
+
+      // FWD case.
+      {
+        scope _ = labels[TAGOFFSET + FWD];
+        child = bitcast(child.arrow(ND_SLOT0), *rt.node_t);
+        make_jump();
+      }
+
+      // CHOICE case.
+      {
+        scope _ = labels[TAGOFFSET + CHOICE];
+        label out_of_memory_handler = rt.make_restart_point();
+        if(enable_tracing) trace_step_start(rt, root_p);
+        exec_pulltab(rt, root_p, child, arity, ichild, out_of_memory_handler);
+        if(enable_tracing) trace_step_end(rt, root_p);
+        return_();
+      }
+
+      // OPER case (recursive call to child.N, then loop back to the jump).
+      {
+        scope _ = labels[TAGOFFSET + OPER];
+        child.arrow(ND_VPTR).arrow(VT_N)(child);
+        make_jump();
+      }
+
+      // CTOR case (recursive call to child.N then continue).
+      {
+        scope _ = labels[TAGOFFSET + CTOR];
+        call = child.arrow(ND_VPTR).arrow(VT_N)(child);
+        current = scope::current_label();
+      }
+
+      block_address addresses[table_size] =
+          {&labels[0], &labels[1], &labels[2], &labels[3], &labels[4]};
+      jumptable.set_initializer(addresses);
+      make_jump();
+      return call;
+    };
+
+    switch(arity)
+    {
+      case 2:
+      {
+        scope _ = current;
+        child = bitcast(root_p.arrow(ND_SLOT1), *rt.node_t);
+        handle_child(1);
+      }
+      case 1:
+      {
+        scope _ = current;
+        child = bitcast(root_p.arrow(ND_SLOT0), *rt.node_t);
+        handle_child(0).set_attribute(tailcall);
+      }
+      case 0: break;
+      default:
+      {
+        value children = bitcast(
+            root_p.arrow(ND_SLOT0), **rt.node_t
+          );
+        value last_call;
+        for(size_t ichild=0; ichild<arity; ++ichild)
+        {
+          scope _ = current;
+          child = children[ichild];
+          last_call = handle_child(ichild);
+        }
+        last_call.set_attribute(tailcall);
+        break;
+      }
+    }
+
+    // Put the return in the last scope.
+    {
+      scope _ = current;
+      return_();
+    }
+  }
+
   void compile_ctor_vtable(
       tgt::global & vt
     , curry::DataType const & dtype
     , size_t ictor
     , compiler::ModuleSTab & module_stab
+    , bool enable_tracing
     )
   {
     compiler::rt_h const & rt = module_stab.rt();
 
-    // Look up the N function and define it as needed.
+    // Look up the N function, or define it as needed.
     auto const & ctor = dtype.constructors[ictor];
     tgt::module & module_ir = module_stab.module_ir;
     std::string const n_name = ".N." + std::to_string(ctor.arity);
@@ -709,46 +826,10 @@ namespace
     if(!N.ptr())
     {
       N = static_<function>(
-          rt.stepfun_t, flexible(n_name), {"root_p"}
-        , [&]{
-            tgt::value root_p = arg("root_p");
-            tgt::value child;
-            // FIXME: need to implement "dot" and "arrow" with names.
-            switch(ctor.arity)
-            {
-              case 2:
-                child = bitcast(
-                    root_p.arrow(ND_SLOT1), *rt.node_t
-                  );
-                child.arrow(ND_VPTR).arrow(VT_N)(child);
-              case 1:
-                child = bitcast(
-                    root_p.arrow(ND_SLOT0), *rt.node_t
-                  );
-                child.arrow(ND_VPTR).arrow(VT_N)(child)
-                    .set_attribute(tailcall);
-              case 0:
-                break;
-              default:
-              {
-                tgt::value children = bitcast(
-                    root_p.arrow(ND_SLOT0), **rt.node_t
-                  );
-                tgt::value last_call;
-                for(size_t i=0; i<ctor.arity; ++i)
-                {
-                  child = children[i];
-                  last_call = child.arrow(ND_VPTR).arrow(VT_N)(child);
-                }
-                last_call.set_attribute(tailcall);
-                break;
-              }
-            }
-            tgt::return_();
-          }
+          rt.stepfun_t, n_name, {"root_p"}
+        , [&]{ compile_ctor_N_function_body(rt, ctor.arity, enable_tracing); }
         );
     }
-
     vt.set_initializer(_t(
         &rt.Cy_NoAction
       , &N
@@ -798,7 +879,7 @@ namespace
     if(!H.ptr())
     {
       H = static_<function>(
-          rt.stepfun_t, flexible(hname), {"root_p"}
+          rt.stepfun_t, hname, {"root_p"}
         , [&]{
             tgt::value root_p = arg("root_p");
             step(root_p);
@@ -964,7 +1045,7 @@ namespace sprite { namespace compiler
           std::string const vtname = ".vt.CTOR." + cymodule.name + "." + ctor.name;
           tgt::global vt = extern_(rt.vtable_t, vtname);
           if(is_primary && !vt.has_initializer())
-            compile_ctor_vtable(vt, dtype, ictor, module_stab);
+            compile_ctor_vtable(vt, dtype, ictor, module_stab, enable_tracing);
   
           // Update the symbol tables.
           module_stab.nodes.emplace(
