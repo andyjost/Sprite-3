@@ -88,7 +88,7 @@ ppStmt n (ATable suffix flex expr branch_list)
 
 ppStmt n (BTable suffix flex expr branch_list)
   = ppIndent n ++ 
-      "BTable " ++ show suffix ++ " " ++ flex_show flex ++
+      "BTable " ++ show suffix ++ " " ++ show (length branch_list) ++ " " ++ flex_show flex ++
       ppExpr (n+2) expr ++
       foldr ((++) . ppBBranch (n+2)) "" branch_list
 

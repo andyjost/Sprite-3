@@ -50,6 +50,9 @@ namespace sprite { namespace backend
   /// Appends an indirect branch instruction to the active label scope.
   instruction goto_(value const & target, array_ref<label> const & labels);
 
+  /// Appends a switch instruction to the active label scope.
+  switch_instruction switch_(value const & cond, label const & default_);
+
   /// Creates a while loop.
   instruction while_(loop_condition const & cond, labeldescr const & body);
 

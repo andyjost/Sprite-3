@@ -318,10 +318,12 @@ namespace sprite { namespace curry
   {
     char c;
   redo:
-    if(word == "ATable")
+    if(word == "ATable" || word == "BTable")
     {
+      bool const is_btable = (word == "BTable");
       Branch branch;
-  
+      branch.iscomplete = !is_btable;
+
       // Read the prefix.
       size_t num;
       ifs >> num; // unused
@@ -348,10 +350,33 @@ namespace sprite { namespace curry
       {
         SPRITE_SKIPSPACE(branch)
         c = ifs.peek();
-        if(c == '(' || c == '"')
+
+        if(is_btable)
         {
           Case case_;
-          ifs >> case_.qname;
+          case_.lhs = [&]{
+              ifs >> word;
+              Rule const rule = read_rule(ifs);
+              if(char const * c = rule.getchar())
+                return CaseLhs(*c);
+              else if(int64_t const * i = rule.getint())
+                return CaseLhs(*i);
+              else if(double const * d = rule.getdouble())
+                return CaseLhs(*d);
+              else throw ParseError();
+            }();
+          ifs >> word;
+          if(word != "=>") throw ParseError();
+          ifs >> word;
+          case_.action = read_definition(ifs);
+          branch.cases.push_back(std::move(case_));
+        }
+        else if(c == '(' || c == '"')
+        {
+          Case case_;
+          Qname qname;
+          ifs >> qname;
+          case_.lhs = qname;
           ifs >> word;
           if(word != "=>") throw ParseError();
           ifs >> word;

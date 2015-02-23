@@ -82,6 +82,7 @@ namespace llvm
 
   // Instructions.
   class Instruction;
+  class SwitchInst;
 
   // ADTs.
   class StringRef;
@@ -139,6 +140,7 @@ namespace sprite { namespace backend
   using llvm::GlobalValue;
   using llvm::GlobalVariable;
   using llvm::Instruction;
+  using llvm::SwitchInst;
   using llvm::MDNode;
 
   SPRITE_DECLARE_TYPENAME(Value)
@@ -147,6 +149,7 @@ namespace sprite { namespace backend
   SPRITE_DECLARE_TYPENAME(GlobalValue)
   SPRITE_DECLARE_TYPENAME(GlobalVariable)
   SPRITE_DECLARE_TYPENAME(Instruction)
+  SPRITE_DECLARE_TYPENAME(SwitchInst)
   SPRITE_DECLARE_TYPENAME(MDNode)
 
   // Constants.

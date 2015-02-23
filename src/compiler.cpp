@@ -14,6 +14,8 @@ namespace tgt = sprite::backend;
 namespace
 {
   using namespace sprite::compiler;
+  namespace curry = sprite::curry;
+  using sprite::curry::Qname;
 
   void trace_step_start(rt_h const & rt, value const & root_p)
   {
@@ -29,6 +31,59 @@ namespace
     rt.Cy_Repr(root_p, rt.stdout_(), true);
     rt.putchar('\n');
     rt.fflush(nullptr);
+  }
+
+  struct GetLhsCaseType
+  {
+    using result_type = type;
+
+    template<typename T>
+    result_type operator()(T) const
+      { return get_type<T>(); }
+
+    result_type operator()(Qname const &) const
+      { throw compile_error("Expected a non-enumerable type."); }
+  };
+
+  type get_case_type(curry::CaseLhs const & lhs)
+  {
+    GetLhsCaseType visitor;
+    return lhs.visit(visitor);
+  }
+
+  type get_case_type(std::vector<curry::Case> const & cases)
+  {
+    type const ty = get_case_type(cases[0].lhs);
+    for(auto const & case_: cases)
+    {
+      type const ty_ = get_case_type(case_.lhs);
+      if(ty.ptr() != ty_.ptr())
+        throw compile_error("Malformed switch.");
+    }
+    return ty;
+  }
+
+  struct GetLhsCaseValue
+  {
+    using result_type = constant_int;
+
+    result_type operator()(char c) const
+      { return cast<constant_int>(get_constant(c)); }
+
+    result_type operator()(int64_t i) const
+      { return cast<constant_int>(get_constant(i)); }
+
+    result_type operator()(double) const
+      { throw compile_error("Can't form case with floating-point value."); }
+
+    result_type operator()(Qname const &) const
+      { throw compile_error("Expected a non-enumerable type."); }
+  };
+
+  constant_int get_case_value(curry::CaseLhs const & lhs)
+  {
+    GetLhsCaseValue visitor;
+    return lhs.visit(visitor);
   }
 
   // Performs a pull tab at node * src, having the specified arity.  itgt is
@@ -573,7 +628,7 @@ namespace
       tgt::value const inductive = this->resolve_path(pathid);
 
       // Declare the jump table in the target program.
-      size_t const table_size = TAGOFFSET + branch.cases.size();
+      size_t const table_size = TAGOFFSET + branch.num_tag_cases();
       tgt::globalvar jumptable =
           tgt::static_((*rt.char_t)[table_size], tgt::flexible(".jtable"))
               .as_globalvar();
@@ -583,13 +638,40 @@ namespace
       std::vector<tgt::label> labels(4);
 
       // Add a label for each constructor at the branch position.
-      for(auto const & case_: branch.cases)
+      if(branch.iscomplete)
       {
-        // Allocate a label, then recursively generate the next step in its
-        // scope.
+        // Generate a separate code block for each case.
+        for(auto const & case_: branch.cases)
+        {
+          // Allocate a label, then recursively generate the next step in its
+          // scope.
+          tgt::label tmp;
+          tgt::scope _ = tmp;
+          case_.action.visit(*this);
+          labels.push_back(tmp);
+        }
+      }
+      else
+      {
+        // All cases share one code block (where tag==CTOR).
         tgt::label tmp;
-        tgt::scope _ = tmp;
-        case_.action.visit(*this);
+        {
+          tgt::scope _ = tmp;
+          type const ty = get_case_type(branch.cases);
+          tgt::value const cond = *bitcast(
+              &inductive_alloca.arrow(ND_SLOT0), *ty
+            );
+          auto sw = switch_(cond, labels[TAGOFFSET + FAIL]);
+          for(auto const & case_: branch.cases)
+          {
+            label tmp2;
+            {
+              scope _ = tmp2;
+              case_.action.visit(*this);
+            }
+            sw->addCase(get_case_value(case_.lhs).ptr(), tmp2.ptr());
+          }
+        }
         labels.push_back(tmp);
       }
 
@@ -619,6 +701,7 @@ namespace
       // CHOICE case
       {
         tgt::scope _ = labels[TAGOFFSET + CHOICE];
+        set_out_of_memory_handler_returning_here();
         if(pathid >= LOCAL_ID_START)
         {
           rt.printf("Choice in branch expression.");

@@ -7,6 +7,7 @@
 #include <limits>
 #include <list>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -49,6 +50,67 @@ namespace sprite { namespace curry
   };
 
   /**
+   * LHS of an ATable or BTable rule.  Either a constructor name (Qname), or
+   * some built-in data of a non-enumerable type.
+   */
+  struct CaseLhs
+  {
+    CaseLhs(Qname const & arg=Qname()) : tag(QNAME), qname(arg) {}
+    CaseLhs(char arg) : tag(CHAR), char_(arg) {}
+    CaseLhs(int64_t arg) : tag(INT), int_(arg) {}
+    CaseLhs(double arg) : tag(DOUBLE), double_(arg) {}
+
+    template<typename Visitor>
+    typename std::remove_reference<Visitor>::type::result_type
+    visit(Visitor && visitor) const
+    {
+      switch(tag)
+      {
+        case QNAME:
+          return visitor(this->qname);
+        case CHAR:
+          return visitor(this->char_);
+        case INT:
+          return visitor(this->int_);
+        case DOUBLE:
+          return visitor(this->double_);
+      }
+      throw std::logic_error("unreachable");
+    }
+
+    CaseLhs(CaseLhs const & arg) : tag(arg.tag)
+    {
+      switch(tag)
+      {
+        case QNAME: new(&qname) Qname(arg.qname); break;
+        case CHAR: new(&char_) char(arg.char_); break;
+        case INT: new(&int_) int64_t(arg.int_); break;
+        case DOUBLE: new(&double_) double(arg.double_); break;
+      }
+    }
+
+    CaseLhs & operator=(CaseLhs const & arg)
+    {
+      this->~CaseLhs();
+      new(this) CaseLhs(arg);
+      return *this;
+    }
+
+    ~CaseLhs()
+    {
+      switch(tag)
+      {
+        case QNAME: qname.~Qname(); break;
+        case CHAR: case INT: case DOUBLE: break;
+      }
+    }
+
+  private:
+    enum { QNAME, CHAR, INT, DOUBLE } tag;
+    union { Qname qname; char char_; int64_t int_; double double_; };
+  };
+
+  /**
    * @brief Represents one case of a branch.
    *
    *  The template parameter breaks a cyclic dependency.
@@ -56,7 +118,7 @@ namespace sprite { namespace curry
   template<typename Definition_ = Definition>
   struct Case_
   {
-    Qname qname;
+    CaseLhs lhs;
     Definition_ action;
   };
   using Case = Case_<>;
@@ -226,6 +288,7 @@ namespace sprite { namespace curry
         case NLTERM:
           return visitor(this->nlterm);
       }
+      throw std::logic_error("unreachable");
     }
     Ref const * getvar() const
     {
@@ -237,6 +300,24 @@ namespace sprite { namespace curry
     {
       if(tag==TERM)
         return &term;
+      return nullptr;
+    }
+    char const * getchar() const
+    {
+      if(tag==CHAR)
+        return &char_;
+      return nullptr;
+    }
+    int64_t const * getint() const
+    {
+      if(tag==INT)
+        return &int_;
+      return nullptr;
+    }
+    double const * getdouble() const
+    {
+      if(tag==DOUBLE)
+        return &double_;
       return nullptr;
     }
   private:
@@ -252,8 +333,13 @@ namespace sprite { namespace curry
   {
     std::string prefix;
     bool isflex;
+    bool iscomplete;
     Rule condition;
     std::vector<Case> cases;
+
+    // For a complete branch, each case has its own tag.  For an incomplete
+    // branch, all cases share tag CTOR.
+    size_t num_tag_cases() const { return iscomplete ? cases.size() : 1; }
   };
 
   /**
@@ -325,6 +411,7 @@ namespace sprite { namespace curry
         case RULE:
           return visitor(this->rule);
       }
+      throw std::logic_error("unreachable");
     }
   private:
     enum {BRANCH, RULE} tag;

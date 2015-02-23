@@ -82,6 +82,15 @@ namespace sprite { namespace backend
     return instruction(rv);
   }
 
+  switch_instruction switch_(value const & cond, label const & default_)
+  {
+    llvm::IRBuilder<> & bldr = current_builder();
+    llvm::SwitchInst * rv = SPRITE_APICALL(
+        bldr.CreateSwitch(cond.ptr(), default_.ptr())
+      );
+    return switch_instruction(rv);
+  }
+
   instruction while_(loop_condition const & cond, labeldescr const & body)
   {
     label test, next;
