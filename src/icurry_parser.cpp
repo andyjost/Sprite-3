@@ -351,10 +351,10 @@ namespace sprite { namespace curry
         SPRITE_SKIPSPACE(branch)
         c = ifs.peek();
 
+        std::shared_ptr<Case> case_(new Case);
         if(is_btable)
         {
-          Case case_;
-          case_.lhs = [&]{
+          case_->lhs = [&]{
               ifs >> word;
               Rule const rule = read_rule(ifs);
               if(char const * c = rule.getchar())
@@ -368,20 +368,19 @@ namespace sprite { namespace curry
           ifs >> word;
           if(word != "=>") throw ParseError();
           ifs >> word;
-          case_.action = read_definition(ifs);
-          branch.cases.push_back(std::move(case_));
+          case_->action = read_definition(ifs);
+          branch.cases.push_back(case_);
         }
         else if(c == '(' || c == '"')
         {
-          Case case_;
           Qname qname;
           ifs >> qname;
-          case_.lhs = qname;
+          case_->lhs = qname;
           ifs >> word;
           if(word != "=>") throw ParseError();
           ifs >> word;
-          case_.action = read_definition(ifs);
-          branch.cases.push_back(std::move(case_));
+          case_->action = read_definition(ifs);
+          branch.cases.push_back(case_);
         }
         else throw ParseError();
       }
@@ -481,6 +480,7 @@ namespace sprite { namespace curry
   {
     // The "function" keyword has already been read.
     // FIXME: The module name is not needed here.
+    function.is_aux = false;
     Qname qname;
     ifs >> qname;
     if(!module_name.empty() && qname.module != module_name)

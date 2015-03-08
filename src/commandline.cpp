@@ -23,7 +23,7 @@ static bool remove_file(std::ostream & err, std::string const & file)
 {
   if(std::remove(file.c_str()) != 0)
   {
-    err << "Error removing \"" << file << "\": " << strerror(errno);
+    err << "Error removing \"" << file << "\": " << strerror(errno) << ".\n";
     return false;
   }
   return true;
@@ -320,14 +320,14 @@ namespace sprite
       int ok = std::system(cmd.str().c_str());
       if(ok != 0)
       {
-        // Remove any files curry2read might have created.
+        // Remove (quietly) any files curry2read might have created.
         std::string const base = remove_extension(readablefile);
-        remove_file(std::cerr, base + ".fcy");
-        remove_file(std::cerr, base + ".fint");
-        remove_file(std::cerr, base + ".icur");
-        remove_file(std::cerr, base + ".icurry");
-        remove_file(std::cerr, base + ".poly");
-        remove_file(std::cerr, base + ".read");
+        remove_file(cmd, base + ".fcy");
+        remove_file(cmd, base + ".fint");
+        remove_file(cmd, base + ".icur");
+        remove_file(cmd, base + ".icurry");
+        remove_file(cmd, base + ".poly");
+        remove_file(cmd, base + ".read");
         throw backend::compile_error(curry2read + " failed");
       }
     }

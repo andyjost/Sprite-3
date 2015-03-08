@@ -58,5 +58,5 @@ $(LIBINSTALL)/currylib/.curry/Prelude.read : $(LIBINSTALL)/currylib/Prelude.curr
 
 # Preprocess the Prelude.
 $(LIBINSTALL)/currylib/.curry/Prelude.bc : $(LIBINSTALL)/currylib/.curry/Prelude.read
-	$(BININSTALL)/scc -c $(LIBINSTALL)/currylib/Prelude.curry
+	$(BININSTALL)/scc -c -T $(LIBINSTALL)/currylib/Prelude.curry
 

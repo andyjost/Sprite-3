@@ -20,6 +20,7 @@ namespace
   void trace_step_start(rt_h const & rt, value const & root_p)
   {
     rt.printf("S> --- ");
+    rt.CyTrace_ShowIndent();
     rt.Cy_Repr(root_p, rt.stdout_(), true);
     rt.putchar('\n');
     rt.fflush(nullptr);
@@ -28,6 +29,16 @@ namespace
   void trace_step_end(rt_h const & rt, value const & root_p)
   {
     rt.printf("S> +++ ");
+    rt.CyTrace_ShowIndent();
+    rt.Cy_Repr(root_p, rt.stdout_(), true);
+    rt.putchar('\n');
+    rt.fflush(nullptr);
+  }
+
+  void trace_step_tmp(rt_h const & rt, value const & root_p)
+  {
+    rt.printf("T> +++ ");
+    rt.CyTrace_ShowIndent();
     rt.Cy_Repr(root_p, rt.stdout_(), true);
     rt.putchar('\n');
     rt.fflush(nullptr);
@@ -51,12 +62,12 @@ namespace
     return lhs.visit(visitor);
   }
 
-  type get_case_type(std::vector<curry::Case> const & cases)
+  type get_case_type(std::vector<std::shared_ptr<curry::Case>> const & cases)
   {
-    type const ty = get_case_type(cases[0].lhs);
+    type const ty = get_case_type(cases[0]->lhs);
     for(auto const & case_: cases)
     {
-      type const ty_ = get_case_type(case_.lhs);
+      type const ty_ = get_case_type(case_->lhs);
       if(ty.ptr() != ty_.ptr())
         throw compile_error("Malformed switch.");
     }
@@ -84,6 +95,19 @@ namespace
   {
     GetLhsCaseValue visitor;
     return lhs.visit(visitor);
+  }
+
+  std::string get_base_function_name(curry::Function const & fun)
+  {
+    std::string const & str = fun.name;
+    if(fun.is_aux)
+    {
+      size_t const found = str.rfind("#branch");
+      if(found != std::string::npos)
+        return str.substr(0, found);
+      throw compile_error("badly named aux function");
+    }
+    return str;
   }
 
   // Performs a pull tab at node * src, having the specified arity.  itgt is
@@ -150,6 +174,21 @@ namespace
     src.arrow(ND_AUX) = tgt.arrow(ND_AUX);
     src.arrow(ND_SLOT0) = bitcast(lhs, *types::char_());
     src.arrow(ND_SLOT1) = bitcast(rhs, *types::char_());
+  }
+
+  /**
+   * Move the contents of a node from src to tgt.  Leaves src in an invalid
+   * state if it has an extended successor array.
+   */
+  void move(value const & src, value const & tgt, size_t arity)
+  {
+    tgt.arrow(ND_VPTR) = src.arrow(ND_VPTR);
+    tgt.arrow(ND_TAG) = src.arrow(ND_TAG);
+    tgt.arrow(ND_AUX) = src.arrow(ND_AUX);
+    if(arity > 0)
+      tgt.arrow(ND_SLOT0) = src.arrow(ND_SLOT0);
+    if(arity > 1)
+      tgt.arrow(ND_SLOT1) = src.arrow(ND_SLOT1);
   }
 
   /**
@@ -221,14 +260,6 @@ namespace
     // current basic block, which is good enough.)
     void set_out_of_memory_handler_returning_here()
       { this->out_of_memory_handler = rt.make_restart_point(); }
-
-    // Emits code to clean up any function-specific allocations and then return.
-    void clean_up_and_return()
-    {
-      for(size_t i=LOCAL_ID_START; i<next_local_id; ++i)
-        rt.CyMem_PopRoot();
-      return_();
-    }
 
     // Node allocator for use in the rewriter.  Automatically uses this
     // object's out-of-memory handler.
@@ -360,7 +391,7 @@ namespace
 
     /// Rewrites the target to a simple constructor with built-in data.
     template<typename Data>
-    void rewrite_integer_data_ctor(Data data, tgt::value const & vt)
+    void rewrite_fundamental_data(Data data, tgt::value const & vt)
     {
       this->destroy_target();
       this->target_p.arrow(ND_VPTR) = vt;
@@ -374,13 +405,13 @@ namespace
   
     // Subcases of Rule.
     result_type operator()(char data)
-      { return rewrite_integer_data_ctor(data, rt.Char_vt); }
+      { return rewrite_fundamental_data(data, rt.Char_vt); }
 
     result_type operator()(int64_t data)
-      { return rewrite_integer_data_ctor(data, rt.Int64_vt); }
+      { return rewrite_fundamental_data(data, rt.Int64_vt); }
 
     result_type operator()(double data)
-      { return rewrite_integer_data_ctor(data, rt.Float_vt); }
+      { return rewrite_fundamental_data(data, rt.Float_vt); }
 
     // Rewrites the root as a FAIL node.
     result_type operator()(curry::Fail const &)
@@ -563,7 +594,9 @@ namespace
       : Rewriter(module_stab_, root_p_, fundef_)
       , inductive_alloca(tgt::local(node_pointer_type))
       , enable_tracing(enable_tracing_)
-    {}
+    {
+      if(enable_tracing) trace_step_start(rt, root_p);
+    }
 
   private:
 
@@ -572,8 +605,19 @@ namespace
     // encountered, so that it can communicate the new target to other sections
     // of code.
     tgt::ref inductive_alloca;
-
     bool enable_tracing;
+
+    // Emits code to clean up any function-specific allocations and then return.
+    void clean_up_and_return()
+    {
+      for(size_t i=LOCAL_ID_START; i<next_local_id; ++i)
+      {
+        if(enable_tracing) rt.CyTrace_Dedent();
+        rt.CyMem_PopRoot();
+      }
+      if(enable_tracing) trace_step_end(rt, root_p);
+      return_();
+    }
 
   public:
 
@@ -586,8 +630,15 @@ namespace
       {
         this->set_out_of_memory_handler_returning_here();
         value p = this->new_(this->resolve_path(next_local_id), condition);
+
         // Add the local allocation, p, as a new root for gc.
         rt.CyMem_PushRoot(p);
+        if(enable_tracing)
+        {
+          rt.CyTrace_Indent();
+          trace_step_tmp(rt, p);
+        }
+
         return next_local_id++;
       }
       else
@@ -647,7 +698,7 @@ namespace
           // scope.
           tgt::label tmp;
           tgt::scope _ = tmp;
-          case_.action.visit(*this);
+          case_->action.visit(*this);
           labels.push_back(tmp);
         }
       }
@@ -667,9 +718,9 @@ namespace
             label tmp2;
             {
               scope _ = tmp2;
-              case_.action.visit(*this);
+              case_->action.visit(*this);
             }
-            sw->addCase(get_case_value(case_.lhs).ptr(), tmp2.ptr());
+            sw->addCase(get_case_value(case_->lhs).ptr(), tmp2.ptr());
           }
         }
         labels.push_back(tmp);
@@ -701,16 +752,31 @@ namespace
       // CHOICE case
       {
         tgt::scope _ = labels[TAGOFFSET + CHOICE];
+        // FIXME: would an allocated branch condition would be reclaimed?
+        // There is a local stack of detached roots.  It would be great to add
+        // the local computation to it only just before the collector runs.
         set_out_of_memory_handler_returning_here();
         if(pathid >= LOCAL_ID_START)
         {
-          rt.printf("Choice in branch expression.");
-          rt.fflush(nullptr);
-          rt.exit(1);
+          // The choice arose from a non-trivial branch discriminator.
+          std::string const name = get_base_function_name(*this->fundef);
+          curry::Qname const qname{module_stab.source->name, name};
+          auto & node_stab = this->module_stab.lookup(qname);
+
+          value copy_of_root = this->node_alloc(*rt.node_t);
+          move(root_p, copy_of_root, this->fundef->arity);
+          root_p.arrow(ND_VPTR) = &*node_stab.auxvt.at(&branch);
+          root_p.arrow(ND_SLOT0) = bitcast(copy_of_root, *rt.char_t);
+          root_p.arrow(ND_SLOT1) = bitcast(inductive, *rt.char_t);
+          exec_pulltab(
+              this->rt, this->root_p, inductive, 2, 1
+            , this->out_of_memory_handler
+            );
         }
         else
         {
           size_t const itgt = this->fundef->paths.at(pathid).idx;
+          // FIXME: why not zip the choice all the way to the root in one step?
           exec_pulltab(
               this->rt, this->target_p, inductive, this->fundef->arity, itgt
             , this->out_of_memory_handler
@@ -731,7 +797,6 @@ namespace
 
       // Add the label addresses to the jump table.
       jumptable.set_initializer(addresses);
-      // tgt::ref jump = &jumptable[TAGOFFSET];
 
       // Store the address of the inductive node in allocated space, then use
       // its tag to make the first jump.
@@ -742,8 +807,6 @@ namespace
 
     result_type operator()(curry::Rule const & rule)
     {
-      if(enable_tracing) trace_step_start(rt, target_p);
-
       // The rewrite step is always a series of allocations and memory stores
       // that finishes by attaching all allocated nodes to the root.  If memory
       // allocation fails, causing gc to run, restart here.
@@ -752,7 +815,6 @@ namespace
       // Step.
       static_cast<Rewriter*>(this)->operator()(rule);
 
-      if(enable_tracing) trace_step_end(rt, target_p);
       clean_up_and_return();
     }
   };
@@ -760,15 +822,23 @@ namespace
   // Helper to simplify the use of FunctionCompiler.
   void compile_function(
       compiler::ModuleSTab const & module_stab
-    , tgt::value const & root_p
     , curry::Function const & fun
     , bool enable_tracing
     )
   {
     try
     {
-      ::FunctionCompiler c(module_stab, root_p, &fun, enable_tracing);
-      return fun.def.visit(c);
+      auto step = module_stab.module_ir.getglobal(".step." + fun.name);
+      function stepf = dyn_cast<function>(step);
+      if(stepf->size() == 0) // function has no body
+      {
+        tgt::scope fscope = dyn_cast<function>(step);
+        label entry_;
+        goto_(entry_);
+        tgt::scope _ = entry_;
+        ::FunctionCompiler c(module_stab, arg("root_p"), &fun, enable_tracing);
+        return fun.def.visit(c);
+      }
     }
     catch(...)
     {
@@ -790,20 +860,40 @@ namespace
     auto handle_child = [&](size_t ichild){
       value call;
       size_t constexpr table_size = 5; // FAIL, FWD, CHOICE, OPER, CTOR
+      // The first jump normalizes children.
       label labels[table_size];
-      globalvar jumptable =
+      globalvar jumptable1 =
           static_((*rt.char_t)[table_size], flexible(".jtable"))
               .as_globalvar();
 
-      auto make_jump = [&]{
-        ref index = local(rt.tag_t);
-        index = child.arrow(ND_TAG) + TAGOFFSET;
-        if_(
-            index >(signed_) (rt.tag_t(table_size-1))
-          , [&]{ index = rt.tag_t(table_size-1); }
-          );
-        goto_(jumptable[index], labels);
-      };
+      // The second jump looks for failures and choices pulled up in the first
+      // step.  The new current label (after this function returns) is where
+      // the second table lands on finding a constructor.
+      current = label();
+      globalvar jumptable2 =
+          static_((*rt.char_t)[table_size], flexible(".jtable"))
+              .as_globalvar();
+
+      auto make_jump = [&](int i){
+          ref index = local(rt.tag_t);
+          index = child.arrow(ND_TAG) + TAGOFFSET;
+          if_(
+              index >(signed_) (rt.tag_t(table_size-1))
+            , [&]{ index = rt.tag_t(table_size-1); }
+            );
+          switch(i)
+          {
+            case 1:
+              goto_(jumptable1[index], labels);
+              break;
+            case 2:
+              goto_(
+                  jumptable2[index]
+                , {labels[0], labels[0], labels[2], labels[0], current}
+                );
+              break;
+          }
+        };
 
       // FAIL case.
       {
@@ -818,7 +908,7 @@ namespace
       {
         scope _ = labels[TAGOFFSET + FWD];
         child = bitcast(child.arrow(ND_SLOT0), *rt.node_t);
-        make_jump();
+        make_jump(1);
       }
 
       // CHOICE case.
@@ -835,20 +925,28 @@ namespace
       {
         scope _ = labels[TAGOFFSET + OPER];
         child.arrow(ND_VPTR).arrow(VT_N)(child);
-        make_jump();
+        make_jump(1);
       }
 
-      // CTOR case (recursive call to child.N then continue).
+      // CTOR case #1 (recursive call to child.N then second jump).
       {
         scope _ = labels[TAGOFFSET + CTOR];
         call = child.arrow(ND_VPTR).arrow(VT_N)(child);
-        current = scope::current_label();
+        make_jump(2);
       }
 
-      block_address addresses[table_size] =
+      // Initialize the jump tables.
+      block_address addresses1[table_size] =
           {&labels[0], &labels[1], &labels[2], &labels[3], &labels[4]};
-      jumptable.set_initializer(addresses);
-      make_jump();
+      jumptable1.set_initializer(addresses1);
+
+      // The FWD and OPER rules are unreachable, so just put FAIL there.
+      block_address addresses2[table_size] =
+          {&labels[0], &labels[0], &labels[2], &labels[0], &current};
+      jumptable2.set_initializer(addresses2);
+
+      // Kick off the process.
+      make_jump(1);
       return call;
     };
 
@@ -986,6 +1084,134 @@ namespace
       , &rt.CyVt_Show("oper")
       ));
   }
+
+  /**
+   * @brief Builds the definition of an aux function for the given function at
+   * the specified branch.
+   *
+   * An aux function is used when a non-trivial branch discriminator evaluates to
+   * a choice.  For example, in the sign function:
+   *
+   *   sign a = if a<0 then -1 else if a>0 then 1 else 0
+   *
+   * either expression a<0 or a>0 could produce a choice.  (Actualy, with some
+   * analysis we could prove that the second expression cannot produce a choice
+   * if the first did not, but the compiler does not attempt that analysis.)
+   * The problem in that case is that the result after pull-tabbing cannot be
+   * written in terms of the original function.  To execute a pull-tab step,
+   * the remainder of the function, starting with the branch where the choice
+   * was encountered, must be compiled.  The result can be written in terms of
+   * that function.  For sign, there are two aux functions.
+   *
+   *     sign#branch0 (sign a) c = if c then -1 else if a>0 then 1 else 0
+   *     sign#branch1 (sign a) c = if c then 1 else 0
+   *
+   * An aux function always has two successors: (1) the original root node
+   * (which must be an application of the main function), and (2) the bound
+   * expression.  Note that, due to (1), this is a somewhat irregular case in
+   * that normally a function would never pattern-match against a function.
+   *
+   * To define an aux function, we do the following:
+   *
+   *   1. Adjust the name by appending #branchN, where N is a unique numeric ID
+   *      provided for the branch in question.
+   *   2. Rebase every variable reference, adding an initial index of 0.  This
+   *      is because the original root is moved to the first argument position.
+   *   3. Replace the branch discriminator with a reference to index 1.
+   *   4. Copy the function from the given branch to the end.
+   */
+  curry::Function build_aux_function(
+      curry::Function const & fun, curry::Branch b, size_t id
+    )
+  {
+    curry::Function aux;
+    aux.is_aux = true;
+    aux.name = fun.name + "#branch" + std::to_string(id);
+    aux.arity = 2;
+    aux.paths = fun.paths;
+
+    // There will be two new variables, for the new base and the discriminator.
+    size_t const newbase = aux.paths.size();
+    curry::Ref const cond{newbase + 1};
+
+    for(auto & pathelem: aux.paths)
+    {
+      if(pathelem.base == curry::nobase)
+        pathelem.base = newbase;
+    }
+    aux.paths.emplace_back(
+        curry::Function::PathElem{curry::nobase, 0, Qname{"Prelude","(,)"}}
+      );
+    aux.paths.emplace_back(
+        curry::Function::PathElem{curry::nobase, 1, Qname{"Prelude","(,)"}}
+      );
+
+    // Copy the branch, but share everything under it (because the cases are
+    // stored in shared_ptrs).  Then modify the discriminator.  It is just a
+    // reference to variable "cond," now.
+    curry::Branch branch = b;
+    branch.condition = curry::Rule(cond);
+    aux.def = curry::Definition(branch);
+
+    return aux;
+  }
+
+  // Traverses a function definition and compiles an aux function for each
+  // branch that has a non-trivial condition.
+  struct CompileAuxVisitor
+  {
+    using result_type = void;
+
+    void operator()(curry::Branch const & branch) 
+    {
+      // Recurse to find all branches.  The deeper branches must be processed
+      // first because they are used when compiling shallower branches.
+      for(auto const & case_: branch.cases)
+        case_->action.visit(*this);
+
+      if(!branch.condition.is_trivial())
+      {
+        rt_h const & rt = module_stab.rt();
+        size_t const id = counter++;
+
+        // Build the aux function definition.
+        curry::Function aux = build_aux_function(
+            node_stab.function(), branch, id
+          );
+
+        // Build the vtable and then update the symbol table of the main function.
+        std::string const vtname =
+            ".vt.OPER." + module_stab.source->name + "." + aux.name;
+        tgt::global vt = extern_(rt.vtable_t, vtname);
+        compile_function_vtable(vt, aux, module_stab);
+        using sprite::backend::globalvar;
+        std::shared_ptr<globalvar> tmp(new globalvar(vt.as_globalvar()));
+        node_stab.auxvt[&branch] = tmp;
+
+        // Compile the aux function.
+        compile_function(module_stab, aux, enable_tracing);
+      }
+    }
+
+    void operator()(curry::Rule const &) {}
+
+    ModuleSTab & module_stab;
+    NodeSTab & node_stab;
+    bool enable_tracing;
+    size_t counter;
+  };
+
+  void compile_aux_functions(
+      compiler::ModuleSTab & module_stab
+    , curry::Function const & fun
+    , bool enable_tracing
+    )
+  {
+    curry::Qname const qname{module_stab.source->name, fun.name};
+    compiler::NodeSTab & node_stab = module_stab.lookup(qname);
+    CompileAuxVisitor mkaux{module_stab, node_stab, enable_tracing, 0};
+    fun.def.visit(mkaux);
+  }
 }
 
 namespace sprite { namespace compiler
@@ -1043,6 +1269,13 @@ namespace sprite { namespace compiler
       
       throw compile_error("symbol '" + qname.str() + "' not found.");
     }
+  }
+
+  compiler::NodeSTab & ModuleSTab::lookup(curry::Qname const & qname)
+  {
+    return const_cast<compiler::NodeSTab &>(
+        static_cast<ModuleSTab const *>(this)->lookup(qname)
+      );
   }
 
   // Constructs an expression at the given node address.
@@ -1141,7 +1374,7 @@ namespace sprite { namespace compiler
       // Update the symbol tables with the forward declarations of functions.
       for(auto const & fun: cymodule.functions)
       {
-        // Create or find the vtable and maybe compile code to fill it.
+        // Create or find the vtable.
         std::string const vtname = ".vt.OPER." + cymodule.name + "." + fun.name;
         tgt::global vt = extern_(rt.vtable_t, vtname);
         if(is_primary && !vt.has_initializer())
@@ -1159,16 +1392,8 @@ namespace sprite { namespace compiler
       {
         for(auto const & fun: cymodule.functions)
         {
-          auto step = module_ir.getglobal(".step." + fun.name);
-          function stepf = dyn_cast<function>(step);
-          if(stepf->size() == 0) // function has no body
-          {
-            tgt::scope fscope = dyn_cast<function>(step);
-            label entry_;
-            goto_(entry_);
-            tgt::scope _ = entry_;
-            ::compile_function(module_stab, arg("root_p"), fun, enable_tracing);
-          }
+          compile_aux_functions(module_stab, fun, enable_tracing);
+          compile_function(module_stab, fun, enable_tracing);
         }
       }
 

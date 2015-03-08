@@ -31,13 +31,15 @@ namespace sprite { namespace curry
       { return lhs.module == rhs.module && lhs.name == rhs.name; }
   };
 
-  /// Represents a Curry constructor.
-  // Note: maintain layout compatibility with Function!
-  struct Constructor
+  /// Represents either a Constructor or Function.
+  struct Node
   {
     std::string name;
     size_t arity;
   };
+
+  /// Represents a Curry constructor.
+  struct Constructor : Node { using Node::Node; };
 
   /**
    * @brief Represents a Curry data type, which comprises an ordered sequence
@@ -320,6 +322,25 @@ namespace sprite { namespace curry
         return &double_;
       return nullptr;
     }
+
+    bool is_trivial() const
+    {
+      switch(tag)
+      {
+        case FAIL:
+        case CHAR:
+        case INT:
+        case DOUBLE:
+        case VAR:
+          return true;
+        case TERM:
+        case EXTERNAL:
+        case PARTIAL:
+        case NLTERM:
+          break;
+      }
+      return false;
+    }
   private:
     enum { FAIL, CHAR, INT, DOUBLE, VAR, TERM, EXTERNAL, PARTIAL, NLTERM } tag;
     union {
@@ -335,7 +356,7 @@ namespace sprite { namespace curry
     bool isflex;
     bool iscomplete;
     Rule condition;
-    std::vector<Case> cases;
+    std::vector<std::shared_ptr<Case>> cases;
 
     // For a complete branch, each case has its own tag.  For an incomplete
     // branch, all cases share tag CTOR.
@@ -357,13 +378,6 @@ namespace sprite { namespace curry
     Definition(Rule && arg) : tag(RULE), rule(std::move(arg)) {}
     Definition(Term const & arg) : tag(RULE), rule(arg) {}
     Definition(Term && arg) : tag(RULE), rule(std::move(arg)) {}
-    // template<typename ConvertsToRule
-    //   , typename = typename std::enable_if<
-    //         std::is_constructible<Rule, ConvertsToRule>::value
-    //       >::type
-    //   >
-    // Definition(ConvertsToRule && arg) : tag(RULE), rule(std::move(arg))
-    // {}
     Definition(Definition && arg) : tag(arg.tag)
     {
       switch(tag)
@@ -433,11 +447,9 @@ namespace sprite { namespace curry
     };
 
   /// Represents a Curry function.
-  // Note: maintain layout compatibility with Constructor!
-  struct Function
+  struct Function : Node
   {
-    std::string name;
-    size_t arity;
+    bool is_aux;
     struct PathElem { size_t base; size_t idx; Qname typename_; };
     std::vector<PathElem> paths;
     Definition def;

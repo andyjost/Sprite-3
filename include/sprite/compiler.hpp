@@ -52,6 +52,22 @@ namespace sprite { namespace compiler
     // The tag associated with the node.  Note: tag==OPER indicates a function;
     // other tag values (i.e., tag>=CTOR) indicate constructors.
     tag_t tag;
+
+    // ==== For functions only, below.
+
+    // Maps each branch with a non-trivial condition to its associated aux
+    // function's V-table.  The aux function is used when a branch
+    // condition is an expression, and that expression evaluates to a
+    // choice.
+    std::map<
+        curry::Branch const *, std::shared_ptr<sprite::backend::globalvar>
+      > auxvt;
+
+    curry::Function const & function() const
+    {
+      assert(tag==OPER); 
+      return *reinterpret_cast<curry::Function const *>(this->source);
+    }
   };
 
   struct LibrarySTab;
@@ -80,6 +96,7 @@ namespace sprite { namespace compiler
 
     // Look up a node symbol table.
     compiler::NodeSTab const & lookup(curry::Qname const &) const;
+    compiler::NodeSTab & lookup(curry::Qname const &);
 
     // The Sprite runtime library, in the target program.
     compiler::rt_h const & rt() const { return headers->rt; }

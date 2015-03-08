@@ -89,6 +89,15 @@ extern "C"
 
   aux_t next_choice_id = 0;
 
+  int64_t CyTrace_IndentLvl = 0;
+  void CyTrace_Indent() { CyTrace_IndentLvl += 2; }
+  void CyTrace_Dedent() { CyTrace_IndentLvl -= 2; }
+  void CyTrace_ShowIndent()
+  {
+    for(int64_t i=0; i<CyTrace_IndentLvl; ++i)
+      putchar(' ');
+  }
+
   void CyMem_PushRoot(node * p) { CyMem_Roots.push_back(p); }
   void CyMem_PopRoot() { CyMem_Roots.pop_back(); }
   void CyMem_Collect() { CyMem_NodePool->collect(); }
@@ -189,6 +198,7 @@ extern "C"
         _Cy_Repr(seen, *begin, stream, false);
     }
     if(!is_outer && N > 0) fputs(")", stream);
+    seen.erase(root);
   }
 
   // Writes a representation of the expression to the given stream.  The

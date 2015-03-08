@@ -116,6 +116,11 @@ namespace sprite { namespace compiler
     function const CyMem_PopRoot = extern_(void_t(), "CyMem_PopRoot");
     globalvar const CyMem_FreeList = extern_(*char_t, "CyMem_FreeList").as_globalvar();
 
+    // Tracing.
+    function const CyTrace_Indent = extern_(void_t(), "CyTrace_Indent");
+    function const CyTrace_Dedent = extern_(void_t(), "CyTrace_Dedent");
+    function const CyTrace_ShowIndent = extern_(void_t(), "CyTrace_ShowIndent");
+
     // Creates a new basic block at the current point in the code stream and
     // makes it the default insertion point.  Creates another basic block that
     // calls the garbage collector and then returns to this point.  Returns the
