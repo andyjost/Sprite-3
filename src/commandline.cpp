@@ -142,6 +142,7 @@ namespace sprite
   void _create_main_function(
       compiler::ModuleSTab const & module_stab
     , curry::Qname const & start
+    , bool enable_tracing
     )
   {
     using namespace backend;
@@ -157,9 +158,11 @@ namespace sprite
           show.arrow(ND_VPTR) = &module_stab.lookup(lshow).vtable;
           show.arrow(ND_TAG) = sprite::compiler::OPER;
           show.arrow(ND_SLOT0) = bitcast(arg("root"), *rt.char_t);
+          rt.CyMem_PushRoot(show, enable_tracing);
           rt.Cy_Normalize(show);
           rt.Cy_CyStringToCString(show, rt.stdout_());
           rt.putchar('\n');
+          rt.CyMem_PopRoot(enable_tracing);
         }
       );
 
@@ -176,13 +179,14 @@ namespace sprite
   }
 
   void insert_main_function(
-      compiler::LibrarySTab const & stab, curry::Qname const & start
+      compiler::LibrarySTab const & stab
+    , curry::Qname const & start
+    , bool enable_tracing
     )
   {
     auto & module_stab = stab.modules.at(start.module);
     backend::scope _ = module_stab.module_ir;
-    _create_main_function(module_stab, start);
-
+    _create_main_function(module_stab, start, enable_tracing);
   }
 
   bool is_up_to_date(

@@ -84,7 +84,9 @@ namespace sprite
    * the module specified by @p start.
    */
   void insert_main_function(
-      compiler::LibrarySTab const & stab, curry::Qname const & start
+      compiler::LibrarySTab const & stab
+    , curry::Qname const & start
+    , bool enable_tracing
     );
 
   inline std::string dirname(std::string const & path)

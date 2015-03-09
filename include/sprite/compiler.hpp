@@ -185,7 +185,7 @@ namespace sprite { namespace compiler
 
     // For choices, assign a fresh id.
     if(node_stab.tag == CHOICE)
-      node_p.arrow(ND_AUX) = module_stab.rt().next_choice_id++;
+      node_p.arrow(ND_AUX) = module_stab.rt().Cy_NextChoiceId++;
   }
 
   // Sets the extended child array to the given value, and returns the same,
@@ -196,5 +196,9 @@ namespace sprite { namespace compiler
     slot0 = array;
     return bitcast(slot0, **types::char_());
   }
+
+  void trace_step_start(rt_h const & rt, value const & root_p);
+  void trace_step_end(rt_h const & rt, value const & root_p);
+  void trace_step_tmp(rt_h const & rt, value const & root_p);
 }}
 

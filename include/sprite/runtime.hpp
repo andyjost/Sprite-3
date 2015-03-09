@@ -112,9 +112,11 @@ namespace sprite { namespace compiler
     function const Cy_ArrayAllocTyped = extern_((**node_t)(aux_t), "Cy_ArrayAllocTyped");
     function const Cy_ArrayDealloc = extern_(void_t(aux_t, *char_t), "Cy_ArrayDealloc");
     function const CyMem_Collect = extern_(void_t(), "CyMem_Collect");
-    function const CyMem_PushRoot = extern_(void_t(*node_t), "CyMem_PushRoot");
-    function const CyMem_PopRoot = extern_(void_t(), "CyMem_PopRoot");
     globalvar const CyMem_FreeList = extern_(*char_t, "CyMem_FreeList").as_globalvar();
+    function const _CyMem_PushRoot = extern_(void_t(*node_t), "CyMem_PushRoot");
+    function const _CyMem_PopRoot = extern_(void_t(), "CyMem_PopRoot");
+    void CyMem_PushRoot(value root_p, bool enable_tracing) const;
+    void CyMem_PopRoot(bool enable_tracing) const;
 
     // Tracing.
     function const CyTrace_Indent = extern_(void_t(), "CyTrace_Indent");
@@ -138,6 +140,7 @@ namespace sprite { namespace compiler
         extern_(void_t(*node_t, FILE_p), "Cy_CyStringToCString");
     function const Cy_NoAction = extern_(void_t(*node_t), "Cy_NoAction");
     function const Cy_Repr = extern_(reprfun_t, "Cy_Repr");
+
 
     // Returns an arity function for the specified arity.
     function Cy_Arity(size_t arity) const;
@@ -179,7 +182,7 @@ namespace sprite { namespace compiler
       ) const;
 
     // The global counter giving the next available choice id.
-    globalvar next_choice_id = extern_(aux_t, "next_choice_id").as_globalvar();
+    globalvar Cy_NextChoiceId = extern_(aux_t, "Cy_NextChoiceId").as_globalvar();
 
     // External functions.
     // void exit(int status);

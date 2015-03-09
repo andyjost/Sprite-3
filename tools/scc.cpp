@@ -179,6 +179,7 @@ namespace
       sprite::compiler::LibrarySTab const & stab
     , std::string const & module_name
     , sprite::curry::Function const & fun
+    , bool enable_tracing
     )
   {
     if(fun.arity != 0)
@@ -191,7 +192,7 @@ namespace
         );
     }
     sprite::curry::Qname const start{module_name, fun.name};
-    sprite::insert_main_function(stab, start);
+    sprite::insert_main_function(stab, start, enable_tracing);
   }
 
   // A wrapper for the library function.  Exits on failure.
@@ -257,7 +258,7 @@ namespace
         for(sprite::curry::Function const & fun: mod.functions)
         {
           if(fun.name == "main")
-            insert_main_function(stab, mod.name, fun);
+            insert_main_function(stab, mod.name, fun, enable_tracing);
         }
       }
 

@@ -11,6 +11,7 @@
 #include "stdio.h"
 #include "stdlib.h"
 #include "cymemory.hpp"
+#include "fingerprint.hpp"
 
 #define SUCC_0(root) reinterpret_cast<node*&>(root->slot0)
 #define SUCC_1(root) reinterpret_cast<node*&>(root->slot1)
@@ -87,7 +88,7 @@ extern "C"
   extern vtable CyVt_Tuple0 __asm__(".vt.CTOR.Prelude.()");
   extern vtable CyVt_apply __asm__(".vt.OPER.Prelude.apply");
 
-  aux_t next_choice_id = 0;
+  aux_t Cy_NextChoiceId = 0;
 
   int64_t CyTrace_IndentLvl = 0;
   void CyTrace_Indent() { CyTrace_IndentLvl += 2; }
@@ -282,26 +283,33 @@ extern "C"
     }
   }
 
-  void Cy_Normalize(node * root)
-  {
-    CyMem_PushRoot(root);
-    root->vptr->N(root);
-    CyMem_PopRoot();
-  }
+  void Cy_Normalize(node * root) { root->vptr->N(root); }
 
   FILE * Cy_stdin() { return stdin; }
   FILE * Cy_stdout() { return stdout; }
   FILE * Cy_stderr() { return stderr; }
 
+  struct Cy_EvalFrame
+  {
+    node * expr;
+    std::shared_ptr<Fingerprint> fingerprint;
+
+    Cy_EvalFrame(node * e, std::shared_ptr<Fingerprint> const & f)
+      : expr(e), fingerprint(f)
+    {}
+  };
+
   // Evaluates an expression.  Calls yield(x) for each result x.
   void Cy_Eval(node * root, void(*yield)(node * root))
   {
     CyMem_PushRoot(root);
-    std::list<node *> computation;
-    computation.push_back(root);
+    std::list<Cy_EvalFrame> computation = {
+        {root, std::shared_ptr<Fingerprint>(new Fingerprint())}
+      };
     while(!computation.empty())
     {
-      node * expr = computation.front();
+      Cy_EvalFrame & frame = computation.front();
+      node * expr = frame.expr;
       expr->vptr->N(expr);
       redo: switch(expr->tag)
       {
@@ -309,13 +317,34 @@ extern "C"
           computation.pop_front();
           break;
         case FWD:
-          computation.front() = expr = SUCC_0(expr);
+          computation.front().expr = expr = SUCC_0(expr);
           goto redo;
         case CHOICE:
         {
-          computation.push_back(SUCC_0(expr));
+          aux_t const id = expr->aux;
+          switch(frame.fingerprint->test(id))
+          {
+            case ChoiceState::LEFT:
+              // Discard right expression.
+              computation.front().expr = SUCC_0(expr);
+              break;
+            case ChoiceState::RIGHT:
+              // Discard left expression.
+              computation.front().expr = SUCC_1(expr);
+              break;
+            case ChoiceState::UNDETERMINED:
+            {
+              // Discard no expression.
+              auto left = frame.fingerprint->clone();
+              left->set_left(id);
+              computation.emplace_back(SUCC_0(expr), left);
+              frame.expr = SUCC_1(expr);
+              frame.fingerprint->set_right(id);
+              break;
+            }
+          }
+          // Rotate the front frame to the back.
           computation.splice(computation.end(), computation, computation.begin());
-          computation.back() = SUCC_1(expr);
           break;
         }
         case OPER:

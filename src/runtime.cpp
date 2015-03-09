@@ -137,4 +137,21 @@ namespace sprite { namespace compiler
       );
     return bitcast(head, ty);
   }
+
+  void rt_h::CyMem_PushRoot(value root_p, bool enable_tracing) const
+  {
+    this->_CyMem_PushRoot(root_p);
+    if(enable_tracing)
+    {
+      this->CyTrace_Indent();
+      trace_step_tmp(*this, root_p);
+    }
+  }
+
+  void rt_h::CyMem_PopRoot(bool enable_tracing) const
+  {
+    if(enable_tracing)
+      this->CyTrace_Dedent();
+    this->_CyMem_PopRoot();
+  }
 }}

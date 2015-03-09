@@ -37,7 +37,7 @@ namespace
   
     // Declare the main function.
     sprite::insert_main_function(
-        stab, sprite::curry::Qname{topmodule, "main"}
+        stab, sprite::curry::Qname{topmodule, "main"}, false /*enable_tracing*/
       );
   
     // NOT READY YET

@@ -17,33 +17,6 @@ namespace
   namespace curry = sprite::curry;
   using sprite::curry::Qname;
 
-  void trace_step_start(rt_h const & rt, value const & root_p)
-  {
-    rt.printf("S> --- ");
-    rt.CyTrace_ShowIndent();
-    rt.Cy_Repr(root_p, rt.stdout_(), true);
-    rt.putchar('\n');
-    rt.fflush(nullptr);
-  }
-
-  void trace_step_end(rt_h const & rt, value const & root_p)
-  {
-    rt.printf("S> +++ ");
-    rt.CyTrace_ShowIndent();
-    rt.Cy_Repr(root_p, rt.stdout_(), true);
-    rt.putchar('\n');
-    rt.fflush(nullptr);
-  }
-
-  void trace_step_tmp(rt_h const & rt, value const & root_p)
-  {
-    rt.printf("T> +++ ");
-    rt.CyTrace_ShowIndent();
-    rt.Cy_Repr(root_p, rt.stdout_(), true);
-    rt.putchar('\n');
-    rt.fflush(nullptr);
-  }
-
   struct GetLhsCaseType
   {
     using result_type = type;
@@ -607,14 +580,12 @@ namespace
     tgt::ref inductive_alloca;
     bool enable_tracing;
 
-    // Emits code to clean up any function-specific allocations and then return.
+    // Emits code to clean up any function-specific allocations and then
+    // returns.
     void clean_up_and_return()
     {
       for(size_t i=LOCAL_ID_START; i<next_local_id; ++i)
-      {
-        if(enable_tracing) rt.CyTrace_Dedent();
-        rt.CyMem_PopRoot();
-      }
+        rt.CyMem_PopRoot(enable_tracing);
       if(enable_tracing) trace_step_end(rt, root_p);
       return_();
     }
@@ -632,13 +603,7 @@ namespace
         value p = this->new_(this->resolve_path(next_local_id), condition);
 
         // Add the local allocation, p, as a new root for gc.
-        rt.CyMem_PushRoot(p);
-        if(enable_tracing)
-        {
-          rt.CyTrace_Indent();
-          trace_step_tmp(rt, p);
-        }
-
+        rt.CyMem_PushRoot(p, enable_tracing);
         return next_local_id++;
       }
       else
@@ -1223,6 +1188,34 @@ namespace sprite { namespace compiler
       tgt::value const & node_p, compiler::VtMember member, tgt::attribute attr
     )
   { return vinvoke(node_p, member).set_attribute(attr); }
+
+  void trace_step_start(rt_h const & rt, value const & root_p)
+  {
+    rt.printf("S> --- ");
+    rt.CyTrace_ShowIndent();
+    rt.Cy_Repr(root_p, rt.stdout_(), true);
+    rt.putchar('\n');
+    rt.fflush(nullptr);
+  }
+
+  void trace_step_end(rt_h const & rt, value const & root_p)
+  {
+    rt.printf("S> +++ ");
+    rt.CyTrace_ShowIndent();
+    rt.Cy_Repr(root_p, rt.stdout_(), true);
+    rt.putchar('\n');
+    rt.fflush(nullptr);
+  }
+
+  void trace_step_tmp(rt_h const & rt, value const & root_p)
+  {
+    rt.printf("T> +++ ");
+    rt.CyTrace_ShowIndent();
+    rt.Cy_Repr(root_p, rt.stdout_(), true);
+    rt.putchar('\n');
+    rt.fflush(nullptr);
+  }
+
 
   ModuleSTab::ModuleSTab(
       curry::Module const & src, llvm::LLVMContext & context
