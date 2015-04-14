@@ -44,6 +44,6 @@ namespace sprite { namespace compiler
   };
 
   enum Tag : tag_t
-      { FAIL= -4, FWD= -3, CHOICE= -2, OPER= -1, CTOR=0, TAGOFFSET= -FAIL };
+      { FAIL= -5, FREE= -4, FWD= -3, CHOICE= -2, OPER= -1, CTOR=0, TAGOFFSET= -FAIL };
 }}
 

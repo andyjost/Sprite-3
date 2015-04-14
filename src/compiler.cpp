@@ -289,8 +289,11 @@ namespace
                 pathid, tgt::local(node_pointer_type)
               );
             // Allocate a new node and store its address on the stack.
-            pair.first->second = this->node_alloc(*rt.node_t);
-            this->resolved_path_alloca = pair.first->second;
+            auto & p = pair.first->second;
+            p = this->node_alloc(*rt.node_t);
+            p.arrow(ND_VPTR) = rt.freevar_vt;
+            p.arrow(ND_TAG) = compiler::FREE;
+            this->resolved_path_alloca = p;
           }
           else
             this->resolved_path_alloca = it->second;
@@ -651,7 +654,7 @@ namespace
 
       // Declare placeholders for the pre-defined special labels.  Definitions
       // are provided below.
-      std::vector<tgt::label> labels(4);
+      std::vector<tgt::label> labels(TAGOFFSET);
 
       // Add a label for each constructor at the branch position.
       if(branch.iscomplete)
@@ -698,6 +701,15 @@ namespace
       // FAIL case
       {
         tgt::scope _ = labels[TAGOFFSET + FAIL];
+        (this->Rewriter::operator())(curry::Fail());
+        clean_up_and_return();
+      }
+
+      // FREE case
+      {
+        // TODO
+        tgt::scope _ = labels[TAGOFFSET + FREE];
+        rt.printf("[not implemented] Failing due to free variable in table");
         (this->Rewriter::operator())(curry::Fail());
         clean_up_and_return();
       }
@@ -824,7 +836,7 @@ namespace
 
     auto handle_child = [&](size_t ichild){
       value call;
-      size_t constexpr table_size = 5; // FAIL, FWD, CHOICE, OPER, CTOR
+      size_t constexpr table_size = 6; // FAIL, FREE, FWD, CHOICE, OPER, CTOR
       // The first jump normalizes children.
       label labels[table_size];
       globalvar jumptable1 =
@@ -854,7 +866,7 @@ namespace
             case 2:
               goto_(
                   jumptable2[index]
-                , {labels[0], labels[0], labels[2], labels[0], current}
+                , {labels[0], current, labels[0], labels[2], labels[0], current}
                 );
               break;
           }
@@ -867,6 +879,18 @@ namespace
         root_p.arrow(ND_VPTR) = rt.failed_vt;
         root_p.arrow(ND_TAG) = compiler::FAIL;
         return_();
+      }
+
+      // FREE case.
+      {
+        // Ignore variables; do the second jump.
+        scope _ = labels[TAGOFFSET + FREE];
+        make_jump(2);
+        // rt.printf("[not implemented] Failing due to free variable in ctor term");
+        // if(arity > 2) vinvoke(root_p, VT_DESTROY);
+        // root_p.arrow(ND_VPTR) = rt.failed_vt;
+        // root_p.arrow(ND_TAG) = compiler::FAIL;
+        // return_();
       }
 
       // FWD case.
@@ -902,12 +926,20 @@ namespace
 
       // Initialize the jump tables.
       block_address addresses1[table_size] =
-          {&labels[0], &labels[1], &labels[2], &labels[3], &labels[4]};
+          {&labels[0], &labels[1], &labels[2], &labels[3], &labels[4], &labels[5]};
       jumptable1.set_initializer(addresses1);
 
-      // The FWD and OPER rules are unreachable, so just put FAIL there.
+      // The FWD and OPER rules are unreachable, so just put FAIL there.  Treat
+      // FREE variables like constructors, since they can appear in a value.
       block_address addresses2[table_size] =
-          {&labels[0], &labels[0], &labels[2], &labels[0], &current};
+      {
+          &labels[TAGOFFSET+FAIL]   // FAIL
+        , &current                  // FREE
+        , &labels[TAGOFFSET+FAIL]   // FWD
+        , &labels[TAGOFFSET+CHOICE] // CHOICE
+        , &labels[TAGOFFSET+FAIL]   // OPER
+        , &current                  // CTOR
+      };
       jumptable2.set_initializer(addresses2);
 
       // Kick off the process.

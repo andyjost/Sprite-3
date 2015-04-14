@@ -22,7 +22,7 @@ uninstall :
 
 ###
 
-$(STATICLIB_C_PART) : C/*.[ch]pp
+$(STATICLIB_C_PART) : C/*.[ch]pp C/*.def ../../include/sprite/basic_runtime.hpp
 	# Runtime C++ part: C++ converted to bitcode using Clang.
 	$(MAKE) -C C
 

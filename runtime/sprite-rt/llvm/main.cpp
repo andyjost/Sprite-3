@@ -57,7 +57,14 @@ void build_vt_for_failed(rt_h const & rt)
 void build_vt_for_success(rt_h const & rt)
   { build_vt_for_trivial_node(rt, "success", 0); }
 void build_vt_for_freevar(rt_h const & rt)
-  { build_vt_for_trivial_node(rt, "freevar", 0); }
+{
+  build_vt_for_trivial_node(
+      rt, "freevar", 0
+    , &rt.CyVt_Equality("freevar")
+    , &rt.CyVt_Compare("freevar")
+    , &rt.CyVt_Show("freevar")
+    );
+}
 void build_vt_for_PartialSpine(rt_h const & rt)
   { build_vt_for_trivial_node(rt, "PartialSpine", 2); }
 void build_vt_for_PartialTerminus(rt_h const & rt)

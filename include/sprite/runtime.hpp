@@ -184,6 +184,10 @@ namespace sprite { namespace compiler
     // The global counter giving the next available choice id.
     globalvar Cy_NextChoiceId = extern_(aux_t, "Cy_NextChoiceId").as_globalvar();
 
+    // Free variables are printed as _a, _b, . . .  This function resets the
+    // sequence to _a, and is called between producing values.
+    function const CyFree_ResetCounter = extern_(void_t(), "CyFree_ResetCounter");
+
     // External functions.
     // void exit(int status);
     function const exit = extern_(void_t(int_t), "exit");
