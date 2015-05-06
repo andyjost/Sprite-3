@@ -1,8 +1,10 @@
+#include <cassert>
 #include <iostream>
 #include "sprite/curryinput.hpp"
 #include "sprite/compiler.hpp"
 #include "sprite/runtime.hpp"
 #include <algorithm>
+#include <iterator>
 
 // DIAGNOSTIC - this may warrant a command-line option setting.
 #include "llvm/Analysis/Verifier.h"
@@ -16,6 +18,11 @@ namespace
   using namespace sprite::compiler;
   namespace curry = sprite::curry;
   using sprite::curry::Qname;
+
+  curry::CaseLhs const & getlhs(curry::CaseLhs const & arg)
+    { return arg; }
+  curry::CaseLhs const & getlhs(std::shared_ptr<curry::Case> const & arg)
+    { return arg->lhs; }
 
   struct ValueSaver
   {
@@ -672,17 +679,17 @@ namespace
     }
 
     template<typename Cases>
-    compiler::tag_t instantiate_variable(value var, Cases const & cases_)
+    compiler::tag_t instantiate_variable(value var, Cases const & cases)
     {
       assert(cases.size());
-      Cases cases = cases_;
-      std::reverse(cases.begin(), cases.end());
+      // Cases cases = cases_;
+      // std::reverse(cases.begin(), cases.end());
 
       compiler::tag_t tag = compiler::CHOICE;
       if(cases.size() == 1)
       {
         ValueSaver saver(target_p, var);
-        auto const & lhs = cases.front()->lhs;
+        auto const & lhs = getlhs(*cases.begin());
         (this->Rewriter::operator())(lhs);
         tag = get_case_tag(lhs, module_stab);
       }
@@ -691,10 +698,13 @@ namespace
         set_out_of_memory_handler_returning_here();
         ValueSaver saver(target_p);
 
-        size_t i=0;
-        size_t const n = cases.size();
-        auto choose_storage = [&] {
-          if(i+1 == n)
+        // size_t i=0;
+        // size_t const n = cases.size();
+        auto current = cases.rbegin();
+        auto const end = cases.rend();
+        auto choose_storage = [&]
+        {
+          if(std::next(current) == end)
             // No need to destroy var.
             return var;
           else
@@ -703,11 +713,11 @@ namespace
 
         value rhs_node = choose_storage();
         target_p = rhs_node;
-        (this->Rewriter::operator())(cases.front()->lhs);
+        (this->Rewriter::operator())(getlhs(*current));
 
-        for(++i; i<n; ++i)
+        for(++current; current!=end; ++current)
         {
-          value lhs_node = new_(cases.at(i)->lhs);
+          value lhs_node = new_(getlhs(*current));
 
           value choice_node = choose_storage();
           choice_node.arrow(ND_VPTR) = rt.choice_vt;
@@ -821,7 +831,19 @@ namespace
         else
         {
           tgt::value inductive = this->inductive_alloca;
-          compiler::tag_t tag = instantiate_variable(inductive, branch.cases);
+          compiler::tag_t tag;
+          if(auto var = branch.condition.getvar())
+          {
+            assert(this->fundef);
+            tag = instantiate_variable(
+                inductive
+              , this->fundef->variable_expansions->at(var->pathid)
+              );
+          }
+          else
+          {
+            tag = instantiate_variable(inductive, branch.cases);
+          }
           tgt::goto_(jumptable[tag+TAGOFFSET], labels);
         }
       }
@@ -1005,11 +1027,6 @@ namespace
         // Ignore variables; do the second jump.
         scope _ = labels[TAGOFFSET + FREE];
         make_jump(2);
-        // rt.printf("[not implemented] Failing due to free variable in ctor term");
-        // if(arity > 2) vinvoke(root_p, VT_DESTROY);
-        // root_p.arrow(ND_VPTR) = rt.failed_vt;
-        // root_p.arrow(ND_TAG) = compiler::FAIL;
-        // return_();
       }
 
       // FWD case.
