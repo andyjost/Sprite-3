@@ -127,6 +127,10 @@ def getAnswers(filename):
   return pakcs_answer, sprite_answer
 
 def equalAnswers(tc, pakcs, sprite):
+  tc.assertEqual(
+      len(pakcs), len(sprite)
+    , msg='len(pakcs) != len(sprite)'
+    )
   for p,s in zip(pakcs, sprite):
     tc.assertTrue(
         # Tolerate extra parens surrounding.
