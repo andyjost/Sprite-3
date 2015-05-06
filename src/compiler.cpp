@@ -1245,6 +1245,7 @@ namespace
     aux.name = fun.name + "#branch" + std::to_string(id);
     aux.arity = 2;
     aux.paths = fun.paths;
+    aux.variable_expansions = fun.variable_expansions;
 
     // There will be two new variables, for the new base and the discriminator.
     size_t const newbase = aux.paths.size();

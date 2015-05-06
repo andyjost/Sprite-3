@@ -3,12 +3,16 @@
  * @brief Contains data structures for representing Curry input programs.
  */
 #pragma once
+#include <iostream>
 #include <iterator>
 #include <limits>
 #include <list>
+#include <map>
 #include <memory>
+#include <set>
 #include <stdexcept>
 #include <string>
+#include <tuple>
 #include <unordered_map>
 #include <vector>
 
@@ -30,8 +34,14 @@ namespace sprite { namespace curry
     std::string name;
     std::string str() const { return module + "." + name; }
     // Note: std::hash<Qname> defined below.
+    auto tuple() const -> decltype(std::tie(module, name))
+      { return std::tie(this->module, this->name); }
     friend bool operator==(Qname const & lhs, Qname const & rhs)
-      { return lhs.module == rhs.module && lhs.name == rhs.name; }
+      { return lhs.tuple() == rhs.tuple(); }
+    friend bool operator<(Qname const & lhs, Qname const & rhs)
+      { return lhs.tuple() < rhs.tuple(); }
+    friend std::ostream & operator<<(std::ostream & os, Qname const & arg)
+      { return (os << arg.module << "." << arg.name); }
   };
 
   /// Represents either a Constructor or Function.
@@ -108,6 +118,33 @@ namespace sprite { namespace curry
         case QNAME: qname.~Qname(); break;
         case CHAR: case INT: case DOUBLE: break;
       }
+    }
+
+    friend std::ostream & operator<<(std::ostream & os, CaseLhs const & arg)
+    {
+      switch(arg.tag)
+      {
+        case QNAME: return os << arg.qname;
+        case CHAR: return os << arg.char_;
+        case INT: return os << arg.int_;
+        case DOUBLE: return os << arg.double_;
+      }
+      return os;
+    }
+
+    friend bool operator<(CaseLhs const & lhs, CaseLhs const & rhs)
+    {
+      if(lhs.tag == rhs.tag)
+      {
+        switch(lhs.tag)
+        {
+          case QNAME: return lhs.qname < rhs.qname;
+          case CHAR: return lhs.char_ < rhs.char_;
+          case INT: return lhs.int_ < rhs.int_;
+          case DOUBLE: return lhs.double_ < rhs.double_;
+        }
+      }
+      return lhs.tag < rhs.tag;
     }
 
   private:
@@ -388,6 +425,7 @@ namespace sprite { namespace curry
     Definition(Rule && arg) : tag(RULE), rule(std::move(arg)) {}
     Definition(Term const & arg) : tag(RULE), rule(arg) {}
     Definition(Term && arg) : tag(RULE), rule(std::move(arg)) {}
+
     Definition(Definition && arg) : tag(arg.tag)
     {
       switch(tag)
@@ -396,6 +434,7 @@ namespace sprite { namespace curry
         case RULE: new(&rule) Rule(std::move(arg.rule)); break;
       }
     }
+
     Definition(Definition const & arg) : tag(arg.tag)
     {
       switch(tag)
@@ -404,18 +443,21 @@ namespace sprite { namespace curry
         case RULE: new(&rule) Rule(arg.rule); break;
       }
     }
+
     Definition & operator=(Definition && arg)
     {
       this->~Definition();
       new(this) Definition(std::move(arg));
       return *this;
     }
+
     Definition & operator=(Definition const & arg)
     {
       this->~Definition();
       new(this) Definition(arg);
       return *this;
     }
+
     ~Definition()
     {
       switch(tag)
@@ -424,6 +466,7 @@ namespace sprite { namespace curry
         case RULE: rule.~Rule(); break;
       }
     }
+
     template<typename Visitor>
     typename std::remove_reference<Visitor>::type::result_type
     visit(Visitor && visitor) const
@@ -436,6 +479,20 @@ namespace sprite { namespace curry
           return visitor(this->rule);
       }
       throw std::logic_error("unreachable");
+    }
+
+    Branch const * getbranch() const
+    {
+      if(tag==BRANCH)
+        return &branch;
+      return nullptr;
+    }
+
+    Rule const * getrule() const
+    {
+      if(tag==RULE)
+        return &rule;
+      return nullptr;
     }
   private:
     enum {BRANCH, RULE} tag;
@@ -463,6 +520,10 @@ namespace sprite { namespace curry
     struct PathElem { size_t base; size_t idx; Qname typename_; };
     std::vector<PathElem> paths;
     Definition def;
+
+    // Mapping from variable IDs to all used values for that variable.
+    using Expansions = std::map<size_t, std::set<CaseLhs>>;
+    std::shared_ptr<Expansions> variable_expansions;
   };
 
   /**
