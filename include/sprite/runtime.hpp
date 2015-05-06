@@ -123,6 +123,8 @@ namespace sprite { namespace compiler
     function const CyTrace_Dedent = extern_(void_t(), "CyTrace_Dedent");
     function const CyTrace_ShowIndent = extern_(void_t(), "CyTrace_ShowIndent");
 
+    function const Cy_Suspend = extern_(void_t(), "Cy_Suspend");
+
     // Creates a new basic block at the current point in the code stream and
     // makes it the default insertion point.  Creates another basic block that
     // calls the garbage collector and then returns to this point.  Returns the

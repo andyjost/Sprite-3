@@ -20,6 +20,9 @@ namespace sprite { namespace curry
   /// A placeholder used to represent a failure.
   struct Fail {};
 
+  /// A placeholder used to represent a free variable.
+  struct Free {};
+
   /// Represents a qualified name.
   struct Qname
   {
@@ -198,6 +201,7 @@ namespace sprite { namespace curry
   struct Rule
   {
     Rule(Fail = Fail()) : tag(FAIL), fail() {}
+    Rule(Free) : tag(FREE), free() {}
     Rule(char arg) : tag(CHAR), char_(arg) {}
     Rule(int64_t arg) : tag(INT), int_(arg) {}
     Rule(double arg) : tag(DOUBLE), double_(arg) {}
@@ -216,6 +220,7 @@ namespace sprite { namespace curry
       switch(tag)
       {
         case FAIL: new(&fail) Fail(); break;
+        case FREE: new(&free) Free(); break;
         case CHAR: new(&char_) char(arg.char_); break;
         case INT: new(&int_) int64_t(arg.int_); break;
         case DOUBLE: new(&double_) double(arg.double_); break;
@@ -231,6 +236,7 @@ namespace sprite { namespace curry
       switch(tag)
       {
         case FAIL: new(&fail) Fail(); break;
+        case FREE: new(&free) Free(); break;
         case CHAR: new(&char_) char(arg.char_); break;
         case INT: new(&int_) int64_t(arg.int_); break;
         case DOUBLE: new(&double_) double(arg.double_); break;
@@ -259,6 +265,7 @@ namespace sprite { namespace curry
       {
         case TERM: term.~Term(); break;
         case FAIL: fail.~Fail(); break;
+        case FREE: free.~Free(); break;
         case EXTERNAL: external.~ExternalCall(); break;
         case PARTIAL: partial.~Partial(); break;
         case NLTERM: nlterm.~NLTerm(); break;
@@ -273,6 +280,8 @@ namespace sprite { namespace curry
       {
         case FAIL:
           return visitor(this->fail);
+        case FREE:
+          return visitor(this->free);
         case CHAR:
           return visitor(this->char_);
         case INT:
@@ -328,6 +337,7 @@ namespace sprite { namespace curry
       switch(tag)
       {
         case FAIL:
+        case FREE:
         case CHAR:
         case INT:
         case DOUBLE:
@@ -342,10 +352,10 @@ namespace sprite { namespace curry
       return false;
     }
   private:
-    enum { FAIL, CHAR, INT, DOUBLE, VAR, TERM, EXTERNAL, PARTIAL, NLTERM } tag;
+    enum { FAIL, FREE, CHAR, INT, DOUBLE, VAR, TERM, EXTERNAL, PARTIAL, NLTERM } tag;
     union {
-      Fail fail; char char_; int64_t int_; double double_; Ref var; Term term;
-      ExternalCall external; Partial partial; NLTerm nlterm;
+      Fail fail; Free free; char char_; int64_t int_; double double_; Ref var;
+      Term term; ExternalCall external; Partial partial; NLTerm nlterm;
     };
   };
 
