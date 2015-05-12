@@ -831,19 +831,25 @@ namespace
         else
         {
           tgt::value inductive = this->inductive_alloca;
-          compiler::tag_t tag;
+          auto invalid = -(TAGOFFSET+1);
+          compiler::tag_t tag = invalid;
+          // Try to look up the available variable expansions if the condition
+          // is a variable reference.  If one is not available then the
+          // condition variable was constructed only to call an aux function.
+          // In that case, the free variable cannot be shared, so a local
+          // expansion is best.
           if(auto var = branch.condition.getvar())
           {
             assert(this->fundef);
-            tag = instantiate_variable(
-                inductive
-              , this->fundef->variable_expansions->at(var->pathid)
-              );
+            auto const & expansions = *this->fundef->variable_expansions;
+            auto p = expansions.find(var->pathid);
+            if(p != expansions.end())
+              tag = instantiate_variable(inductive, p->second);
           }
-          else
-          {
-            tag = instantiate_variable(inductive, branch.cases);
-          }
+          // Consult only the local table to expand the free variable.
+          if(tag == invalid)
+            { tag = instantiate_variable(inductive, branch.cases); }
+
           tgt::goto_(jumptable[tag+TAGOFFSET], labels);
         }
       }
