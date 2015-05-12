@@ -535,6 +535,11 @@ extern "C"
     DATA(root, double) = -x;
   }
 
+  void CyPrelude_Unify(node *) __asm__("CyPrelude_=:=");
+  void CyPrelude_Unify(node * root)
+  {
+  }
+
   // Converts a character into its ASCII value.
   void CyPrelude_ord(node * root)
   {
@@ -608,6 +613,15 @@ extern "C"
       root->aux = rem - 1;
       // The successors do not need to be modified.
     }
+  }
+
+  // cond :: Success -> a -> a
+  void CyPrelude_cond(node * root)
+  {
+    #include "normalize1.def"
+    root->vptr = &CyVt_Fwd;
+    root->tag = FWD;
+    SUCC_0(root) = SUCC_1(root);
   }
 
   void CyPrelude_Eq(node *) __asm__("CyPrelude_==");
