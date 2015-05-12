@@ -16,22 +16,28 @@
 #define TAG(arg) (arg->tag < 0 ? arg->tag : 0)
 #endif
 
+// The action to take when a free variable is encountered.  By default, do
+// nothing (i.e., fall through to the constructor case.
+#ifndef WHEN_FREE
+#define WHEN_FREE(arg)
+#endif
+
   static void * table_lhs[] =
-      { &&t_fail, &&t_fwd_lhs, &&t_choice_lhs, &&t_oper_lhs, &&t_ctor_lhs };
+      { &&t_fail, &&t_free_lhs, &&t_fwd_lhs, &&t_choice_lhs, &&t_oper_lhs, &&t_ctor_lhs };
   static void * table_rhs[] =
-      { &&t_fail, &&t_fwd_rhs, &&t_choice_rhs, &&t_oper_rhs, &&t_ctor_rhs };
+      { &&t_fail, &&t_free_rhs, &&t_fwd_rhs, &&t_choice_rhs, &&t_oper_rhs, &&t_ctor_rhs };
   node * lhs = SUCC_0(root);
   node * rhs = SUCC_1(root);
   node * lhs_choice, * rhs_choice;
-  goto* (&table_lhs[4])[TAG(lhs)];
+  goto* (&table_lhs[TAGOFFSET])[TAG(lhs)];
 t_fail:
   return CyPrelude_failed(root);
 t_fwd_lhs:
   lhs = reinterpret_cast<node *>(lhs->slot0);
-  goto* (&table_lhs[4])[TAG(lhs)];
+  goto* (&table_lhs[TAGOFFSET])[TAG(lhs)];
 t_fwd_rhs:
   rhs = reinterpret_cast<node *>(rhs->slot0);
-  goto* (&table_rhs[4])[TAG(rhs)];
+  goto* (&table_rhs[TAGOFFSET])[TAG(rhs)];
 t_choice_lhs:
   NODE_ALLOC(lhs_choice, t_choice_lhs);
   NODE_ALLOC(rhs_choice, t_choice_lhs);
@@ -68,12 +74,18 @@ t_choice_rhs:
   return;
 t_oper_lhs:
   NORMALIZE(lhs);
-  goto* (&table_lhs[4])[TAG(lhs)];
+  goto* (&table_lhs[TAGOFFSET])[TAG(lhs)];
 t_oper_rhs:
   NORMALIZE(rhs);
-  goto* (&table_rhs[4])[TAG(rhs)];
+  goto* (&table_rhs[TAGOFFSET])[TAG(rhs)];
+t_free_lhs:
+  WHEN_FREE(lhs);
 t_ctor_lhs:
-  goto* (&table_rhs[4])[TAG(rhs)];
+  goto* (&table_rhs[TAGOFFSET])[TAG(rhs)];
+t_free_rhs:
+  WHEN_FREE(rhs);
 t_ctor_rhs:
 #undef NORMALIZE
 #undef TAG
+#undef WHEN_FREE
+

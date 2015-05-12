@@ -162,6 +162,7 @@ namespace sprite
           rt.Cy_Normalize(show);
           rt.Cy_CyStringToCString(show, rt.stdout_());
           rt.putchar('\n');
+          rt.CyFree_ResetCounter();
           rt.CyMem_PopRoot(enable_tracing);
         }
       );

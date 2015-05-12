@@ -14,7 +14,8 @@ clean :
 #         =1  Prints a summary of the time spent collecting.
 #         =2  Prints information every time the collector runs.
 #         =3  Prints information about every node during collection.
-LOCAL_CFLAGS += $(shell $(LLVM-CONFIG) --cppflags) -std=c++11 -I.
+#     -g Add debug symbols.  Allows debugging into the runtime library.
+LOCAL_CFLAGS += $(shell $(LLVM-CONFIG) --cppflags) $(RT-CFLAGS) -std=c++11 -I. 
 
 .DELETE_ON_ERROR :
 $(STATICLIB) : main.o

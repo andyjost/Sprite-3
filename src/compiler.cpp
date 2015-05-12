@@ -1,8 +1,10 @@
+#include <cassert>
 #include <iostream>
 #include "sprite/curryinput.hpp"
 #include "sprite/compiler.hpp"
 #include "sprite/runtime.hpp"
 #include <algorithm>
+#include <iterator>
 
 // DIAGNOSTIC - this may warrant a command-line option setting.
 #include "llvm/Analysis/Verifier.h"
@@ -16,6 +18,22 @@ namespace
   using namespace sprite::compiler;
   namespace curry = sprite::curry;
   using sprite::curry::Qname;
+
+  curry::CaseLhs const & getlhs(curry::CaseLhs const & arg)
+    { return arg; }
+  curry::CaseLhs const & getlhs(std::shared_ptr<curry::Case> const & arg)
+    { return arg->lhs; }
+
+  struct ValueSaver
+  {
+    ValueSaver(value & ref_, value x=value())
+      : ref(ref_), saved(ref_)
+    { ref_ = x; }
+    ~ValueSaver()  { ref = saved; }
+  private:
+    value & ref;
+    value saved;
+  };
 
   struct GetLhsCaseType
   {
@@ -67,6 +85,32 @@ namespace
   constant_int get_case_value(curry::CaseLhs const & lhs)
   {
     GetLhsCaseValue visitor;
+    return lhs.visit(visitor);
+  }
+
+  struct GetLhsCaseTag
+  {
+    using result_type = compiler::tag_t;
+
+    GetLhsCaseTag(compiler::ModuleSTab const & module_stab_)
+      : module_stab(module_stab_)
+    {}
+
+    compiler::ModuleSTab const & module_stab;
+
+    template<typename T>
+    result_type operator()(T const &) const
+      { return compiler::CTOR; }
+
+    result_type operator()(Qname const & qname) const
+    { return module_stab.lookup(qname).tag; }
+  };
+
+  compiler::tag_t get_case_tag(
+      curry::CaseLhs const & lhs, compiler::ModuleSTab const & module_stab
+    )
+  {
+    GetLhsCaseTag visitor(module_stab);
     return lhs.visit(visitor);
   }
 
@@ -240,20 +284,20 @@ namespace
       { return rt.node_alloc(ty, this->out_of_memory_handler); }
 
     // Places an expression at an uninitialized location.
-    tgt::value new_(tgt::value const & data, curry::Rule const & rule)
+    template<typename RuleOrCaseLhs>
+    tgt::value new_(tgt::value const & data, RuleOrCaseLhs const & def)
     {
-      tgt::value orig_target_p = this->target_p;
-      this->target_p = data;
-      (*this)(rule);
-      this->target_p = orig_target_p;
+      ValueSaver saver(target_p, data);
+      (*this)(def);
       return data;
     }
 
     // Allocates a new node and places an expression there.
-    tgt::value new_(curry::Rule const & rule)
+    template<typename RuleOrCaseLhs>
+    tgt::value new_(RuleOrCaseLhs const & def)
     {
       tgt::value data = this->node_alloc(*rt.node_t);
-      return this->new_(data, rule);
+      return this->new_(data, def);
     }
 
     // Deallocates the extended child array stored in the root node, if present.
@@ -289,8 +333,11 @@ namespace
                 pathid, tgt::local(node_pointer_type)
               );
             // Allocate a new node and store its address on the stack.
-            pair.first->second = this->node_alloc(*rt.node_t);
-            this->resolved_path_alloca = pair.first->second;
+            auto & p = pair.first->second;
+            p = this->node_alloc(*rt.node_t);
+            p.arrow(ND_VPTR) = rt.freevar_vt;
+            p.arrow(ND_TAG) = compiler::FREE;
+            this->resolved_path_alloca = p;
           }
           else
             this->resolved_path_alloca = it->second;
@@ -359,6 +406,26 @@ namespace
 
     result_type operator()(curry::Rule const & rule)
       { rule.visit(*this); }
+
+    result_type operator()(curry::CaseLhs const & rule)
+      { rule.visit(*this); }
+
+    // For variable instantiation.
+    result_type operator()(curry::Free const &)
+    {
+      this->destroy_target();
+      this->target_p.arrow(ND_VPTR) = rt.freevar_vt;
+      this->target_p.arrow(ND_TAG) = compiler::FREE;
+    }
+
+    result_type operator()(Qname const & qname)
+    {
+      auto const & node_stab = this->module_stab.lookup(qname);
+      size_t const arity = node_stab.source->arity;
+      std::vector<curry::Rule> args(arity, curry::Free());
+      curry::Term const term(qname, std::move(args));
+      (*this)(term);
+    }
 
   private:
 
@@ -481,36 +548,37 @@ namespace
 
     result_type operator()(curry::Term const & term)
     {
-      // The target node pointer is clobbered so that recursion can be used.
-      // Save it for below.
-      tgt::value orig_target_p = this->target_p;
-
-      // Each child needs to be allocated and initialized.  The children are
-      // stored as i8* pointers.
       std::vector<tgt::value> child_data;
       child_data.reserve(term.args.size());
-      for(auto const & subexpr: term.args)
+
       {
-        // Avoid creating FWD nodes for subexpressions.
-        if(curry::Ref const * varref = subexpr.getvar())
+        // The target node pointer is clobbered so that recursion can be used.
+        // Save it for below.
+        ValueSaver saver(target_p);
+
+        // Each child needs to be allocated and initialized.  The children are
+        // stored as i8* pointers.
+        for(auto const & subexpr: term.args)
         {
-          // Retrieve the pointer to an existing node.
-          tgt::value child = this->resolve_path_char_p(varref->pathid);
-          child_data.push_back(child);
-        }
-        // Allocate a new node and place its contents with a recursive call.
-        else
-        {
-          tgt::value child = this->node_alloc(*rt.char_t);
-          child_data.push_back(child);
-          // Clobber the root so the recursive call works.
-          this->target_p = bitcast(child, node_pointer_type);
-          (*this)(subexpr);
+          // Avoid creating FWD nodes for subexpressions.
+          if(curry::Ref const * varref = subexpr.getvar())
+          {
+            // Retrieve the pointer to an existing node.
+            tgt::value child = this->resolve_path_char_p(varref->pathid);
+            child_data.push_back(child);
+          }
+          // Allocate a new node and place its contents with a recursive call.
+          else
+          {
+            tgt::value child = this->node_alloc(*rt.char_t);
+            child_data.push_back(child);
+            // Clobber the root so the recursive call works.
+            this->target_p = bitcast(child, node_pointer_type);
+            (*this)(subexpr);
+          }
         }
       }
-
-      // Restore the original target.
-      this->target_p = orig_target_p;
+      // (The original target is restored.)
 
       // Set the vtable and tag.
       node_init(
@@ -610,6 +678,59 @@ namespace
         throw compile_error("Invalid branch condition");
     }
 
+    template<typename Cases>
+    compiler::tag_t instantiate_variable(value var, Cases const & cases)
+    {
+      assert(cases.size());
+      // Cases cases = cases_;
+      // std::reverse(cases.begin(), cases.end());
+
+      compiler::tag_t tag = compiler::CHOICE;
+      if(cases.size() == 1)
+      {
+        ValueSaver saver(target_p, var);
+        auto const & lhs = getlhs(*cases.begin());
+        (this->Rewriter::operator())(lhs);
+        tag = get_case_tag(lhs, module_stab);
+      }
+      else
+      {
+        set_out_of_memory_handler_returning_here();
+        ValueSaver saver(target_p);
+
+        // size_t i=0;
+        // size_t const n = cases.size();
+        auto current = cases.rbegin();
+        auto const end = cases.rend();
+        auto choose_storage = [&]
+        {
+          if(std::next(current) == end)
+            // No need to destroy var.
+            return var;
+          else
+            return this->node_alloc(*rt.node_t);
+        };
+
+        value rhs_node = choose_storage();
+        target_p = rhs_node;
+        (this->Rewriter::operator())(getlhs(*current));
+
+        for(++current; current!=end; ++current)
+        {
+          value lhs_node = new_(getlhs(*current));
+
+          value choice_node = choose_storage();
+          choice_node.arrow(ND_VPTR) = rt.choice_vt;
+          choice_node.arrow(ND_TAG) = compiler::CHOICE;
+          choice_node.arrow(ND_SLOT0) = lhs_node;
+          choice_node.arrow(ND_SLOT1) = rhs_node;
+
+          rhs_node = choice_node;
+        }
+      }
+      return tag;
+    }
+
     result_type operator()(curry::Branch const & branch)
     {
       // Save and resove the next_local_id variable and manage freevar_alloca.
@@ -639,10 +760,7 @@ namespace
         size_t prev;
       } _freevar_alloca_manager(*this);
 
-      // Look up the inductive node.
       size_t const pathid = build_condition(branch.condition);
-      tgt::value const inductive = this->resolve_path(pathid);
-
       // Declare the jump table in the target program.
       size_t const table_size = TAGOFFSET + branch.num_tag_cases();
       tgt::globalvar jumptable =
@@ -651,7 +769,7 @@ namespace
 
       // Declare placeholders for the pre-defined special labels.  Definitions
       // are provided below.
-      std::vector<tgt::label> labels(4);
+      std::vector<tgt::label> labels(TAGOFFSET);
 
       // Add a label for each constructor at the branch position.
       if(branch.iscomplete)
@@ -702,6 +820,40 @@ namespace
         clean_up_and_return();
       }
 
+      // FREE case
+      {
+        tgt::scope _ = labels[TAGOFFSET + FREE];
+        if(!branch.isflex)
+        {
+          rt.Cy_Suspend();
+          clean_up_and_return();
+        }
+        else
+        {
+          tgt::value inductive = this->inductive_alloca;
+          auto invalid = -(TAGOFFSET+1);
+          compiler::tag_t tag = invalid;
+          // Try to look up the available variable expansions if the condition
+          // is a variable reference.  If one is not available then the
+          // condition variable was constructed only to call an aux function.
+          // In that case, the free variable cannot be shared, so a local
+          // expansion is best.
+          if(auto var = branch.condition.getvar())
+          {
+            assert(this->fundef);
+            auto const & expansions = *this->fundef->variable_expansions;
+            auto p = expansions.find(var->pathid);
+            if(p != expansions.end())
+              tag = instantiate_variable(inductive, p->second);
+          }
+          // Consult only the local table to expand the free variable.
+          if(tag == invalid)
+            { tag = instantiate_variable(inductive, branch.cases); }
+
+          tgt::goto_(jumptable[tag+TAGOFFSET], labels);
+        }
+      }
+
       // FWD case
       {
         tgt::scope _ = labels[TAGOFFSET + FWD];
@@ -717,10 +869,13 @@ namespace
       // CHOICE case
       {
         tgt::scope _ = labels[TAGOFFSET + CHOICE];
+
         // FIXME: would an allocated branch condition would be reclaimed?
         // There is a local stack of detached roots.  It would be great to add
         // the local computation to it only just before the collector runs.
         set_out_of_memory_handler_returning_here();
+        tgt::value inductive = this->inductive_alloca;
+
         if(pathid >= LOCAL_ID_START)
         {
           // The choice arose from a non-trivial branch discriminator.
@@ -753,8 +908,9 @@ namespace
       // OPER case
       {
         tgt::scope _ = labels[TAGOFFSET + OPER];
+        tgt::value inductive = this->inductive_alloca;
         // Head-normalize the inductive node.
-        vinvoke(this->inductive_alloca, VT_H);
+        vinvoke(inductive, VT_H);
         // Repeat the previous jump.
         tgt::value const index = inductive.arrow(ND_TAG) + TAGOFFSET;
         tgt::goto_(jumptable[index], labels);
@@ -762,6 +918,9 @@ namespace
 
       // Add the label addresses to the jump table.
       jumptable.set_initializer(addresses);
+
+      // Look up the inductive node.
+      tgt::value const inductive = this->resolve_path(pathid);
 
       // Store the address of the inductive node in allocated space, then use
       // its tag to make the first jump.
@@ -778,7 +937,7 @@ namespace
       this->set_out_of_memory_handler_returning_here();
 
       // Step.
-      static_cast<Rewriter*>(this)->operator()(rule);
+      (this->Rewriter::operator())(rule);
 
       clean_up_and_return();
     }
@@ -824,7 +983,7 @@ namespace
 
     auto handle_child = [&](size_t ichild){
       value call;
-      size_t constexpr table_size = 5; // FAIL, FWD, CHOICE, OPER, CTOR
+      size_t constexpr table_size = 6; // FAIL, FREE, FWD, CHOICE, OPER, CTOR
       // The first jump normalizes children.
       label labels[table_size];
       globalvar jumptable1 =
@@ -854,7 +1013,7 @@ namespace
             case 2:
               goto_(
                   jumptable2[index]
-                , {labels[0], labels[0], labels[2], labels[0], current}
+                , {labels[0], current, labels[0], labels[2], labels[0], current}
                 );
               break;
           }
@@ -867,6 +1026,13 @@ namespace
         root_p.arrow(ND_VPTR) = rt.failed_vt;
         root_p.arrow(ND_TAG) = compiler::FAIL;
         return_();
+      }
+
+      // FREE case.
+      {
+        // Ignore variables; do the second jump.
+        scope _ = labels[TAGOFFSET + FREE];
+        make_jump(2);
       }
 
       // FWD case.
@@ -902,12 +1068,20 @@ namespace
 
       // Initialize the jump tables.
       block_address addresses1[table_size] =
-          {&labels[0], &labels[1], &labels[2], &labels[3], &labels[4]};
+          {&labels[0], &labels[1], &labels[2], &labels[3], &labels[4], &labels[5]};
       jumptable1.set_initializer(addresses1);
 
-      // The FWD and OPER rules are unreachable, so just put FAIL there.
+      // The FWD and OPER rules are unreachable, so just put FAIL there.  Treat
+      // FREE variables like constructors, since they can appear in a value.
       block_address addresses2[table_size] =
-          {&labels[0], &labels[0], &labels[2], &labels[0], &current};
+      {
+          &labels[TAGOFFSET+FAIL]   // FAIL
+        , &current                  // FREE
+        , &labels[TAGOFFSET+FAIL]   // FWD
+        , &labels[TAGOFFSET+CHOICE] // CHOICE
+        , &labels[TAGOFFSET+FAIL]   // OPER
+        , &current                  // CTOR
+      };
       jumptable2.set_initializer(addresses2);
 
       // Kick off the process.
@@ -1094,6 +1268,7 @@ namespace
     aux.name = fun.name + "#branch" + std::to_string(id);
     aux.arity = 2;
     aux.paths = fun.paths;
+    aux.variable_expansions = fun.variable_expansions;
 
     // There will be two new variables, for the new base and the discriminator.
     size_t const newbase = aux.paths.size();

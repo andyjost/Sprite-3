@@ -1,8 +1,10 @@
 #include "sprite/curryinput.hpp"
 #include "sprite/icurry_parser.hpp"
+#include <cassert>
 #include <cctype>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <limits>
 
@@ -25,6 +27,8 @@ static std::string word;
 
 namespace sprite { namespace curry
 {
+  void compute_variable_expansions(Function &);
+
   template<typename T> void base_one_to_zero(T & t)
   {
     if(t == 0)
@@ -561,6 +565,9 @@ namespace sprite { namespace curry
   
     // Parse the rules.
     function.def = read_definition(ifs);
+
+    // Add variable expansion info.
+    compute_variable_expansions(function);
   }
 
   std::istream & operator>>(std::istream & ifs, Function & fun)
@@ -649,5 +656,35 @@ namespace sprite { namespace curry
       ifs.exceptions(flags);
       throw ParseError();
     }
+  }
+
+  void compute_variable_expansions_impl(
+      Definition & def, Function::Expansions & exp
+    )
+  {
+    if(auto br = def.getbranch())
+    {
+      if(auto var = br->condition.getvar())
+      {
+        auto & slot = exp[var->pathid];
+        for(auto const & case_: br->cases)
+        {
+          slot.insert(case_->lhs);
+          compute_variable_expansions_impl(case_->action, exp);
+        }
+      }
+    }
+  }
+
+  // Perform some analysis of the function definition.  For each variable that
+  // is used as the selector of a table, build the set of possible values it
+  // may assume.  This must be done globally for all tables in the function.
+  // CMC might eventually perform this analysis, so we place it in the parse;
+  // eventually a parsing step might replace this.
+  void compute_variable_expansions(Function & fun)
+  {
+    assert(!fun.variable_expansions);
+    fun.variable_expansions.reset(new Function::Expansions());
+    compute_variable_expansions_impl(fun.def, *fun.variable_expansions);
   }
 }}

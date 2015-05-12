@@ -13,6 +13,21 @@
     code
       external "Prelude.failed"
 
+  function "Prelude.primitive.==.freevar" 2
+    table
+    code
+      external "Prelude.suspend"
+
+  function "Prelude.primitive.compare.freevar" 2
+    table
+    code
+      external "Prelude.suspend"
+
+  function "Prelude.primitive.show.freevar" 1
+    table
+    code
+      external "Prelude.primitive.show.freevar"
+
   function "Prelude.primitive.==.fwd" 2
     table
     code

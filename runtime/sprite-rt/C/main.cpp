@@ -116,6 +116,18 @@ extern "C"
     return root;
   }
 
+  void Cy_Suspend()
+  {
+    // TODO
+    // I'm not sure how to implement this.  For now, it's a placeholder
+    // that exits the program.
+    printf("[Fixme] Goal suspended!");
+    std::exit(EXIT_FAILURE);
+  }
+
+  void CyPrelude_suspend(node * root)
+    { Cy_Suspend(); }
+
   void CyPrelude_failed(node * root)
   {
     root->vptr->destroy(root);
@@ -150,6 +162,7 @@ extern "C"
   void CyPrelude_putChar(node * root)
   {
     #define TAG(arg) arg->tag
+    #define WHEN_FREE(arg) Cy_Suspend()
     #include "normalize1.def"
     putc(DATA(arg, char), stdout);
     root->vptr = &CyVt_Tuple0;
@@ -391,8 +404,8 @@ extern "C"
   // the result is bound to a non-variable term.
   void CyPrelude_ensureNotFree(node * root)
   {
+    #define WHEN_FREE(arg) Cy_Suspend()
     #include "normalize1.def"
-    // TODO: suspend.
     return;
   }
 
@@ -422,7 +435,9 @@ extern "C"
   void CyPrelude_DollarHashHash(node *) __asm__("CyPrelude_$##");
   void CyPrelude_DollarHashHash(node * root)
   {
-    // FIXME: this is incorrect -- detect variables.
+    #define NORMALIZE(arg) arg->vptr->N(arg)
+    #define WHEN_FREE(arg) Cy_Suspend()
+    #include "normalize1.def"
     root->vptr = &CyVt_Fwd;
     root->tag = FWD;
   }
@@ -439,6 +454,7 @@ extern "C"
   void CyPrelude_IntPlus(node * root)
   {
     #define TAG(arg) arg->tag
+    #define WHEN_FREE(arg) Cy_Suspend()
     #include "normalize2.def"
     int64_t const x = DATA(lhs, int64_t);
     int64_t const y = DATA(rhs, int64_t);
@@ -451,6 +467,7 @@ extern "C"
   void CyPrelude_IntSub(node * root)
   {
     #define TAG(arg) arg->tag
+    #define WHEN_FREE(arg) Cy_Suspend()
     #include "normalize2.def"
     int64_t const x = DATA(lhs, int64_t);
     int64_t const y = DATA(rhs, int64_t);
@@ -463,6 +480,7 @@ extern "C"
   void CyPrelude_IntMul(node * root)
   {
     #define TAG(arg) arg->tag
+    #define WHEN_FREE(arg) Cy_Suspend()
     #include "normalize2.def"
     int64_t const x = DATA(lhs, int64_t);
     int64_t const y = DATA(rhs, int64_t);
@@ -475,6 +493,7 @@ extern "C"
   void CyPrelude_div(node * root)
   {
     #define TAG(arg) arg->tag
+    #define WHEN_FREE(arg) Cy_Suspend()
     #include "normalize2.def"
     int64_t const x = DATA(lhs, int64_t);
     int64_t const y = DATA(rhs, int64_t);
@@ -490,6 +509,7 @@ extern "C"
   void CyPrelude_mod(node * root)
   {
     #define TAG(arg) arg->tag
+    #define WHEN_FREE(arg) Cy_Suspend()
     #include "normalize2.def"
     int64_t const x = DATA(lhs, int64_t);
     int64_t const y = DATA(rhs, int64_t);
@@ -504,6 +524,7 @@ extern "C"
   void CyPrelude_quot(node * root)
   {
     #define TAG(arg) arg->tag
+    #define WHEN_FREE(arg) Cy_Suspend()
     #include "normalize2.def"
     int64_t const x = DATA(lhs, int64_t);
     int64_t const y = DATA(rhs, int64_t);
@@ -516,6 +537,7 @@ extern "C"
   void CyPrelude_rem(node * root)
   {
     #define TAG(arg) arg->tag
+    #define WHEN_FREE(arg) Cy_Suspend()
     #include "normalize2.def"
     int64_t const x = DATA(lhs, int64_t);
     int64_t const y = DATA(rhs, int64_t);
@@ -528,6 +550,7 @@ extern "C"
   void CyPrelude_negateFloat(node * root)
   {
     #define TAG(arg) arg->tag
+    #define WHEN_FREE(arg) Cy_Suspend()
     #include "normalize1.def"
     double const x = DATA(arg, double);
     root->vptr = &CyVt_Float;
@@ -544,6 +567,7 @@ extern "C"
   void CyPrelude_ord(node * root)
   {
     #define TAG(arg) arg->tag
+    #define WHEN_FREE(arg) Cy_Suspend()
     #include "normalize1.def"
     root->vptr = &CyVt_Int64;
     root->tag = CTOR;
@@ -555,6 +579,7 @@ extern "C"
   void CyPrelude_chr(node * root)
   {
     #define TAG(arg) arg->tag
+    #define WHEN_FREE(arg) Cy_Suspend()
     #include "normalize1.def"
     root->vptr = &CyVt_Char;
     root->tag = CTOR;
@@ -564,6 +589,7 @@ extern "C"
 
   void CyPrelude_apply(node * root)
   {
+    #define WHEN_FREE(arg) Cy_Suspend()
     #include "normalize_apply.def"
     aux_t const rem = arg->aux;
     // Handle complete calls.  There is one argument, i.e., this one,
@@ -642,10 +668,10 @@ extern "C"
   }
 
   // Gives the representation of a char in a double-quoted string.
-  // GHC
   void CyPrelude_prim_char_repr(node * root)
   {
     #define TAG(arg) arg->tag
+    #define WHEN_FREE(arg) Cy_Suspend()
     #include "normalize1.def"
     char const c = DATA(arg, char);
     // Remove escape for single quote.
@@ -664,6 +690,41 @@ extern "C"
       size_t len = std::strlen(str);
       Cy_CStringToCyString(str, root, len-1); // skip the trailing single quote.
     }
+  }
+  
+  static size_t CyFree_NextId = 0;
+  static std::unordered_set<node*> CyFree_Seen;
+
+  void CyFree_ResetCounter()
+  {
+    CyFree_NextId = 0;
+    CyFree_Seen.clear();
+  }
+
+  // show.freevar
+  void Cy_Free_show(node *) __asm__("CyPrelude_primitive.show.freevar");
+  void Cy_Free_show(node * root)
+  {
+    node * arg = SUCC_0(root);
+    if(CyFree_Seen.insert(arg).second)
+    {
+      // If unseen, put the string into the free variable's data region.
+      char * p = &DATA(arg, char);
+      *p++ = '_';
+      size_t id = CyFree_NextId++;
+      if(id<26)
+      {
+        *p++ = 'a' + id;
+        *p = '\0';
+      }
+      else
+      {
+        *p++ = 'a';
+        size_t constexpr maxsize = sizeof(arg->slot0) + sizeof(arg->slot1) - 2;
+        snprintf(p, maxsize, "%zu", (id-25));
+      }
+    }
+    Cy_CStringToCyString(&DATA(arg, char), root);
   }
 
   // ==.fwd
@@ -841,6 +902,7 @@ extern "C"
   void Cy_Char_Eq(node * root)
   {
     #define TAG(arg) arg->tag
+    #define WHEN_FREE(arg) Cy_Suspend()
     #include "normalize2.def"
     bool const result = (DATA(lhs, char) == DATA(rhs, char));
     vtable * const vptr = result ? &CyVt_True : &CyVt_False;
@@ -853,6 +915,7 @@ extern "C"
   void Cy_Int_Eq(node * root)
   {
     #define TAG(arg) arg->tag
+    #define WHEN_FREE(arg) Cy_Suspend()
     #include "normalize2.def"
     bool const result = (DATA(lhs, int64_t) == DATA(rhs, int64_t));
     vtable * const vptr = result ? &CyVt_True : &CyVt_False;
@@ -865,6 +928,7 @@ extern "C"
   void Cy_Float_Eq(node * root)
   {
     #define TAG(arg) arg->tag
+    #define WHEN_FREE(arg) Cy_Suspend()
     #include "normalize2.def"
     bool const result = (DATA(lhs, double) == DATA(rhs, double));
     vtable * const vptr = result ? &CyVt_True : &CyVt_False;
@@ -880,6 +944,7 @@ extern "C"
   void Cy_Char_compare(node * root)
   {
     #define TAG(arg) arg->tag
+    #define WHEN_FREE(arg) Cy_Suspend()
     #include "normalize2.def"
     char const lhs_data = DATA(lhs, char);
     char const rhs_data = DATA(rhs, char);
@@ -904,6 +969,7 @@ extern "C"
   void Cy_Int_compare(node * root)
   {
     #define TAG(arg) arg->tag
+    #define WHEN_FREE(arg) Cy_Suspend()
     #include "normalize2.def"
     int64_t const lhs_data = DATA(lhs, int64_t);
     int64_t const rhs_data = DATA(rhs, int64_t);
@@ -928,6 +994,7 @@ extern "C"
   void Cy_Float_compare(node * root)
   {
     #define TAG(arg) arg->tag
+    #define WHEN_FREE(arg) Cy_Suspend()
     #include "normalize2.def"
     double const lhs_data = DATA(lhs, double);
     double const rhs_data = DATA(rhs, double);

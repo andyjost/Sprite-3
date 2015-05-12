@@ -9,16 +9,22 @@
 
 #define TAG(arg) (arg->tag < 0 ? arg->tag : 0)
 
+// The action to take when a free variable is encountered.  By default, do
+// nothing (i.e., fall through to the constructor case.
+#ifndef WHEN_FREE
+#define WHEN_FREE(arg)
+#endif
+
   static void * table[] =
-      { &&t_fail, &&t_fwd, &&t_choice, &&t_oper, &&t_ctor};
+      { &&t_fail, &&t_free, &&t_fwd, &&t_choice, &&t_oper, &&t_ctor};
   node * arg = SUCC_0(root);
   node * lhs_choice, * rhs_choice;
-  goto* (&table[4])[TAG(arg)];
+  goto* (&table[TAGOFFSET])[TAG(arg)];
 t_fail:
   return CyPrelude_failed(root);
 t_fwd:
   arg = reinterpret_cast<node *>(arg->slot0);
-  goto* (&table[4])[TAG(arg)];
+  goto* (&table[TAGOFFSET])[TAG(arg)];
 t_choice:
   NODE_ALLOC(lhs_choice, t_choice);
   NODE_ALLOC(rhs_choice, t_choice);
@@ -38,7 +44,11 @@ t_choice:
   return;
 t_oper:
   arg->vptr->H(arg);
-  goto* (&table[4])[TAG(arg)];
+  goto* (&table[TAGOFFSET])[TAG(arg)];
+t_free:
+  WHEN_FREE(arg);
 t_ctor:
 #undef NORMALIZE
 #undef TAG
+#undef WHEN_FREE
+

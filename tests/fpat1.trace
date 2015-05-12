@@ -1,0 +1,140 @@
+  ______      __       _    _    ______   _______     
+ |  __  |    /  \     | |  / /  |  ____| |  _____|   Portland Aachen Kiel
+ | |  | |   / /\ \    | |_/ /   | |      | |_____    Curry System
+ | |__| |  / /__\ \   |  _  |   | |      |_____  |   
+ |  ____| / ______ \  | | \ \   | |____   _____| |   Version 1.11.4 (4)
+ |_|     /_/      \_\ |_|  \_\  |______| |_______|   
+
+Curry2Prolog(swi 5.10) Compiler Environment (Version of 2014-10-16)
+(RWTH Aachen, CAU Kiel, Portland State University)
+
+Type ":h" for help (contact: pakcs@curry-language.org)
+Prelude> [1 of 2] Skipping  Prelude          ( /home/cmc/local/pakcs-1.11.4/lib/Prelude.curry, /home/cmc/local/pakcs-1.11.4/lib/.curry/Prelude.fcy )
+[2 of 2] Skipping  fpat1            ( fpat1.curry, .curry/fpat1.fcy )
+fpat1> [1 of 2] Skipping  Prelude          ( /home/cmc/local/pakcs-1.11.4/lib/Prelude.curry, /home/cmc/local/pakcs-1.11.4/lib/.curry/Prelude.fcy )
+[2 of 2] Skipping  fpat1            ( fpat1.curry, .curry/fpat1.fcy )
+fpat1> fpat1> Call: main
+(g)o (t)race (n)otrace (s)kip (l)eap (e)val (a)bort <return>(single step) >
+Single step mode off.
+Call: select [1,2]
+Call: cond ((unknown ++ ([_G23975] ++ unknown)) =:<= [1,2]) ([1,2],_G23975)
+Call: (unknown ++ ([_G23975] ++ unknown)) =:<= [1,2]
+Call: unknown ++ ([_G23975] ++ unknown)
+Call: unknown
+Exit: unknown (HNF: _G24994)
+Call: [_G23975] ++ unknown
+Exit: [_G23975] ++ unknown (HNF: _G23975:([] ++ unknown))
+Exit: unknown ++ ([_G23975] ++ unknown) (HNF: _G23975:([] ++ unknown))
+Call: (_G23975 =:<= 1) & (([] ++ unknown) =:<= [2])
+Call: _G23975 =:<= 1
+Exit: 1 =:<= 1 (HNF: success)
+Call: ([] ++ unknown) =:<= [2]
+Call: [] ++ unknown
+Call: unknown
+Exit: unknown (HNF: _G26463)
+Exit: [] ++ unknown (HNF: _G26463)
+Exit: ([] ++ unknown) =:<= [2] (HNF: success)
+Exit: (1 =:<= 1) & (([] ++ unknown) =:<= [2]) (HNF: success)
+Exit: (unknown ++ ([1] ++ unknown)) =:<= [1,2] (HNF: success)
+Exit: cond ((unknown ++ ([1] ++ unknown)) =:<= [1,2]) ([1,2],1) (HNF: ([1,2],1))
+Exit: select [1,2] (HNF: ([1,2],1))
+Exit: main (HNF: ([1,2],1))
+([1,2],1)
+Redo: main
+Redo: select [1,2]
+Redo: cond ((unknown ++ ([1] ++ unknown)) =:<= [1,2]) ([1,2],1)
+Redo: (unknown ++ ([1] ++ unknown)) =:<= [1,2]
+Redo: (1 =:<= 1) & (([] ++ unknown) =:<= [2])
+Redo: ([] ++ unknown) =:<= [2]
+Redo: [] ++ unknown
+Redo: unknown
+Fail: unknown
+Fail: [] ++ unknown
+Fail: ([] ++ unknown) =:<= [2]
+Redo: 1 =:<= 1
+Fail: _G23975 =:<= 1
+Fail: (_G23975 =:<= 1) & (([] ++ unknown) =:<= [2])
+Redo: unknown ++ ([_G23975] ++ unknown)
+Redo: [_G23975] ++ unknown
+Fail: [_G23975] ++ unknown
+Exit: unknown ++ ([_G23975] ++ unknown) (HNF: _G25081:(_G25082 ++ ([_G23975] ++ unknown)))
+Call: (_G25081 =:<= 1) & ((_G25082 ++ ([_G23975] ++ unknown)) =:<= [2])
+Call: _G25081 =:<= 1
+Exit: 1 =:<= 1 (HNF: success)
+Call: (_G25082 ++ ([_G23975] ++ unknown)) =:<= [2]
+Call: _G25082 ++ ([_G23975] ++ unknown)
+Call: [_G23975] ++ unknown
+Exit: [_G23975] ++ unknown (HNF: _G23975:([] ++ unknown))
+Exit: [] ++ ([_G23975] ++ unknown) (HNF: _G23975:([] ++ unknown))
+Call: (_G23975 =:<= 2) & (([] ++ unknown) =:<= [])
+Call: _G23975 =:<= 2
+Exit: 2 =:<= 2 (HNF: success)
+Call: ([] ++ unknown) =:<= []
+Call: [] ++ unknown
+Call: unknown
+Exit: unknown (HNF: _G27768)
+Exit: [] ++ unknown (HNF: _G27768)
+Exit: ([] ++ unknown) =:<= [] (HNF: success)
+Exit: (2 =:<= 2) & (([] ++ unknown) =:<= []) (HNF: success)
+Exit: ([] ++ ([2] ++ unknown)) =:<= [2] (HNF: success)
+Exit: (1 =:<= 1) & (([] ++ ([2] ++ unknown)) =:<= [2]) (HNF: success)
+Exit: (unknown ++ ([2] ++ unknown)) =:<= [1,2] (HNF: success)
+Exit: cond ((unknown ++ ([2] ++ unknown)) =:<= [1,2]) ([1,2],2) (HNF: ([1,2],2))
+Exit: select [1,2] (HNF: ([1,2],2))
+Exit: main (HNF: ([1,2],2))
+([1,2],2)
+Redo: main
+Redo: select [1,2]
+Redo: cond ((unknown ++ ([2] ++ unknown)) =:<= [1,2]) ([1,2],2)
+Redo: (unknown ++ ([2] ++ unknown)) =:<= [1,2]
+Redo: (1 =:<= 1) & (([] ++ ([2] ++ unknown)) =:<= [2])
+Redo: ([] ++ ([2] ++ unknown)) =:<= [2]
+Redo: (2 =:<= 2) & (([] ++ unknown) =:<= [])
+Redo: ([] ++ unknown) =:<= []
+Redo: [] ++ unknown
+Redo: unknown
+Fail: unknown
+Fail: [] ++ unknown
+Fail: ([] ++ unknown) =:<= []
+Redo: 2 =:<= 2
+Fail: _G23975 =:<= 2
+Fail: (_G23975 =:<= 2) & (([] ++ unknown) =:<= [])
+Redo: [] ++ ([_G23975] ++ unknown)
+Redo: [_G23975] ++ unknown
+Fail: [_G23975] ++ unknown
+Exit: (_G26567:_G26568) ++ ([_G23975] ++ unknown) (HNF: _G26567:(_G26568 ++ ([_G23975] ++ unknown)))
+Call: (_G26567 =:<= 2) & ((_G26568 ++ ([_G23975] ++ unknown)) =:<= [])
+Call: _G26567 =:<= 2
+Exit: 2 =:<= 2 (HNF: success)
+Call: (_G26568 ++ ([_G23975] ++ unknown)) =:<= []
+Call: _G26568 ++ ([_G23975] ++ unknown)
+Call: [_G23975] ++ unknown
+Exit: [_G23975] ++ unknown (HNF: _G23975:([] ++ unknown))
+Exit: [] ++ ([_G23975] ++ unknown) (HNF: _G23975:([] ++ unknown))
+Redo: [] ++ ([_G23975] ++ unknown)
+Redo: [_G23975] ++ unknown
+Fail: [_G23975] ++ unknown
+Exit: (_G27875:_G27876) ++ ([_G23975] ++ unknown) (HNF: _G27875:(_G27876 ++ ([_G23975] ++ unknown)))
+Redo: (_G27875:_G27876) ++ ([_G23975] ++ unknown)
+Fail: _G26568 ++ ([_G23975] ++ unknown)
+Fail: (_G26568 ++ ([_G23975] ++ unknown)) =:<= []
+Redo: 2 =:<= 2
+Fail: _G26567 =:<= 2
+Fail: (_G26567 =:<= 2) & ((_G26568 ++ ([_G23975] ++ unknown)) =:<= [])
+Redo: (_G26567:_G26568) ++ ([_G23975] ++ unknown)
+Fail: _G25082 ++ ([_G23975] ++ unknown)
+Fail: (_G25082 ++ ([_G23975] ++ unknown)) =:<= [2]
+Redo: 1 =:<= 1
+Fail: _G25081 =:<= 1
+Fail: (_G25081 =:<= 1) & ((_G25082 ++ ([_G23975] ++ unknown)) =:<= [2])
+Redo: unknown ++ ([_G23975] ++ unknown)
+Redo: unknown
+Fail: unknown
+Fail: unknown ++ ([_G23975] ++ unknown)
+Fail: (unknown ++ ([_G23975] ++ unknown)) =:<= [1,2]
+Fail: cond ((unknown ++ ([_G23975] ++ unknown)) =:<= [1,2]) ([1,2],_G23975)
+Fail: select [1,2]
+Fail: main
+Number of function calls: 27
+Number of function exits: 32
+fpat1> 
