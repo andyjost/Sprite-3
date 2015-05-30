@@ -116,6 +116,14 @@ extern "C"
     return root;
   }
 
+  void Cy_Error() __attribute__((__noreturn__));
+  void Cy_Error()
+  {
+    // Perhaps this should raise an error and unwind to the main function.
+    std::exit(EXIT_FAILURE);
+  }
+
+  void Cy_Suspend() __attribute__((__noreturn__));
   void Cy_Suspend()
   {
     // TODO
@@ -169,23 +177,26 @@ extern "C"
     root->tag = CTOR;
   }
 
-  void CyPrelude_true(node * root)
+  void CyPrelude_true(node * root, bool need_destroy=false)
   {
-    root->vptr->destroy(root);
+    if(need_destroy)
+      root->vptr->destroy(root);
     root->vptr = &CyVt_True;
     root->tag = 1;
   }
 
-  void CyPrelude_false(node * root)
+  void CyPrelude_false(node * root, bool need_destroy=false)
   {
-    root->vptr->destroy(root);
+    if(need_destroy)
+      root->vptr->destroy(root);
     root->vptr = &CyVt_False;
     root->tag = 0;
   }
 
-  void CyPrelude_eq(node * root)
+  void CyPrelude_eq(node * root, bool need_destroy=false)
   {
-    root->vptr->destroy(root);
+    if(need_destroy)
+      root->vptr->destroy(root);
     root->vptr = &CyVt_EQ;
     root->tag = 1;
   }
@@ -558,11 +569,6 @@ extern "C"
     DATA(root, double) = -x;
   }
 
-  void CyPrelude_Unify(node *) __asm__("CyPrelude_=:=");
-  void CyPrelude_Unify(node * root)
-  {
-  }
-
   // Converts a character into its ASCII value.
   void CyPrelude_ord(node * root)
   {
@@ -644,15 +650,32 @@ extern "C"
   // cond :: Success -> a -> a
   void CyPrelude_cond(node * root)
   {
+    #define WHEN_FREE(arg) Cy_Suspend()
     #include "normalize1.def"
     root->vptr = &CyVt_Fwd;
     root->tag = FWD;
     SUCC_0(root) = SUCC_1(root);
   }
 
+  // Concurrent conjunction on constraints.
+  // An expression like (c1 & c2) is evaluated by evaluating
+  // the constraints c1 and c2 in a concurrent manner.
+  // (&)     :: Success -> Success -> Success
+  void CyPrelude_Amp(node * root) __asm__("CyPrelude_&");
+  void CyPrelude_Amp(node * root)
+  {
+    #define WHEN_FREE(arg) Cy_Suspend()
+    #include "normalize2.def"
+    root->vptr = &CyVt_Success;
+    root->tag = CTOR;
+  }
+
   void CyPrelude_Eq(node *) __asm__("CyPrelude_==");
   void CyPrelude_Eq(node * root)
     { root->vptr = SUCC_0(root)->vptr->equals; }
+
+  // void CyPrelude_Unify(node *) __asm__("CyPrelude_=:=");
+  // void CyPrelude_Unify(node * root)
 
   void CyPrelude_compare(node * root)
     { root->vptr = SUCC_0(root)->vptr->compare; }
@@ -699,6 +722,31 @@ extern "C"
   {
     CyFree_NextId = 0;
     CyFree_Seen.clear();
+  }
+
+  // ==.freevar
+  void Cy_Free_Eq(node *) __asm__("CyPrelude_primitive.==.freevar");
+  void Cy_Free_Eq(node * root)
+  {
+    #define SELECT SUCC_1
+    // "_a == _b | isVar(_a) && isVar(_b) = True"
+    #define WHEN_FREE(arg) return CyPrelude_true(root);
+    #include "normalize1.def"
+    root->vptr = arg->vptr->equals;
+  }
+
+  // compare.freevar
+  void Cy_Free_compare(node *) __asm__("CyPrelude_primitive.compare.freevar");
+  void Cy_Free_compare(node * root)
+  {
+    #define SELECT SUCC_1
+    // By convention:
+    //    "_a < _b | isVar(_a) && isVar(_b) = False"
+    // There seems to be no good answer.  Perhaps gen_Bool is better?  This behavior
+    // matches KiCS2.  It seems to instantiate both variables to ().
+    #define WHEN_FREE(arg) return CyPrelude_false(root);
+    #include "normalize1.def"
+    root->vptr = arg->vptr->compare;
   }
 
   // show.freevar

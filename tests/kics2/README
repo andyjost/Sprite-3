@@ -1,0 +1,5 @@
+Certain tests require KiCS2 because it can narrow certain expressions that
+cause PAKCS to suspend.  The test harness has not been modified to use KiCS2,
+and switching from PAKCS to KiCS2 as an oracle will likely induce failures.
+For now, this directory is just a place to hold these problematic tests
+so they can be run manually.

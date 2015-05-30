@@ -9,6 +9,12 @@
 #define NORMALIZE(arg) arg->vptr->H(arg)
 #endif
 
+// The SELECT macro selects which successor to normalize.
+#ifndef SELECT
+#define SELECT SUCC_0
+#endif
+
+
 // The TAG macro may be defined to control how the tag of the inductive node is
 // obtained.  When the argument being normalized is a type with only one
 // constructor (such as a built-in data type), then the call to min is not needed.
@@ -24,7 +30,7 @@
 
   static void * table[] =
       { &&t_fail, &&t_free, &&t_fwd, &&t_choice, &&t_oper, &&t_ctor};
-  node * arg = SUCC_0(root);
+  node * arg = SELECT(root);
   node * lhs_choice, * rhs_choice;
   goto* (&table[TAGOFFSET])[TAG(arg)];
 t_fail:
@@ -56,6 +62,7 @@ t_free:
   WHEN_FREE(arg);
 t_ctor:
 #undef NORMALIZE
+#undef SELECT
 #undef TAG
 #undef WHEN_FREE
 

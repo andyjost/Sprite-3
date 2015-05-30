@@ -124,6 +124,7 @@ namespace sprite { namespace compiler
     function const CyTrace_ShowIndent = extern_(void_t(), "CyTrace_ShowIndent");
 
     function const Cy_Suspend = extern_(void_t(), "Cy_Suspend");
+    function const Cy_Error = extern_(void_t(), "Cy_Error");
 
     // Creates a new basic block at the current point in the code stream and
     // makes it the default insertion point.  Creates another basic block that

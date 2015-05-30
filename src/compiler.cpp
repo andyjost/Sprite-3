@@ -658,6 +658,14 @@ namespace
       return_();
     }
 
+    template<typename...Ts>
+    void error(std::string const & message, Ts const &...ts)
+    {
+      rt.printf(message.c_str(), std::string(ts).c_str()...);
+      rt.Cy_Error();
+      // clean_up_and_return();
+    }
+
   public:
 
     // Evaluates the condition to get a path index.
@@ -690,6 +698,24 @@ namespace
       {
         ValueSaver saver(target_p, var);
         auto const & lhs = getlhs(*cases.begin());
+
+        // Sometimes a typename is used where a constructor is needed.  See
+        // show.Int, for instance.  It is used to head-normalize a built-in
+        // type (which has just one constructor).
+        if(auto qn = lhs.getqname())
+        {
+          static const std::string builtins[] =
+              {"Char", "Int", "Float", "Success", "IO"};
+          for(auto const & name: builtins)
+          {
+            if(qn->str() == ("Prelude." + name))
+            {
+              error("No generator for Prelude." + name);
+              return compiler::CTOR; // meaningless
+            }
+          }
+        }
+
         (this->Rewriter::operator())(lhs);
         tag = get_case_tag(lhs, module_stab);
       }
@@ -823,16 +849,16 @@ namespace
       // FREE case
       {
         tgt::scope _ = labels[TAGOFFSET + FREE];
+        tgt::value inductive = this->inductive_alloca;
+        auto invalid = -(TAGOFFSET+1);
+        compiler::tag_t tag = invalid;
         if(!branch.isflex)
         {
-          rt.Cy_Suspend();
-          clean_up_and_return();
+          tag = instantiate_variable(inductive, branch.cases);
+          tgt::goto_(jumptable[tag+TAGOFFSET], labels);
         }
         else
         {
-          tgt::value inductive = this->inductive_alloca;
-          auto invalid = -(TAGOFFSET+1);
-          compiler::tag_t tag = invalid;
           // Try to look up the available variable expansions if the condition
           // is a variable reference.  If one is not available then the
           // condition variable was constructed only to call an aux function.

@@ -147,6 +147,34 @@ namespace sprite { namespace curry
       return lhs.tag < rhs.tag;
     }
 
+    Qname const * getqname() const
+    {
+      if(tag==QNAME)
+        return &qname;
+      return nullptr;
+    }
+
+    char const * getchar() const
+    {
+      if(tag==CHAR)
+        return &char_;
+      return nullptr;
+    }
+
+    int64_t const * getint() const
+    {
+      if(tag==CHAR)
+        return &int_;
+      return nullptr;
+    }
+
+    double const * getdouble() const
+    {
+      if(tag==CHAR)
+        return &double_;
+      return nullptr;
+    }
+
   private:
     enum { QNAME, CHAR, INT, DOUBLE } tag;
     union { Qname qname; char char_; int64_t int_; double double_; };

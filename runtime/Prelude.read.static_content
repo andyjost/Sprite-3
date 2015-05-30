@@ -16,12 +16,12 @@
   function "Prelude.primitive.==.freevar" 2
     table
     code
-      external "Prelude.suspend"
+      external "Prelude.primitive.==.freevar"
 
   function "Prelude.primitive.compare.freevar" 2
     table
     code
-      external "Prelude.suspend"
+      external "Prelude.primitive.compare.freevar"
 
   function "Prelude.primitive.show.freevar" 1
     table
