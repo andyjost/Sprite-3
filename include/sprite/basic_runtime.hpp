@@ -24,7 +24,8 @@ namespace sprite { namespace compiler
     rangefun_t * succ;     // Gives the range containing the successors.
     rangefun_t * gcsucc;   // Range function that does not skip fwd nodes.
     stepfun_t  * destroy;  // Frees the associated successor array, if any.
-    vtable     * equals;   // Type-specific equality function.
+    vtable     * equal;    // Type-specific equality function.
+    vtable     * equate;   // Type-specific equational constraint function.
     vtable     * compare;  // Type-specific comparison function.
     vtable     * show;     // Type-specific show function.
   };

@@ -1,4 +1,4 @@
-// Normalizes a unary node.
+// Normalizes the first successor of a binary node.
 //
 // Variable root must be pre-defined.  The successor must normalize to a data
 // term (i.e., one with exactly one constructor), or TAG must be defined so that
@@ -39,9 +39,11 @@ t_choice:
   lhs_choice->vptr = root->vptr;
   lhs_choice->tag = root->tag;
   lhs_choice->slot0 = arg->slot0;
+  lhs_choice->slot1 = root->slot1;
   rhs_choice->vptr = root->vptr;
   rhs_choice->tag = root->tag;
   rhs_choice->slot0 = arg->slot1;
+  rhs_choice->slot1 = root->slot1;
   root->vptr = &CyVt_Choice;
   root->tag = CHOICE;
   root->aux = arg->aux; // copy choice id

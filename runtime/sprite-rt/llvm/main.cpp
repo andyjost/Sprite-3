@@ -22,7 +22,8 @@ void build_vt_for_IO(rt_h const & rt);
 void build_vt_for_trivial_node(
     rt_h const & rt
   , std::string const & name, size_t arity
-  , value const & vptr_equals = nullptr
+  , value const & vptr_equal = nullptr
+  , value const & vptr_equate = nullptr
   , value const & vptr_compare = nullptr
   , value const & vptr_show = nullptr
   )
@@ -38,7 +39,8 @@ void build_vt_for_trivial_node(
         , &rt.Cy_Succ(arity)
         , &rt.Cy_Succ(arity)
         , &rt.Cy_Destroy(arity)
-				, vptr_equals.ptr() ? vptr_equals : vptr_null
+				, vptr_equal.ptr() ? vptr_equal : vptr_null
+				, vptr_equate.ptr() ? vptr_equate : vptr_null
 				, vptr_compare.ptr() ? vptr_compare : vptr_null
 				, vptr_show.ptr() ? vptr_show : vptr_null
         ))
@@ -49,7 +51,8 @@ void build_vt_for_failed(rt_h const & rt)
 {
   build_vt_for_trivial_node(
       rt, "failed", 0
-    , &rt.CyVt_Equality("failed")
+    , &rt.CyVt_Equal("failed")
+    , &rt.CyVt_Equate("failed")
     , &rt.CyVt_Compare("failed")
     , &rt.CyVt_Show("failed")
     );
@@ -60,7 +63,8 @@ void build_vt_for_freevar(rt_h const & rt)
 {
   build_vt_for_trivial_node(
       rt, "freevar", 0
-    , &rt.CyVt_Equality("freevar")
+    , &rt.CyVt_Equal("freevar")
+    , &rt.CyVt_Equate("freevar")
     , &rt.CyVt_Compare("freevar")
     , &rt.CyVt_Show("freevar")
     );
@@ -89,6 +93,7 @@ void build_vt_for_PartialTerminus(rt_h const & rt)
         , &rt.Cy_Succ(0)
         , &rt.Cy_Succ(0)
         , &rt.Cy_Destroy(0)
+				, nullptr
 				, nullptr
 				, nullptr
 				, nullptr
@@ -154,7 +159,7 @@ int main()
   // DECLARE_EXTERNAL_STUB(quot)
   // DECLARE_EXTERNAL_STUB(rem)
   // DECLARE_EXTERNAL_STUB(negateFloat)
-  DECLARE_EXTERNAL_STUB(=:=)
+  // DECLARE_EXTERNAL_STUB(=:=)
   // DECLARE_EXTERNAL_STUB(success)
   // DECLARE_EXTERNAL_STUB(&)
   // DECLARE_EXTERNAL_STUB(>>=)

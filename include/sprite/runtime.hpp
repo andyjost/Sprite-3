@@ -78,12 +78,13 @@ namespace sprite { namespace compiler
             , *rangefun_t /*succ*/
             , *rangefun_t /*gcsucc*/
             , *stepfun_t  /*destroy*/
-            , *vtable_t   /*equality*/
-            , *vtable_t   /*comparison*/
+            , *vtable_t   /*equal*/
+            , *vtable_t   /*equate*/
+            , *vtable_t   /*compare*/
             , *vtable_t   /*show*/
             }
         #if 0
-        , {"H", "N", "label", "sentinel", "arity", "succ", "destroy", "equality", "comparison", "show"}
+        , {"H", "N", "label", "sentinel", "arity", "succ", "destroy", "equal", "equate", "compare", "show"}
         #endif
         );
     }
@@ -124,7 +125,6 @@ namespace sprite { namespace compiler
     function const CyTrace_ShowIndent = extern_(void_t(), "CyTrace_ShowIndent");
 
     function const Cy_Suspend = extern_(void_t(), "Cy_Suspend");
-    function const Cy_Error = extern_(void_t(), "Cy_Error");
 
     // Creates a new basic block at the current point in the code stream and
     // makes it the default insertion point.  Creates another basic block that
@@ -161,10 +161,16 @@ namespace sprite { namespace compiler
     // Gets the vtable for equality.  For normal types, str1 is the module name
     // and str2 is the type name.  For built-in types, str1 is the built-in
     // type name and str2 is empty.
-    global CyVt_Equality(
+    global CyVt_Equal(
         std::string const & str1, std::string const & str2 = std::string()
       ) const
     { return CyVt_PolyFunction("==", str1, str2); }
+
+    // Gets the vtable for equate.
+    global CyVt_Equate(
+        std::string const & str1, std::string const & str2 = std::string()
+      ) const
+    { return CyVt_PolyFunction("=:=", str1, str2); }
 
     // Gets the vtable for compare.
     global CyVt_Compare(

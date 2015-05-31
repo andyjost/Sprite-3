@@ -21,9 +21,11 @@ comparison (_,_,_,comp,_) = comp
 make_branch (_,_,_,_,mkbranch) = mkbranch
 
 spec_equality = (equals, "True", "&&", "==", make_branch_equality)
+spec_equate = (equates, "Success", "&", "=:=", make_branch_equate)
 spec_compare = (compares, "EQ", "compare_conjunction", "compare", make_branch_compare)
 
 equals typename = "=="++"."++typename
+equates typename = "=:="++"."++typename
 compares typename = "compare"++"."++typename
 shows typename = "show"++"."++typename
 primitive x = "primitive."++x
@@ -33,6 +35,7 @@ icurryToPoly (IModule modname {-imported_list-}_ data_list {-funct_list-}_)
       concat [
           make_show modname onetype
         , make_binary_funct modname onetype spec_equality
+        , make_binary_funct modname onetype spec_equate
         , make_binary_funct modname onetype spec_compare
         ]
       | onetype <- data_list
@@ -121,6 +124,12 @@ make_branch_equality ctor arg2 _ mapping = (arg2, [
   if ctor == arg2 
     then (recur2 ctor mapping spec_equality)
     else Return (applyC "False" [])
+  ])
+
+make_branch_equate ctor arg2 _ mapping = (arg2, [
+  if ctor == arg2 
+    then (recur2 ctor mapping spec_equate)
+    else Return (applyC "failed" [])
   ])
 
 -- compare ctor1 and ctor2 according the order in which they appear in clist

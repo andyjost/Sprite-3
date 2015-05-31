@@ -661,9 +661,8 @@ namespace
     template<typename...Ts>
     void error(std::string const & message, Ts const &...ts)
     {
-      rt.printf(message.c_str(), std::string(ts).c_str()...);
-      rt.Cy_Error();
-      // clean_up_and_return();
+      rt.fprintf(rt.stderr_, message.c_str(), std::string(ts).c_str()...);
+      rt.Cy_Suspend();
     }
 
   public:
@@ -1185,7 +1184,8 @@ namespace
       , &rt.Cy_Succ(ctor.arity)
       , &rt.Cy_Succ(ctor.arity)
       , &rt.Cy_Destroy(ctor.arity)
-      , &rt.CyVt_Equality(module_stab.source->name, dtype.name)
+      , &rt.CyVt_Equal(module_stab.source->name, dtype.name)
+      , &rt.CyVt_Equate(module_stab.source->name, dtype.name)
       , &rt.CyVt_Compare(module_stab.source->name, dtype.name)
       , &rt.CyVt_Show(module_stab.source->name, dtype.name)
       ));
@@ -1244,7 +1244,8 @@ namespace
       , &rt.Cy_Succ(fun.arity)
       , &rt.Cy_Succ(fun.arity)
       , &rt.Cy_Destroy(fun.arity)
-      , &rt.CyVt_Equality("oper")
+      , &rt.CyVt_Equal("oper")
+      , &rt.CyVt_Equate("oper")
       , &rt.CyVt_Compare("oper")
       , &rt.CyVt_Show("oper")
       ));

@@ -559,7 +559,7 @@ negateFloat :: Float -> Float
 negateFloat external
 
 -- Constraints
-data Success -- = Success
+data Success = Success
 
 --- The equational constraint.
 --- (e1 =:= e2) is satisfiable if both sides e1 and e2 can be

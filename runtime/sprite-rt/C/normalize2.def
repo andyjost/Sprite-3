@@ -22,6 +22,7 @@
 #define WHEN_FREE(arg)
 #endif
 
+  assert(root->tag != FWD);
   static void * table_lhs[] =
       { &&t_fail, &&t_free_lhs, &&t_fwd_lhs, &&t_choice_lhs, &&t_oper_lhs, &&t_ctor_lhs };
   static void * table_rhs[] =

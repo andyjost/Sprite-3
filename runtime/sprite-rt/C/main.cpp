@@ -116,13 +116,6 @@ extern "C"
     return root;
   }
 
-  void Cy_Error() __attribute__((__noreturn__));
-  void Cy_Error()
-  {
-    // Perhaps this should raise an error and unwind to the main function.
-    std::exit(EXIT_FAILURE);
-  }
-
   void Cy_Suspend() __attribute__((__noreturn__));
   void Cy_Suspend()
   {
@@ -136,11 +129,27 @@ extern "C"
   void CyPrelude_suspend(node * root)
     { Cy_Suspend(); }
 
+  void Cy_failed(node * root, bool need_destroy=false)
+  {
+    if(need_destroy)
+      root->vptr->destroy(root);
+    root->vptr = &CyVt_Failed;
+    root->tag = FAIL;
+  }
+
   void CyPrelude_failed(node * root)
   {
     root->vptr->destroy(root);
     root->vptr = &CyVt_Failed;
     root->tag = FAIL;
+  }
+
+  void Cy_success(node * root, bool need_destroy=false)
+  {
+    if(need_destroy)
+      root->vptr->destroy(root);
+    root->vptr = &CyVt_Success;
+    root->tag = CTOR;
   }
 
   void CyPrelude_success(node * root)
@@ -177,7 +186,7 @@ extern "C"
     root->tag = CTOR;
   }
 
-  void CyPrelude_true(node * root, bool need_destroy=false)
+  void Cy_true(node * root, bool need_destroy=false)
   {
     if(need_destroy)
       root->vptr->destroy(root);
@@ -185,7 +194,7 @@ extern "C"
     root->tag = 1;
   }
 
-  void CyPrelude_false(node * root, bool need_destroy=false)
+  void Cy_false(node * root, bool need_destroy=false)
   {
     if(need_destroy)
       root->vptr->destroy(root);
@@ -193,7 +202,7 @@ extern "C"
     root->tag = 0;
   }
 
-  void CyPrelude_eq(node * root, bool need_destroy=false)
+  void Cy_eq(node * root, bool need_destroy=false)
   {
     if(need_destroy)
       root->vptr->destroy(root);
@@ -208,7 +217,17 @@ extern "C"
     , bool is_outer
     )
   {
+    if(!root)
+    {
+      fputs("(!null-node!)", stream);
+      return;
+    }
     node ** begin, ** end;
+    if(!root->vptr)
+    {
+      fputs("(!null-vptr!)", stream);
+      return;
+    }
     root->vptr->succ(root, &begin, &end);
     size_t const N = end - begin;
     if(!is_outer && N > 0) fputs("(", stream);
@@ -217,7 +236,7 @@ extern "C"
     for(; begin != end; ++begin)
     {
       fputs(" ", stream);
-      if(seen.count(*begin))
+      if(begin && seen.count(*begin))
         fputs("...", stream);
       else
         _Cy_Repr(seen, *begin, stream, false);
@@ -233,6 +252,14 @@ extern "C"
   {
     std::unordered_set<node *> seen;
     _Cy_Repr(seen, root, stream, is_outer);
+  }
+
+  // Prints a node representation to stdout (for debugging).
+  void Cy_Print(node * root) 
+  {
+    Cy_Repr(root, stdout, true);
+    fputs("\n", stdout);
+    fflush(NULL);
   }
 
   // Converts a C-string to a Curry string (list of Char).  Rewrites root to be
@@ -651,7 +678,7 @@ extern "C"
   void CyPrelude_cond(node * root)
   {
     #define WHEN_FREE(arg) Cy_Suspend()
-    #include "normalize1.def"
+    #include "normalize1st.def"
     root->vptr = &CyVt_Fwd;
     root->tag = FWD;
     SUCC_0(root) = SUCC_1(root);
@@ -664,6 +691,7 @@ extern "C"
   void CyPrelude_Amp(node * root) __asm__("CyPrelude_&");
   void CyPrelude_Amp(node * root)
   {
+    // FIXME: normalize sequentially. if LHS is a var, then try the RHS.
     #define WHEN_FREE(arg) Cy_Suspend()
     #include "normalize2.def"
     root->vptr = &CyVt_Success;
@@ -672,10 +700,11 @@ extern "C"
 
   void CyPrelude_Eq(node *) __asm__("CyPrelude_==");
   void CyPrelude_Eq(node * root)
-    { root->vptr = SUCC_0(root)->vptr->equals; }
+    { root->vptr = SUCC_0(root)->vptr->equal; }
 
-  // void CyPrelude_Unify(node *) __asm__("CyPrelude_=:=");
-  // void CyPrelude_Unify(node * root)
+  void CyPrelude_EqColonEq(node *) __asm__("CyPrelude_=:=");
+  void CyPrelude_EqColonEq(node * root)
+    { root->vptr = SUCC_0(root)->vptr->equate; }
 
   void CyPrelude_compare(node * root)
     { root->vptr = SUCC_0(root)->vptr->compare; }
@@ -728,24 +757,32 @@ extern "C"
   void Cy_Free_Eq(node *) __asm__("CyPrelude_primitive.==.freevar");
   void Cy_Free_Eq(node * root)
   {
-    #define SELECT SUCC_1
     // "_a == _b | isVar(_a) && isVar(_b) = True"
-    #define WHEN_FREE(arg) return CyPrelude_true(root);
-    #include "normalize1.def"
-    root->vptr = arg->vptr->equals;
+    #define WHEN_FREE(arg) return Cy_true(root);
+    #include "normalize2nd.def"
+    root->vptr = arg->vptr->equal;
+  }
+
+  // =:=.freevar
+  void Cy_Free_EqColonEq(node *) __asm__("CyPrelude_primitive.=:=.freevar");
+  void Cy_Free_EqColonEq(node * root)
+  {
+    // "_a == _b | isVar(_a) && isVar(_b) = Success"
+    #define WHEN_FREE(arg) return Cy_success(root);
+    #include "normalize2nd.def"
+    root->vptr = arg->vptr->equate;
   }
 
   // compare.freevar
   void Cy_Free_compare(node *) __asm__("CyPrelude_primitive.compare.freevar");
   void Cy_Free_compare(node * root)
   {
-    #define SELECT SUCC_1
     // By convention:
     //    "_a < _b | isVar(_a) && isVar(_b) = False"
     // There seems to be no good answer.  Perhaps gen_Bool is better?  This behavior
     // matches KiCS2.  It seems to instantiate both variables to ().
-    #define WHEN_FREE(arg) return CyPrelude_false(root);
-    #include "normalize1.def"
+    #define WHEN_FREE(arg) return Cy_false(root);
+    #include "normalize2nd.def"
     root->vptr = arg->vptr->compare;
   }
 
@@ -781,7 +818,16 @@ extern "C"
   {
     node *& arg0 = SUCC_0(root);
     arg0 = DATA(arg0, node *);
-    root->vptr = arg0->vptr->equals;
+    root->vptr = arg0->vptr->equal;
+  }
+
+  // =:=.fwd
+  void CyPrelude_FwdEqColonEq(node *) __asm__("CyPrelude_primitive.=:=.fwd");
+  void CyPrelude_FwdEqColonEq(node * root)
+  {
+    node *& arg0 = SUCC_0(root);
+    arg0 = DATA(arg0, node *);
+    root->vptr = arg0->vptr->equate;
   }
 
   // compare.fwd
@@ -802,16 +848,16 @@ extern "C"
     root->vptr = arg0->vptr->show;
   }
 
-  // ==.choice
-  void Cy_Choice_Eq(node *) __asm__("CyPrelude_primitive.==.choice");
-  void Cy_Choice_Eq(node * root)
+  void _Cy_Choice_Eq_or_EqColonEq(node * root, size_t offset)
   {
     node * arg0 = SUCC_0(root);
     node * lhs_choice, * rhs_choice;
   redo:
     NODE_ALLOC(lhs_choice, redo);
     NODE_ALLOC(rhs_choice, redo);
-    lhs_choice->vptr = rhs_choice->vptr = SUCC_0(arg0)->vptr->equals;
+    lhs_choice->vptr = rhs_choice->vptr = reinterpret_cast<vtable*>(
+        reinterpret_cast<char*>(SUCC_0(arg0)->vptr) + offset
+      );
     lhs_choice->tag = rhs_choice->tag = OPER;
     lhs_choice->slot0 = arg0->slot0;
     rhs_choice->slot0 = arg0->slot1;
@@ -821,6 +867,20 @@ extern "C"
     root->aux = arg0->aux;
     root->slot0 = lhs_choice;
     root->slot1 = rhs_choice;
+  }
+
+  // ==.choice
+  void Cy_Choice_Eq(node *) __asm__("CyPrelude_primitive.==.choice");
+  void Cy_Choice_Eq(node * root)
+  {
+    _Cy_Choice_Eq_or_EqColonEq(root, offsetof(vtable, equal));
+  }
+
+  // =:=.choice
+  void Cy_Choice_EqColonEq(node *) __asm__("CyPrelude_primitive.=:=.choice");
+  void Cy_Choice_EqColonEq(node * root)
+  {
+    _Cy_Choice_Eq_or_EqColonEq(root, offsetof(vtable, equate));
   }
 
   // compare.choice
@@ -871,7 +931,16 @@ extern "C"
   {
     node * arg0 = SUCC_0(root);
     arg0->vptr->H(arg0);
-    root->vptr = arg0->vptr->equals;
+    root->vptr = arg0->vptr->equal;
+  }
+
+  // =:=.oper
+  void Cy_Oper_EqColonEq(node *) __asm__("CyPrelude_primitive.=:=.oper");
+  void Cy_Oper_EqColonEq(node * root)
+  {
+    node * arg0 = SUCC_0(root);
+    arg0->vptr->H(arg0);
+    root->vptr = arg0->vptr->equate;
   }
 
   // compare.oper
@@ -896,14 +965,21 @@ extern "C"
   void Cy_Success_Eq(node *) __asm__("CyPrelude_primitive.==.Success");
   void Cy_Success_Eq(node * root)
   {
-    CyPrelude_true(root);
+    Cy_true(root);
+  }
+
+  // =:=.Success
+  void Cy_Success_EqColonEq(node *) __asm__("CyPrelude_primitive.=:=.Success");
+  void Cy_Success_EqColonEq(node * root)
+  {
+    Cy_success(root);
   }
 
   // compare.Success
   void Cy_Success_compare(node *) __asm__("CyPrelude_primitive.compare.Success");
   void Cy_Success_compare(node * root)
   {
-    CyPrelude_eq(root);
+    Cy_eq(root);
   }
 
   // show.Success
@@ -923,6 +999,16 @@ extern "C"
     printf("Equality for IO is not implemented");
     std::exit(1);
   }
+
+  // ==.IO
+  void Cy_IO_EqColonEq(node *) __asm__("CyPrelude_primitive.=:=.IO");
+  void Cy_IO_EqColonEq(node * root)
+  {
+    // TODO
+    printf("The equational constraint for IO is not implemented");
+    std::exit(1);
+  }
+
 
   // compare.IO
   void Cy_IO_compare(node *) __asm__("CyPrelude_primitive.compare.IO");
@@ -954,7 +1040,7 @@ extern "C"
     #include "normalize2.def"
     bool const result = (DATA(lhs, char) == DATA(rhs, char));
     vtable * const vptr = result ? &CyVt_True : &CyVt_False;
-    int64_t const tag = result ? 1 : 0;
+    tag_t const tag = result ? 1 : 0;
     root->vptr = vptr;
     root->tag = tag;
   }
@@ -967,7 +1053,7 @@ extern "C"
     #include "normalize2.def"
     bool const result = (DATA(lhs, int64_t) == DATA(rhs, int64_t));
     vtable * const vptr = result ? &CyVt_True : &CyVt_False;
-    int64_t const tag = result ? 1 : 0;
+    tag_t const tag = result ? 1 : 0;
     root->vptr = vptr;
     root->tag = tag;
   }
@@ -980,7 +1066,50 @@ extern "C"
     #include "normalize2.def"
     bool const result = (DATA(lhs, double) == DATA(rhs, double));
     vtable * const vptr = result ? &CyVt_True : &CyVt_False;
-    int64_t const tag = result ? 1 : 0;
+    tag_t const tag = result ? 1 : 0;
+    root->vptr = vptr;
+    root->tag = tag;
+  }
+
+  // =:=.T
+  // Creates the lowest-level function implementing the equational constraint
+  // for a fundamental type.
+
+  void Cy_Char_EqColonEq(node *) __asm__("CyPrelude_primitive.=:=.Char");
+  void Cy_Char_EqColonEq(node * root)
+  {
+    #define TAG(arg) arg->tag
+    #define WHEN_FREE(arg) fprintf(stderr, "No generator for type Char"); Cy_Suspend()
+    #include "normalize2.def"
+    bool const result = (DATA(lhs, char) == DATA(rhs, char));
+    vtable * const vptr = result ? &CyVt_Success : &CyVt_Failed;
+    tag_t const tag = result ? CTOR : FAIL;
+    root->vptr = vptr;
+    root->tag = tag;
+  }
+
+  void Cy_Int_EqColonEq(node *) __asm__("CyPrelude_primitive.=:=.Int");
+  void Cy_Int_EqColonEq(node * root)
+  {
+    #define TAG(arg) arg->tag
+    #define WHEN_FREE(arg) fprintf(stderr, "No generator for type Int"); Cy_Suspend()
+    #include "normalize2.def"
+    bool const result = (DATA(lhs, int64_t) == DATA(rhs, int64_t));
+    vtable * const vptr = result ? &CyVt_Success : &CyVt_Failed;
+    tag_t const tag = result ? CTOR : FAIL;
+    root->vptr = vptr;
+    root->tag = tag;
+  }
+
+  void Cy_Float_EqColonEq(node *) __asm__("CyPrelude_primitive.=:=.Float");
+  void Cy_Float_EqColonEq(node * root)
+  {
+    #define TAG(arg) arg->tag
+    #define WHEN_FREE(arg) fprintf(stderr, "No generator for type Float"); Cy_Suspend()
+    #include "normalize2.def"
+    bool const result = (DATA(lhs, double) == DATA(rhs, double));
+    vtable * const vptr = result ? &CyVt_Success : &CyVt_Failed;
+    tag_t const tag = result ? CTOR : FAIL;
     root->vptr = vptr;
     root->tag = tag;
   }
