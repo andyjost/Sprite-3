@@ -340,6 +340,7 @@ extern "C"
   FILE * Cy_stdout() { return stdout; }
   FILE * Cy_stderr() { return stderr; }
 
+  // A subcomputation.  One entry in a work queue from the Fair Scheme.
   struct Cy_EvalFrame
   {
     node * expr;
@@ -350,13 +351,67 @@ extern "C"
     {}
   };
 
+  // The computation of a single involcation of Cy_Eval.  Holds one instance of
+  // a work queue from the Fair Scheme.
+  struct Cy_ComputationFrame
+  {
+    std::list<Cy_EvalFrame> * computation;
+    Cy_ComputationFrame * next;
+  };
+
+  // A linked list of current computations.  Each element of the list is an
+  // activation of Cy_Eval.
+  Cy_ComputationFrame * Cy_GlobalComputations = nullptr;
+
+  // Produces all of the node pointers reachable from Cy_GlobalComputations in
+  // some order, ending with a null pointer.
+  node * CyMem_NextComputationRoot()
+  {
+    static struct State
+    {
+      State() : frame(nullptr) {}
+      Cy_ComputationFrame * frame;
+      std::list<Cy_EvalFrame>::const_iterator pos, end;
+    } state;
+
+    // Initialize or increment the position.
+    if(!state.frame)
+    {
+      // No computations.
+      if(!Cy_GlobalComputations) return nullptr;
+      state.frame = Cy_GlobalComputations;
+      state.pos = state.frame->computation->begin();
+      state.end = state.frame->computation->end();
+    }
+    else
+      ++state.pos;
+
+    // Go to the next computation, if needed.
+    while(state.pos == state.end)
+    {
+      if(!(state.frame = state.frame->next))
+        break;
+      state.pos = state.frame->computation->begin();
+      state.end = state.frame->computation->end();
+    }
+    return state.frame ? state.pos->expr : nullptr;
+  }
+
   // Evaluates an expression.  Calls yield(x) for each result x.
   void Cy_Eval(node * root, void(*yield)(node * root))
   {
-    CyMem_PushRoot(root);
+    // Set up this computations.
     std::list<Cy_EvalFrame> computation = {
         {root, std::shared_ptr<Fingerprint>(new Fingerprint())}
       };
+
+    // Link it into the list of global computations.
+    Cy_ComputationFrame compframe = { &computation, Cy_GlobalComputations };
+    Cy_GlobalComputations = &compframe;
+    struct Cleanup
+      { ~Cleanup() { Cy_GlobalComputations = Cy_GlobalComputations->next; } }
+      _cleanup;
+
     while(!computation.empty())
     {
       Cy_EvalFrame & frame = computation.front();
@@ -407,7 +462,6 @@ extern "C"
           computation.pop_front();
       }
     }
-    CyMem_PopRoot();
   }
 
   // Note: root is a [Char], already normalized.

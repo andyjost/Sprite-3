@@ -17,6 +17,9 @@ extern "C"
   // The head of the free list.
   void * CyMem_FreeList = nullptr;
   extern sprite::compiler::vtable CyVt_Fwd __asm__(".vt.fwd");
+
+  // The computation roots.
+  sprite::compiler::node * CyMem_NextComputationRoot();
 }
 
 namespace sprite { namespace compiler
@@ -140,8 +143,14 @@ namespace sprite { namespace compiler
   
     // Mark phase.
     std::deque<node*> roots;
+
+    // Add roots from computations.
+    while(node * p = CyMem_NextComputationRoot())
+      roots.push_back(p);
+    // Add other roots.
     for(node * p: CyMem_Roots)
       roots.push_back(p);
+
     while(!roots.empty())
     {
       node * parent = roots.back();

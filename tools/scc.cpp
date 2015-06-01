@@ -75,6 +75,8 @@ namespace
       << "       Save temporary files.\n"
       << "   -S, --output-assembly\n"
       << "       Write out the final program as assembly.\n"
+      << "   -T, --trace\n"
+      << "       Compile tracing output into the program.\n"
       ;
   }
 
