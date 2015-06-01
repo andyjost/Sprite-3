@@ -855,7 +855,7 @@ extern "C"
   redo:
     NODE_ALLOC(lhs_choice, redo);
     NODE_ALLOC(rhs_choice, redo);
-    lhs_choice->vptr = rhs_choice->vptr = reinterpret_cast<vtable*>(
+    lhs_choice->vptr = rhs_choice->vptr = *reinterpret_cast<vtable**>(
         reinterpret_cast<char*>(SUCC_0(arg0)->vptr) + offset
       );
     lhs_choice->tag = rhs_choice->tag = OPER;
