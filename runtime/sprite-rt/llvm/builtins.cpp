@@ -17,6 +17,44 @@ globalvar & printbuffer(rt_h const & rt)
   return printbuffer;
 }
 
+void build_vt_for_freevar(rt_h const & rt)
+{
+  function freevar_name = inline_<function>(
+      rt.labelfun_t, ".name.freevar", {"node_p"}
+    , [&] {
+        value node_p = arg("node_p");
+        value rv = rt.snprintf(
+            &printbuffer(rt), PRINT_BUFFER_SIZE, "_G%x", node_p
+          );
+        if_(rv ==(signed_)(0)
+          , [&]{
+              rt.perror("Error converting free variable to string");
+              rt.exit(1);
+            }
+          );
+        return_(&printbuffer(rt));
+      }
+    );
+
+  extern_(rt.vtable_t, sprite::compiler::get_vt_name("freevar"))
+      .set_initializer(_t(
+          &rt.Cy_NoAction
+        , &rt.Cy_NoAction
+        , &freevar_name
+				, &rt.Cy_Sentinel()
+        , &rt.Cy_Arity(0)
+        , &rt.Cy_Succ(0)
+        , &rt.Cy_Succ(0)
+        , &rt.Cy_Destroy(0)
+        , nullptr
+        , nullptr
+        , nullptr
+        , nullptr
+        , nullptr
+        ))
+	  ;
+}
+
 void build_vt_for_Char(rt_h const & rt)
 {
   auto char_repr = extern_(rt.char_t[7][256], ".Char_repr")
@@ -46,6 +84,7 @@ void build_vt_for_Char(rt_h const & rt)
         , &rt.Cy_Destroy(0)
         , &rt.CyVt_Equal("Char")
         , &rt.CyVt_Equate("Char")
+        , &rt.CyVt_NsEquate("Char")
         , &rt.CyVt_Compare("Char")
         , &rt.CyVt_Show("Char")
         ))
@@ -91,6 +130,7 @@ void build_vt_for_Int64(rt_h const & rt)
         , &rt.Cy_Destroy(0)
         , &rt.CyVt_Equal("Int")
         , &rt.CyVt_Equate("Int")
+        , &rt.CyVt_NsEquate("Int")
         , &rt.CyVt_Compare("Int")
         , &rt.CyVt_Show("Int")
         ))
@@ -136,6 +176,7 @@ void build_vt_for_Float(rt_h const & rt)
         , &rt.Cy_Destroy(0)
         , &rt.CyVt_Equal("Float")
         , &rt.CyVt_Equate("Float")
+        , &rt.CyVt_NsEquate("Float")
         , &rt.CyVt_Compare("Float")
         , &rt.CyVt_Show("Float")
         ))
@@ -171,10 +212,11 @@ void build_vt_for_choice(rt_h const & rt)
         , &rt.Cy_Succ(2)
         , &rt.Cy_Succ(2)
         , &rt.Cy_Destroy(2)
-        , rt.CyVt_Equal("choice")
-        , rt.CyVt_Equate("choice")
-        , rt.CyVt_Compare("choice")
-        , rt.CyVt_Show("choice")
+        , nullptr
+        , nullptr
+        , nullptr
+        , nullptr
+        , nullptr
         ))
 		;
 }
@@ -246,10 +288,11 @@ void build_vt_for_fwd(rt_h const & rt)
         , &fwd_succ
         , &rt.Cy_Succ(1)
         , &rt.Cy_Destroy(1)
-        , rt.CyVt_Equal("fwd")
-        , rt.CyVt_Equate("fwd")
-        , rt.CyVt_Compare("fwd")
-        , rt.CyVt_Show("fwd")
+        , nullptr
+        , nullptr
+        , nullptr
+        , nullptr
+        , nullptr
         ))
 		;
 }

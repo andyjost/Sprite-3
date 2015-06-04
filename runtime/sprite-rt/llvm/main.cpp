@@ -9,26 +9,22 @@ using sprite::compiler::rt_h;
 
 void build_vt_for_Char(rt_h const & rt);
 void build_vt_for_choice(rt_h const & rt);
-void build_vt_for_Float(rt_h const & rt);
 void build_vt_for_choice(rt_h const & rt);
+void build_vt_for_Float(rt_h const & rt);
+void build_vt_for_freevar(rt_h const & rt);
 void build_vt_for_fwd(rt_h const & rt);
 void build_vt_for_Int64(rt_h const & rt);
+void build_vt_for_IO(rt_h const & rt);
 void build_vt_for_PartialSpine(rt_h const & rt);
 void build_vt_for_PartialTerminus(rt_h const & rt);
-void build_vt_for_IO(rt_h const & rt);
 
 // A trivial node is one with label and arity, but no meaningful action for H
 // or N.
 void build_vt_for_trivial_node(
     rt_h const & rt
   , std::string const & name, size_t arity
-  , value const & vptr_equal = nullptr
-  , value const & vptr_equate = nullptr
-  , value const & vptr_compare = nullptr
-  , value const & vptr_show = nullptr
   )
 {
-  value const vptr_null = (*rt.vtable_t)(nullptr);
   extern_(rt.vtable_t, sprite::compiler::get_vt_name(name))
       .set_initializer(_t(
           &rt.Cy_NoAction
@@ -39,36 +35,20 @@ void build_vt_for_trivial_node(
         , &rt.Cy_Succ(arity)
         , &rt.Cy_Succ(arity)
         , &rt.Cy_Destroy(arity)
-				, vptr_equal.ptr() ? vptr_equal : vptr_null
-				, vptr_equate.ptr() ? vptr_equate : vptr_null
-				, vptr_compare.ptr() ? vptr_compare : vptr_null
-				, vptr_show.ptr() ? vptr_show : vptr_null
+        , nullptr
+        , nullptr
+        , nullptr
+        , nullptr
+        , nullptr
         ))
 	  ;
 }
 
 void build_vt_for_failed(rt_h const & rt)
-{
-  build_vt_for_trivial_node(
-      rt, "failed", 0
-    , &rt.CyVt_Equal("failed")
-    , &rt.CyVt_Equate("failed")
-    , &rt.CyVt_Compare("failed")
-    , &rt.CyVt_Show("failed")
-    );
-}
+  { build_vt_for_trivial_node(rt, "failed", 0); }
 void build_vt_for_success(rt_h const & rt)
   { build_vt_for_trivial_node(rt, "success", 0); }
-void build_vt_for_freevar(rt_h const & rt)
-{
-  build_vt_for_trivial_node(
-      rt, "freevar", 0
-    , &rt.CyVt_Equal("freevar")
-    , &rt.CyVt_Equate("freevar")
-    , &rt.CyVt_Compare("freevar")
-    , &rt.CyVt_Show("freevar")
-    );
-}
+// FIXME: using a polymorphic function on a partial application will SEGV!
 void build_vt_for_PartialSpine(rt_h const & rt)
   { build_vt_for_trivial_node(rt, "PartialSpine", 2); }
 void build_vt_for_PartialTerminus(rt_h const & rt)
@@ -93,6 +73,7 @@ void build_vt_for_PartialTerminus(rt_h const & rt)
         , &rt.Cy_Succ(0)
         , &rt.Cy_Succ(0)
         , &rt.Cy_Destroy(0)
+				, nullptr // FIXME: All cause SEGV below.
 				, nullptr
 				, nullptr
 				, nullptr
@@ -178,7 +159,7 @@ int main()
   // DECLARE_EXTERNAL_STUB(apply)
   // DECLARE_EXTERNAL_STUB(cond)
   DECLARE_EXTERNAL_STUB(letrec) // Unused in Sprite
-  DECLARE_EXTERNAL_STUB(=:<=)
+  // DECLARE_EXTERNAL_STUB(=:<=)
   DECLARE_EXTERNAL_STUB(=:<<=)
   DECLARE_EXTERNAL_STUB(ifVar)
   DECLARE_EXTERNAL_STUB(failure)

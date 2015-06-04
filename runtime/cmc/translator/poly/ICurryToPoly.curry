@@ -22,10 +22,12 @@ make_branch (_,_,_,_,mkbranch) = mkbranch
 
 spec_equality = (equals, "True", "&&", "==", make_branch_equality)
 spec_equate = (equates, "Success", "&", "=:=", make_branch_equate)
+spec_ns_equate = (ns_equates, "Success", "&", "=:<=", make_branch_ns_equate)
 spec_compare = (compares, "EQ", "compare_conjunction", "compare", make_branch_compare)
 
 equals typename = "=="++"."++typename
 equates typename = "=:="++"."++typename
+ns_equates typename = "=:<="++"."++typename
 compares typename = "compare"++"."++typename
 shows typename = "show"++"."++typename
 primitive x = "primitive."++x
@@ -36,6 +38,7 @@ icurryToPoly (IModule modname {-imported_list-}_ data_list {-funct_list-}_)
           make_show modname onetype
         , make_binary_funct modname onetype spec_equality
         , make_binary_funct modname onetype spec_equate
+        , make_binary_funct modname onetype spec_ns_equate
         , make_binary_funct modname onetype spec_compare
         ]
       | onetype <- data_list
@@ -129,6 +132,12 @@ make_branch_equality ctor arg2 _ mapping = (arg2, [
 make_branch_equate ctor arg2 _ mapping = (arg2, [
   if ctor == arg2 
     then (recur2 ctor mapping spec_equate)
+    else Return (applyC "failed" [])
+  ])
+
+make_branch_ns_equate ctor arg2 _ mapping = (arg2, [
+  if ctor == arg2 
+    then (recur2 ctor mapping spec_ns_equate)
     else Return (applyC "failed" [])
   ])
 

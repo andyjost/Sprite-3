@@ -26,8 +26,11 @@ namespace sprite { namespace compiler
       return copy;
     }
 
-    void set_left(aux_t id) { bits.set(2*id); bits.reset(2*id+1); }
-    void set_right(aux_t id) { bits.set(2*id); bits.set(2*id+1); }
+    void set_left(aux_t id) { check_alloc(id); set_left_no_check(id); }
+    void set_right(aux_t id) { check_alloc(id); set_right_no_check(id); }
+
+    void set_left_no_check(aux_t id) { bits.set(2*id); bits.reset(2*id+1); }
+    void set_right_no_check(aux_t id) { bits.set(2*id); bits.set(2*id+1); }
 
     void check_alloc(aux_t id) const
     {
@@ -38,10 +41,17 @@ namespace sprite { namespace compiler
     ChoiceState test(aux_t id) const
     {
       check_alloc(id);
+      return test_no_check(id);
+    }
+
+    ChoiceState test_no_check(aux_t id) const
+    {
       return static_cast<ChoiceState>(
           (bits.test(2*id) ? 1 : 0) * (bits.test(2*id+1) ? 2 : 1)
         );
     }
+
+    size_t size() const { return bits.size() / 2; }
 
   private:
 

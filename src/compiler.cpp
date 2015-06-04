@@ -747,6 +747,7 @@ namespace
           value choice_node = choose_storage();
           choice_node.arrow(ND_VPTR) = rt.choice_vt;
           choice_node.arrow(ND_TAG) = compiler::CHOICE;
+          choice_node.arrow(ND_AUX) = rt.Cy_NextChoiceId++;
           choice_node.arrow(ND_SLOT0) = lhs_node;
           choice_node.arrow(ND_SLOT1) = rhs_node;
 
@@ -1186,6 +1187,7 @@ namespace
       , &rt.Cy_Destroy(ctor.arity)
       , &rt.CyVt_Equal(module_stab.source->name, dtype.name)
       , &rt.CyVt_Equate(module_stab.source->name, dtype.name)
+      , &rt.CyVt_NsEquate(module_stab.source->name, dtype.name)
       , &rt.CyVt_Compare(module_stab.source->name, dtype.name)
       , &rt.CyVt_Show(module_stab.source->name, dtype.name)
       ));
@@ -1244,10 +1246,11 @@ namespace
       , &rt.Cy_Succ(fun.arity)
       , &rt.Cy_Succ(fun.arity)
       , &rt.Cy_Destroy(fun.arity)
-      , &rt.CyVt_Equal("oper")
-      , &rt.CyVt_Equate("oper")
-      , &rt.CyVt_Compare("oper")
-      , &rt.CyVt_Show("oper")
+      , nullptr
+      , nullptr
+      , nullptr
+      , nullptr
+      , nullptr
       ));
   }
 
@@ -1396,7 +1399,9 @@ namespace sprite { namespace compiler
     rt.printf("S> --- ");
     rt.CyTrace_ShowIndent();
     rt.Cy_Repr(root_p, rt.stdout_(), true);
-    rt.putchar('\n');
+    rt.printf(" {");
+    rt.Cy_ReprFingerprint(rt.stdout_());
+    rt.printf("}\n");
     rt.fflush(nullptr);
   }
 
@@ -1405,7 +1410,9 @@ namespace sprite { namespace compiler
     rt.printf("S> +++ ");
     rt.CyTrace_ShowIndent();
     rt.Cy_Repr(root_p, rt.stdout_(), true);
-    rt.putchar('\n');
+    rt.printf(" {");
+    rt.Cy_ReprFingerprint(rt.stdout_());
+    rt.printf("}\n");
     rt.fflush(nullptr);
   }
 
@@ -1414,7 +1421,9 @@ namespace sprite { namespace compiler
     rt.printf("T> +++ ");
     rt.CyTrace_ShowIndent();
     rt.Cy_Repr(root_p, rt.stdout_(), true);
-    rt.putchar('\n');
+    rt.printf(" {");
+    rt.Cy_ReprFingerprint(rt.stdout_());
+    rt.printf("}\n");
     rt.fflush(nullptr);
   }
 

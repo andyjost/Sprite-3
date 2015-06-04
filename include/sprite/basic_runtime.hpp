@@ -16,18 +16,20 @@ namespace sprite { namespace compiler
 
   struct vtable
   {
-    stepfun_t  * H;        // Head-normalization function.
-    stepfun_t  * N;        // Normalization function.
-    labelfun_t * label;    // Gives the string representation of the label.
-    vtable     * sentinel; // Used to determine node memory state.
-    arityfun_t * arity;    // Gives the arity.
-    rangefun_t * succ;     // Gives the range containing the successors.
-    rangefun_t * gcsucc;   // Range function that does not skip fwd nodes.
-    stepfun_t  * destroy;  // Frees the associated successor array, if any.
-    vtable     * equal;    // Type-specific equality function.
-    vtable     * equate;   // Type-specific equational constraint function.
-    vtable     * compare;  // Type-specific comparison function.
-    vtable     * show;     // Type-specific show function.
+    stepfun_t  * H;         // Head-normalization function.
+    stepfun_t  * N;         // Normalization function.
+    labelfun_t * label;     // Gives the string representation of the label.
+    vtable     * sentinel;  // Used to determine node memory state.
+    arityfun_t * arity;     // Gives the arity.
+    rangefun_t * succ;      // Gives the range containing the successors.
+    rangefun_t * gcsucc;    // Range function that does not skip fwd nodes.
+    stepfun_t  * destroy;   // Frees the associated successor array, if any.
+    // The vtables below are used only for CTOR nodes.
+    vtable     * equal;     // Type-specific equality function.
+    vtable     * equate;    // Type-specific equational constraint function.
+    vtable     * ns_equate; // Type-specific non-strict equational constraint.
+    vtable     * compare;   // Type-specific comparison function.
+    vtable     * show;      // Type-specific show function.
   };
 
   using tag_t = int16_t;

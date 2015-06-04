@@ -6,56 +6,58 @@
 
 // The NORMALIZE macro may be defined to control how to perform normalization.
 #ifndef NORMALIZE
-#define NORMALIZE(arg) arg->vptr->H(arg)
+#define NORMALIZE(lhs) lhs->vptr->H(lhs)
 #endif
 
 // The TAG macro may be defined to control how the tag of the inductive node is
 // obtained.  When the argument being normalized is a type with only one
 // constructor (such as a built-in data type), then the call to min is not needed.
 #ifndef TAG
-#define TAG(arg) (arg->tag < 0 ? arg->tag : 0)
+#define TAG(lhs) (lhs->tag < 0 ? lhs->tag : 0)
 #endif
 
 // The action to take when a free variable is encountered.  By default, do
 // nothing (i.e., fall through to the constructor case.
 #ifndef WHEN_FREE
-#define WHEN_FREE(arg)
+#define WHEN_FREE(lhs)
 #endif
 
   assert(root->tag != FWD);
-  static void * table[] =
-      { &&t_fail, &&t_free, &&t_fwd, &&t_choice, &&t_oper, &&t_ctor};
-  node * arg = SUCC_0(root);
-  node * lhs_choice, * rhs_choice;
-  goto* (&table[TAGOFFSET])[TAG(arg)];
-t_fail:
+  static void * table1st[] =
+      { &&t1_fail, &&t1_free, &&t1_fwd, &&t1_choice, &&t1_oper, &&t1_ctor};
+  lhs = SUCC_0(root);
+  goto* (&table1st[TAGOFFSET])[TAG(lhs)];
+t1_fail:
   return CyPrelude_failed(root);
-t_fwd:
-  arg = reinterpret_cast<node *>(arg->slot0);
-  goto* (&table[TAGOFFSET])[TAG(arg)];
-t_choice:
-  NODE_ALLOC(lhs_choice, t_choice);
-  NODE_ALLOC(rhs_choice, t_choice);
+t1_fwd:
+  lhs = reinterpret_cast<node *>(lhs->slot0);
+  goto* (&table1st[TAGOFFSET])[TAG(lhs)];
+t1_choice:
+{
+  node * lhs_choice, * rhs_choice;
+  NODE_ALLOC(lhs_choice, t1_choice);
+  NODE_ALLOC(rhs_choice, t1_choice);
   lhs_choice->vptr = root->vptr;
   lhs_choice->tag = root->tag;
-  lhs_choice->slot0 = arg->slot0;
+  lhs_choice->slot0 = lhs->slot0;
   lhs_choice->slot1 = root->slot1;
   rhs_choice->vptr = root->vptr;
   rhs_choice->tag = root->tag;
-  rhs_choice->slot0 = arg->slot1;
+  rhs_choice->slot0 = lhs->slot1;
   rhs_choice->slot1 = root->slot1;
   root->vptr = &CyVt_Choice;
   root->tag = CHOICE;
-  root->aux = arg->aux; // copy choice id
+  root->aux = lhs->aux; // copy choice id
   root->slot0 = lhs_choice;
   root->slot1 = rhs_choice;
   return;
-t_oper:
-  NORMALIZE(arg);
-  goto* (&table[TAGOFFSET])[TAG(arg)];
-t_free:
-  WHEN_FREE(arg);
-t_ctor:
+}
+t1_oper:
+  NORMALIZE(lhs);
+  goto* (&table1st[TAGOFFSET])[TAG(lhs)];
+t1_free:
+  WHEN_FREE(lhs);
+t1_ctor:
 #undef NORMALIZE
 #undef TAG
 #undef WHEN_FREE
