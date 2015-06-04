@@ -46,7 +46,7 @@ void build_vt_for_freevar(rt_h const & rt)
         , &rt.Cy_Succ(0)
         , &rt.Cy_Succ(0)
         , &rt.Cy_Destroy(0)
-        , nullptr
+        , nullptr // unreachable
         , nullptr
         , nullptr
         , nullptr
@@ -212,7 +212,7 @@ void build_vt_for_choice(rt_h const & rt)
         , &rt.Cy_Succ(2)
         , &rt.Cy_Succ(2)
         , &rt.Cy_Destroy(2)
-        , nullptr
+        , nullptr // unreachable
         , nullptr
         , nullptr
         , nullptr
@@ -288,7 +288,7 @@ void build_vt_for_fwd(rt_h const & rt)
         , &fwd_succ
         , &rt.Cy_Succ(1)
         , &rt.Cy_Destroy(1)
-        , nullptr
+        , nullptr // unreachable
         , nullptr
         , nullptr
         , nullptr

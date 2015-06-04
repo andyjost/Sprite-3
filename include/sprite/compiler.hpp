@@ -11,6 +11,12 @@ namespace sprite { namespace compiler
 {
   using namespace sprite::backend;
 
+  struct CompilerOptions
+  {
+    bool enable_tracing = false;
+    int bypass_choices = false;
+  };
+
   // ===========================
   // ====== Symbol tables ======
   // ===========================
@@ -147,7 +153,7 @@ namespace sprite { namespace compiler
       sprite::curry::Module const &
     , sprite::compiler::LibrarySTab &
     , llvm::LLVMContext &
-    , bool enable_tracing
+    , compiler::CompilerOptions const & options
     );
 
   /// Constructs an expression at the given node address.
@@ -196,6 +202,10 @@ namespace sprite { namespace compiler
     slot0 = array;
     return bitcast(slot0, **types::char_());
   }
+
+  // Gets the extended child array cast to char_t**.
+  inline value get_extended_child_array(rt_h const & rt, value const & node)
+    { return bitcast(node.arrow(ND_SLOT0), **rt.node_t); }
 
   void trace_step_start(rt_h const & rt, value const & root_p);
   void trace_step_end(rt_h const & rt, value const & root_p);

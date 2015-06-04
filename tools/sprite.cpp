@@ -18,7 +18,8 @@
 
 namespace
 {
-   llvm::LLVMContext & context = llvm::getGlobalContext();
+  sprite::compiler::CompilerOptions options;
+  llvm::LLVMContext & context = llvm::getGlobalContext();
   int main_(int argc, char const *argv[])
   {
     if(argc != 2)
@@ -32,12 +33,12 @@ namespace
     // Compile the input file.
     sprite::curry::Library lib;
     sprite::compiler::LibrarySTab stab;
-    sprite::compile_file(argv[1], lib, stab, context, false, false);
+    sprite::compile_file(argv[1], lib, stab, context, false, options);
     std::string topmodule = lib.modules.front().name;
   
     // Declare the main function.
     sprite::insert_main_function(
-        stab, sprite::curry::Qname{topmodule, "main"}, false /*enable_tracing*/
+        stab, sprite::curry::Qname{topmodule, "main"}, options
       );
   
     // NOT READY YET

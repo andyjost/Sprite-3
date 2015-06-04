@@ -19,9 +19,9 @@ namespace
   llvm::LLVMContext & context = llvm::getGlobalContext();
 
   // Control variables set by the parser.
+  sprite::compiler::CompilerOptions options;
   bool compile_only = false;
   bool preprocess_only = false;
-  bool enable_tracing = false;
   int save_temps = 0;
   char optlvl = '3'; // 0, 1, 2, 3, s, or z
   std::string mainmodule;
@@ -53,7 +53,7 @@ namespace
   {
     out
       << "Usage: scc [options] [curryfiles...]\n"
-      << "Options:\n"
+      << "Basic options:\n"
       << "   -b, --output-bitcode\n"
       << "       Write out the final program as LLVM bitcode.\n"
       << "   -c, --compile\n"
@@ -77,6 +77,10 @@ namespace
       << "       Write out the final program as assembly.\n"
       << "   -T, --trace\n"
       << "       Compile tracing output into the program.\n"
+      << "Feature options:\n"
+      << "   --f[no]bypass (Default=OFF)\n"
+      << "       Bypass choices.  Skips some pull-tab steps by rerouting pointers\n"
+      << "       around previously-made choices.\n"
       ;
   }
 
@@ -110,6 +114,9 @@ namespace
         {"output-assembly", no_argument, 0, 'S'},
         {"save-temps",      no_argument, &save_temps, 1},
         {"trace",           no_argument, 0, 'T'},
+        // Functional flags
+        {"fbypass",         no_argument, &options.bypass_choices, 1},
+        {"fnobypass",       no_argument, &options.bypass_choices, 0},
         {0, 0, 0, 0}
       };
 
@@ -161,7 +168,7 @@ namespace
           output_type = OUTPUT_ASSEMBLY;
           break;
         case 'T':
-          enable_tracing = true;
+          options.enable_tracing = true;
           break;
         default:
           std::exit(EXIT_FAILURE);
@@ -181,7 +188,6 @@ namespace
       sprite::compiler::LibrarySTab const & stab
     , std::string const & module_name
     , sprite::curry::Function const & fun
-    , bool enable_tracing
     )
   {
     if(fun.arity != 0)
@@ -194,7 +200,7 @@ namespace
         );
     }
     sprite::curry::Qname const start{module_name, fun.name};
-    sprite::insert_main_function(stab, start, enable_tracing);
+    sprite::insert_main_function(stab, start, options);
   }
 
   // A wrapper for the library function.  Exits on failure.
@@ -238,7 +244,7 @@ namespace
       if(!preprocess_only)
       {
         sprite::compile_file(
-           file, lib, stab, context, compile_only, enable_tracing
+           file, lib, stab, context, compile_only, options
          );
       }
     }
@@ -260,7 +266,7 @@ namespace
         for(sprite::curry::Function const & fun: mod.functions)
         {
           if(fun.name == "main")
-            insert_main_function(stab, mod.name, fun, enable_tracing);
+            insert_main_function(stab, mod.name, fun);
         }
       }
 

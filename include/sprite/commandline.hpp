@@ -62,7 +62,7 @@ namespace sprite
     , compiler::LibrarySTab &
     , llvm::LLVMContext & context
     , bool save_bitcode
-    , bool enable_tracing
+    , compiler::CompilerOptions const & options
     );
 
   /**
@@ -86,7 +86,7 @@ namespace sprite
   void insert_main_function(
       compiler::LibrarySTab const & stab
     , curry::Qname const & start
-    , bool enable_tracing
+    , compiler::CompilerOptions const & options
     );
 
   inline std::string dirname(std::string const & path)

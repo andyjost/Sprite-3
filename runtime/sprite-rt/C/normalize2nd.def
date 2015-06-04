@@ -34,6 +34,7 @@ t2_fwd:
   goto* (&table2nd[TAGOFFSET])[TAG(rhs)];
 t2_choice:
 {
+  GENERATE_BYPASS_CODE(rhs, slot1)
   node * lhs_choice, * rhs_choice;
   NODE_ALLOC(lhs_choice, t2_choice);
   NODE_ALLOC(rhs_choice, t2_choice);

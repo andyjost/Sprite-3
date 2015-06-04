@@ -35,11 +35,11 @@ void build_vt_for_trivial_node(
         , &rt.Cy_Succ(arity)
         , &rt.Cy_Succ(arity)
         , &rt.Cy_Destroy(arity)
-        , nullptr
-        , nullptr
-        , nullptr
-        , nullptr
-        , nullptr
+        , &extern_(rt.vtable_t, ".vt.OPER.Prelude.prim_error_cmp_fun")
+        , &extern_(rt.vtable_t, ".vt.OPER.Prelude.prim_error_cmp_fun")
+        , &extern_(rt.vtable_t, ".vt.OPER.Prelude.prim_error_cmp_fun")
+        , &extern_(rt.vtable_t, ".vt.OPER.Prelude.prim_error_cmp_fun")
+        , &extern_(rt.vtable_t, ".vt.OPER.Prelude.prim_label")
         ))
 	  ;
 }
@@ -73,11 +73,11 @@ void build_vt_for_PartialTerminus(rt_h const & rt)
         , &rt.Cy_Succ(0)
         , &rt.Cy_Succ(0)
         , &rt.Cy_Destroy(0)
-				, nullptr // FIXME: All cause SEGV below.
-				, nullptr
-				, nullptr
-				, nullptr
-				, nullptr
+        , &extern_(rt.vtable_t, ".vt.OPER.Prelude.prim_error_cmp_fun")
+        , &extern_(rt.vtable_t, ".vt.OPER.Prelude.prim_error_cmp_fun")
+        , &extern_(rt.vtable_t, ".vt.OPER.Prelude.prim_error_cmp_fun")
+        , &extern_(rt.vtable_t, ".vt.OPER.Prelude.prim_error_cmp_fun")
+        , &extern_(rt.vtable_t, ".vt.OPER.Prelude.prim_label")
         ))
 	  ;
 }

@@ -44,6 +44,29 @@
 #define SPRITE_INPLACE_BOUND 3
 #endif
 
+#ifdef NOBYPASS
+#define GENERATE_BYPASS_CODE(arg, pos)
+#else
+#define GENERATE_BYPASS_CODE(arg, pos)  \
+    if(Cy_TestChoiceIsMade(arg->aux))   \
+    {                                   \
+      if(Cy_TestChoiceIsLeft(arg->aux)) \
+        root->pos = arg->slot0;         \
+      else                              \
+        root->pos = arg->slot1;         \
+      return;                           \
+    }                                   \
+  /**/
+#endif
+
+using namespace sprite::compiler;
+
+extern "C"
+{
+  bool Cy_TestChoiceIsMade(aux_t id);
+  bool Cy_TestChoiceIsLeft(aux_t id);
+}
+
 namespace sprite { namespace compiler
 {
   /// The pool for allocating new nodes.
@@ -67,8 +90,6 @@ namespace sprite { namespace compiler
 
 extern "C"
 {
-  using namespace sprite::compiler;
-
   // These are defined in the "LLVM part" of the runtime.
   extern vtable CyVt_Char __asm__(".vt.Char");
   extern vtable CyVt_Choice __asm__(".vt.choice");
@@ -376,12 +397,16 @@ extern "C"
   // activation of Cy_Eval.
   Cy_ComputationFrame * Cy_GlobalComputations = nullptr;
 
+  // The current fingerprint.  Accessible through Cy_GlobalComputations, but duplicated
+  // here for faster access.
+  Fingerprint * Cy_CurrentFingerprint = nullptr;
+
   // Gets the representation of the current fingerprint.
   void Cy_ReprFingerprint(FILE * stream)
   {
-    if(Cy_GlobalComputations && !Cy_GlobalComputations->computation->empty())
+    if(Cy_CurrentFingerprint)
     {
-      auto & fp = *Cy_GlobalComputations->computation->front().fingerprint;
+      auto & fp = *Cy_CurrentFingerprint;
       size_t const n = fp.size();
       bool first = true;
       for(size_t i=0; i<n; ++i)
@@ -399,6 +424,15 @@ extern "C"
       }
     }
   }
+
+  // Tests the indicated choice in the current fingerprint.  Precondition:
+  // Cy_Eval is on the stack, so that Cy_CurrentFingerprint is non-null.
+  bool Cy_TestChoiceIsMade(aux_t id)
+    { return Cy_CurrentFingerprint->choice_is_made(id); }
+
+  // Indicates whether a made choice is LEFT or RIGHT.  Precondition: Cy_TestChoiceIsMade(id).
+  bool Cy_TestChoiceIsLeft(aux_t id)
+    { return Cy_CurrentFingerprint->choice_is_left_no_check(id); }
 
   // Produces all of the node pointers reachable from Cy_GlobalComputations in
   // some order, ending with a null pointer.
@@ -452,6 +486,7 @@ extern "C"
     while(!computation.empty())
     {
       Cy_EvalFrame & frame = computation.front();
+      Cy_CurrentFingerprint = frame.fingerprint.get();
       node * expr = frame.expr;
       expr->vptr->N(expr);
       redo: switch(expr->tag)
@@ -499,6 +534,7 @@ extern "C"
           computation.pop_front();
       }
     }
+    Cy_CurrentFingerprint = nullptr;
   }
 
   // Note: root is a [Char], already normalized.
@@ -576,6 +612,7 @@ extern "C"
     node * arg = SUCC_0(root);
     CyPrelude_DollarHashHash(arg);
     Cy_FPrint(arg, stderr);
+    putc('\n', stderr);
     std::exit(EXIT_FAILURE); // FIXME: should throw or lngjump.
   }
 
@@ -853,14 +890,10 @@ extern "C"
   void CyPrelude_EqColonLtEq(node *) __asm__("CyPrelude_=:<=");
   void CyPrelude_EqColonLtEq(node * root)
   {
-    // FIXME
-    node * lhs, * rhs;
-    bool freelhs = false;
-    #define WHEN_FREE(lhs) freelhs = true;
+    node * lhs;
+    #define WHEN_FREE(lhs) return Cy_BindVar(root, lhs, SUCC_1(root));
     #include "normalize1st.def"
-    #define WHEN_FREE(rhs) if(freelhs) return Cy_BindVar(root, rhs, lhs);
-    #include "normalize2nd.def"
-    root->vptr = (freelhs ? rhs : lhs)->vptr->ns_equate;
+    root->vptr = lhs->vptr->ns_equate;
   }
 
   void CyPrelude_compare(node * root)
@@ -911,18 +944,18 @@ extern "C"
     Cy_CStringToCyString(&DATA(arg, char), root);
   }
 
-  void CyPrelude_show(node * root)
-  {
-    #define WHEN_FREE(lhs) return Cy_Free_show(root);
-    #include "normalize1.def"
-    root->vptr = arg->vptr->show;
-  }
-
   void CyPrelude_prim_label(node * root)
   {
     node * arg = SUCC_0(root);
     char const * str = arg->vptr->label(arg);
     Cy_CStringToCyString(str, root);
+  }
+
+  void CyPrelude_show(node * root)
+  {
+    #define WHEN_FREE(lhs) return Cy_Free_show(root);
+    #include "normalize1.def"
+    root->vptr = arg->vptr->show;
   }
 
   // Gives the representation of a char in a double-quoted string.

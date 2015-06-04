@@ -201,6 +201,8 @@ namespace sprite { namespace compiler
 
     // The global counter giving the next available choice id.
     globalvar Cy_NextChoiceId = extern_(aux_t, "Cy_NextChoiceId").as_globalvar();
+    function const Cy_TestChoiceIsMade = extern_(bool_t(aux_t), "Cy_TestChoiceIsMade");
+    function const Cy_TestChoiceIsLeft = extern_(bool_t(aux_t), "Cy_TestChoiceIsLeft");
 
     // Free variables are printed as _a, _b, . . .  This function resets the
     // sequence to _a, and is called between producing values.

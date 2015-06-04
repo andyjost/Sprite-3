@@ -40,6 +40,7 @@ t_fwd_rhs:
   rhs = reinterpret_cast<node *>(rhs->slot0);
   goto* (&table_rhs[TAGOFFSET])[TAG(rhs)];
 t_choice_lhs:
+  GENERATE_BYPASS_CODE(lhs, slot0)
   NODE_ALLOC(lhs_choice, t_choice_lhs);
   NODE_ALLOC(rhs_choice, t_choice_lhs);
   lhs_choice->vptr = root->vptr;
@@ -57,6 +58,7 @@ t_choice_lhs:
   root->slot1 = rhs_choice;
   return;
 t_choice_rhs:
+  GENERATE_BYPASS_CODE(rhs, slot1)
   NODE_ALLOC(lhs_choice, t_choice_rhs);
   NODE_ALLOC(rhs_choice, t_choice_rhs);
   lhs_choice->vptr = root->vptr;

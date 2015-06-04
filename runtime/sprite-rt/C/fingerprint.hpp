@@ -51,6 +51,15 @@ namespace sprite { namespace compiler
         );
     }
 
+    bool choice_is_made(aux_t id) const
+    {
+      size_t const id2 = 2*id;
+      return id2 < bits.size() && bits.test(id2);
+    }
+
+    bool choice_is_left_no_check(aux_t id) const
+      { return !bits.test(2*id+1); }
+
     size_t size() const { return bits.size() / 2; }
 
   private:

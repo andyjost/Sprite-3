@@ -37,7 +37,7 @@ namespace sprite
     , compiler::LibrarySTab & stab
     , llvm::LLVMContext & context
     , bool save_bitcode
-    , bool enable_tracing
+    , compiler::CompilerOptions const & options
     )
   {
     std::string const modulename = sprite::get_modulename(curryfile);
@@ -65,7 +65,7 @@ namespace sprite
       if(stab.modules.count(import) == 0)
       {
         compile_file(
-            get_module_file(import), lib, stab, context, false, enable_tracing
+            get_module_file(import), lib, stab, context, false, options
           );
       }
     }
@@ -93,7 +93,7 @@ namespace sprite
         );
     }
 
-    compiler::compile(cymodule, stab, context, enable_tracing);
+    compiler::compile(cymodule, stab, context, options);
 
     // If asked to, write out the .bc file.
     if(save_bitcode && !bitcode_is_up_to_date)
@@ -142,7 +142,7 @@ namespace sprite
   void _create_main_function(
       compiler::ModuleSTab const & module_stab
     , curry::Qname const & start
-    , bool enable_tracing
+    , compiler::CompilerOptions const & options
     )
   {
     using namespace backend;
@@ -158,12 +158,12 @@ namespace sprite
           show.arrow(ND_VPTR) = &module_stab.lookup(lshow).vtable;
           show.arrow(ND_TAG) = sprite::compiler::OPER;
           show.arrow(ND_SLOT0) = bitcast(arg("root"), *rt.char_t);
-          rt.CyMem_PushRoot(show, enable_tracing);
+          rt.CyMem_PushRoot(show, options.enable_tracing);
           rt.Cy_Normalize(show);
           rt.Cy_CyStringToCString(show, rt.stdout_());
           rt.putchar('\n');
           rt.CyFree_ResetCounter();
-          rt.CyMem_PopRoot(enable_tracing);
+          rt.CyMem_PopRoot(options.enable_tracing);
         }
       );
 
@@ -182,12 +182,12 @@ namespace sprite
   void insert_main_function(
       compiler::LibrarySTab const & stab
     , curry::Qname const & start
-    , bool enable_tracing
+    , compiler::CompilerOptions const & options
     )
   {
     auto & module_stab = stab.modules.at(start.module);
     backend::scope _ = module_stab.module_ir;
-    _create_main_function(module_stab, start, enable_tracing);
+    _create_main_function(module_stab, start, options);
   }
 
   bool is_up_to_date(

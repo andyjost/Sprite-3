@@ -1,0 +1,1 @@
+main = cond < cond
