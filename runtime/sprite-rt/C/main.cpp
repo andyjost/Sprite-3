@@ -150,9 +150,9 @@ extern "C"
   void CyPrelude_suspend(node * root)
     { Cy_Suspend(); }
 
-  void CyErr_NotImplemented(char const * op, char const * type)
+  void CyErr_Undefined(char const * op, char const * type)
   {
-    fprintf(stderr, "No %s for type %s is implemented", op, type);
+    fprintf(stderr, "%s is undefined for type %s", op, type);
     Cy_Suspend();
   }
 
@@ -988,7 +988,7 @@ extern "C"
   void Cy_IO_Eq(node * root)
   {
     // TODO
-    CyErr_NotImplemented("(==)", "IO");
+    CyErr_Undefined("(==)", "IO");
   }
 
   // =:=.IO
@@ -996,7 +996,7 @@ extern "C"
   void Cy_IO_EqColonEq(node * root)
   {
     // TODO
-    CyErr_NotImplemented("(=:=)", "IO");
+    CyErr_Undefined("(=:=)", "IO");
   }
 
   // =:<=.IO
@@ -1004,7 +1004,7 @@ extern "C"
   void Cy_IO_EqColonLtEq(node * root)
   {
     // TODO
-    CyErr_NotImplemented("(=:<=)", "IO");
+    CyErr_Undefined("(=:<=)", "IO");
   }
 
   // compare.IO
@@ -1012,7 +1012,7 @@ extern "C"
   void Cy_IO_compare(node * root)
   {
     // TODO
-    CyErr_NotImplemented("compare", "IO");
+    CyErr_Undefined("compare", "IO");
   }
 
   // show.IO
