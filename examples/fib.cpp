@@ -1,5 +1,5 @@
-// FIXME: This does not belong in the examples directory, or the README needs
-// to be updated.
+// Demonstrates construction of a simple program (fib) using the embedded LLVM
+// DSL.
 
 #include "sprite/backend.hpp"
 #include <cmath>
