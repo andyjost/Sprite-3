@@ -44,6 +44,29 @@
 #define SPRITE_INPLACE_BOUND 3
 #endif
 
+#ifdef NOBYPASS
+#define GENERATE_BYPASS_CODE(arg, pos)
+#else
+#define GENERATE_BYPASS_CODE(arg, pos)  \
+    if(Cy_TestChoiceIsMade(arg->aux))   \
+    {                                   \
+      if(Cy_TestChoiceIsLeft(arg->aux)) \
+        root->pos = arg->slot0;         \
+      else                              \
+        root->pos = arg->slot1;         \
+      return;                           \
+    }                                   \
+  /**/
+#endif
+
+using namespace sprite::compiler;
+
+extern "C"
+{
+  bool Cy_TestChoiceIsMade(aux_t id);
+  bool Cy_TestChoiceIsLeft(aux_t id);
+}
+
 namespace sprite { namespace compiler
 {
   /// The pool for allocating new nodes.
@@ -67,8 +90,6 @@ namespace sprite { namespace compiler
 
 extern "C"
 {
-  using namespace sprite::compiler;
-
   // These are defined in the "LLVM part" of the runtime.
   extern vtable CyVt_Char __asm__(".vt.Char");
   extern vtable CyVt_Choice __asm__(".vt.choice");
@@ -116,6 +137,7 @@ extern "C"
     return root;
   }
 
+  void Cy_Suspend() __attribute__((__noreturn__));
   void Cy_Suspend()
   {
     // TODO
@@ -128,11 +150,40 @@ extern "C"
   void CyPrelude_suspend(node * root)
     { Cy_Suspend(); }
 
+  void CyErr_Undefined(char const * op, char const * type)
+  {
+    fprintf(stderr, "%s is undefined for type %s", op, type);
+    Cy_Suspend();
+  }
+
+  void CyErr_NoGenerator(char const *) __attribute__((__noreturn__));
+  void CyErr_NoGenerator(char const * type)
+  {
+    fprintf(stderr, "No generator for type %s", type);
+    Cy_Suspend();
+  }
+
+  void Cy_failed(node * root, bool need_destroy=false)
+  {
+    if(need_destroy)
+      root->vptr->destroy(root);
+    root->vptr = &CyVt_Failed;
+    root->tag = FAIL;
+  }
+
   void CyPrelude_failed(node * root)
   {
     root->vptr->destroy(root);
     root->vptr = &CyVt_Failed;
     root->tag = FAIL;
+  }
+
+  void Cy_success(node * root, bool need_destroy=false)
+  {
+    if(need_destroy)
+      root->vptr->destroy(root);
+    root->vptr = &CyVt_Success;
+    root->tag = CTOR;
   }
 
   void CyPrelude_success(node * root)
@@ -169,23 +220,26 @@ extern "C"
     root->tag = CTOR;
   }
 
-  void CyPrelude_true(node * root)
+  void Cy_true(node * root, bool need_destroy=false)
   {
-    root->vptr->destroy(root);
+    if(need_destroy)
+      root->vptr->destroy(root);
     root->vptr = &CyVt_True;
     root->tag = 1;
   }
 
-  void CyPrelude_false(node * root)
+  void Cy_false(node * root, bool need_destroy=false)
   {
-    root->vptr->destroy(root);
+    if(need_destroy)
+      root->vptr->destroy(root);
     root->vptr = &CyVt_False;
     root->tag = 0;
   }
 
-  void CyPrelude_eq(node * root)
+  void Cy_eq(node * root, bool need_destroy=false)
   {
-    root->vptr->destroy(root);
+    if(need_destroy)
+      root->vptr->destroy(root);
     root->vptr = &CyVt_EQ;
     root->tag = 1;
   }
@@ -197,7 +251,17 @@ extern "C"
     , bool is_outer
     )
   {
+    if(!root)
+    {
+      fputs("(!null-node!)", stream);
+      return;
+    }
     node ** begin, ** end;
+    if(!root->vptr)
+    {
+      fputs("(!null-vptr!)", stream);
+      return;
+    }
     root->vptr->succ(root, &begin, &end);
     size_t const N = end - begin;
     if(!is_outer && N > 0) fputs("(", stream);
@@ -206,7 +270,7 @@ extern "C"
     for(; begin != end; ++begin)
     {
       fputs(" ", stream);
-      if(seen.count(*begin))
+      if(begin && seen.count(*begin))
         fputs("...", stream);
       else
         _Cy_Repr(seen, *begin, stream, false);
@@ -222,6 +286,14 @@ extern "C"
   {
     std::unordered_set<node *> seen;
     _Cy_Repr(seen, root, stream, is_outer);
+  }
+
+  // Prints a node representation to stdout (for debugging).
+  void Cy_Print(node * root) 
+  {
+    Cy_Repr(root, stdout, true);
+    fputs("\n", stdout);
+    fflush(NULL);
   }
 
   // Converts a C-string to a Curry string (list of Char).  Rewrites root to be
@@ -302,6 +374,7 @@ extern "C"
   FILE * Cy_stdout() { return stdout; }
   FILE * Cy_stderr() { return stderr; }
 
+  // A subcomputation.  One entry in a work queue from the Fair Scheme.
   struct Cy_EvalFrame
   {
     node * expr;
@@ -312,16 +385,108 @@ extern "C"
     {}
   };
 
+  // The computation of a single involcation of Cy_Eval.  Holds one instance of
+  // a work queue from the Fair Scheme.
+  struct Cy_ComputationFrame
+  {
+    std::list<Cy_EvalFrame> * computation;
+    Cy_ComputationFrame * next;
+  };
+
+  // A linked list of current computations.  Each element of the list is an
+  // activation of Cy_Eval.
+  Cy_ComputationFrame * Cy_GlobalComputations = nullptr;
+
+  // The current fingerprint.  Accessible through Cy_GlobalComputations, but duplicated
+  // here for faster access.
+  Fingerprint * Cy_CurrentFingerprint = nullptr;
+
+  // Gets the representation of the current fingerprint.
+  void Cy_ReprFingerprint(FILE * stream)
+  {
+    if(Cy_CurrentFingerprint)
+    {
+      auto & fp = *Cy_CurrentFingerprint;
+      size_t const n = fp.size();
+      bool first = true;
+      for(size_t i=0; i<n; ++i)
+      {
+        switch(fp.test_no_check(i))
+        {
+          case ChoiceState::LEFT:
+            if(!first) fputc(',', stream); else first = false;
+            fprintf(stream, "%zu:L", i); break;
+          case ChoiceState::RIGHT:
+            if(!first) fputc(',', stream); else first = false;
+            fprintf(stream, "%zu:R", i); break;
+          case ChoiceState::UNDETERMINED:;
+        }
+      }
+    }
+  }
+
+  // Tests the indicated choice in the current fingerprint.  Precondition:
+  // Cy_Eval is on the stack, so that Cy_CurrentFingerprint is non-null.
+  bool Cy_TestChoiceIsMade(aux_t id)
+    { return Cy_CurrentFingerprint->choice_is_made(id); }
+
+  // Indicates whether a made choice is LEFT or RIGHT.  Precondition: Cy_TestChoiceIsMade(id).
+  bool Cy_TestChoiceIsLeft(aux_t id)
+    { return Cy_CurrentFingerprint->choice_is_left_no_check(id); }
+
+  // Produces all of the node pointers reachable from Cy_GlobalComputations in
+  // some order, ending with a null pointer.
+  node * CyMem_NextComputationRoot()
+  {
+    static struct State
+    {
+      State() : frame(nullptr) {}
+      Cy_ComputationFrame * frame;
+      std::list<Cy_EvalFrame>::const_iterator pos, end;
+    } state;
+
+    // Initialize or increment the position.
+    if(!state.frame)
+    {
+      // No computations.
+      if(!Cy_GlobalComputations) return nullptr;
+      state.frame = Cy_GlobalComputations;
+      state.pos = state.frame->computation->begin();
+      state.end = state.frame->computation->end();
+    }
+    else
+      ++state.pos;
+
+    // Go to the next computation, if needed.
+    while(state.pos == state.end)
+    {
+      if(!(state.frame = state.frame->next))
+        break;
+      state.pos = state.frame->computation->begin();
+      state.end = state.frame->computation->end();
+    }
+    return state.frame ? state.pos->expr : nullptr;
+  }
+
   // Evaluates an expression.  Calls yield(x) for each result x.
   void Cy_Eval(node * root, void(*yield)(node * root))
   {
-    CyMem_PushRoot(root);
+    // Set up this computations.
     std::list<Cy_EvalFrame> computation = {
         {root, std::shared_ptr<Fingerprint>(new Fingerprint())}
       };
+
+    // Link it into the list of global computations.
+    Cy_ComputationFrame compframe = { &computation, Cy_GlobalComputations };
+    Cy_GlobalComputations = &compframe;
+    struct Cleanup
+      { ~Cleanup() { Cy_GlobalComputations = Cy_GlobalComputations->next; } }
+      _cleanup;
+
     while(!computation.empty())
     {
       Cy_EvalFrame & frame = computation.front();
+      Cy_CurrentFingerprint = frame.fingerprint.get();
       node * expr = frame.expr;
       expr->vptr->N(expr);
       redo: switch(expr->tag)
@@ -349,10 +514,10 @@ extern "C"
             {
               // Discard no expression.
               auto left = frame.fingerprint->clone();
-              left->set_left(id);
+              left->set_left_no_check(id); // note: call to test() dominates.
               computation.emplace_back(SUCC_0(expr), left);
               frame.expr = SUCC_1(expr);
-              frame.fingerprint->set_right(id);
+              frame.fingerprint->set_right_no_check(id); // note: as above
               break;
             }
           }
@@ -369,7 +534,7 @@ extern "C"
           computation.pop_front();
       }
     }
-    CyMem_PopRoot();
+    Cy_CurrentFingerprint = nullptr;
   }
 
   // Note: root is a [Char], already normalized.
@@ -447,6 +612,7 @@ extern "C"
     node * arg = SUCC_0(root);
     CyPrelude_DollarHashHash(arg);
     Cy_FPrint(arg, stderr);
+    putc('\n', stderr);
     std::exit(EXIT_FAILURE); // FIXME: should throw or lngjump.
   }
 
@@ -636,21 +802,160 @@ extern "C"
     }
   }
 
+  // cond :: Success -> a -> a
+  void CyPrelude_cond(node * root)
+  {
+    node * lhs;
+    #define WHEN_FREE(arg) Cy_Suspend()
+    #include "normalize1st.def"
+    root->vptr = &CyVt_Fwd;
+    root->tag = FWD;
+    SUCC_0(root) = SUCC_1(root);
+  }
+
+  // Concurrent conjunction on constraints.
+  // An expression like (c1 & c2) is evaluated by evaluating
+  // the constraints c1 and c2 in a concurrent manner.
+  // (&)     :: Success -> Success -> Success
+  void CyPrelude_Amp(node * root) __asm__("CyPrelude_&");
+  void CyPrelude_Amp(node * root)
+  {
+    // FIXME: normalize sequentially. if LHS is a var, then try the RHS.
+    #define WHEN_FREE(arg) Cy_Suspend()
+    #include "normalize2.def"
+    root->vptr = &CyVt_Success;
+    root->tag = CTOR;
+  }
+
+  // Binds a variable to another node.  In a root expression matching the pattern
+  // (to=:=from), this replaces from with (to ?_i from') where i is a fresh
+  // choice ID and from' is a new free variable.  The computation fingerprints
+  // are also modified to make the appropriate choice for ?_i.
+  void Cy_BindVar(node * root, node * from, node * to)
+  {
+    // Create a new variable.
+    node * newvar;
+    redo: NODE_ALLOC(newvar, redo);
+    newvar->vptr = from->vptr;
+    newvar->tag = FREE;
+
+    // Replace the second variable (could be either one) with a choice.
+    from->vptr = &CyVt_Choice;
+    from->tag = CHOICE;
+    aux_t const id = Cy_NextChoiceId++;
+    from->aux = id;
+    from->slot0 = reinterpret_cast<char*>(to);
+    from->slot1 = reinterpret_cast<char*>(newvar);
+
+    // Update the fingerprints.  The first eval frame (the current computation)
+    // chooses left, and all others choose right.
+    assert(Cy_GlobalComputations);
+    auto pos = Cy_GlobalComputations->computation->begin();
+    auto end = Cy_GlobalComputations->computation->end();
+    assert(pos!=end);
+    pos->fingerprint->set_left(id);
+    for(++pos; pos!=end; ++pos)
+      pos->fingerprint->set_right(id);
+
+    // Return Success.
+    root->vptr = &CyVt_Success;
+    root->tag = CTOR;
+  }
+
   void CyPrelude_Eq(node *) __asm__("CyPrelude_==");
   void CyPrelude_Eq(node * root)
-    { root->vptr = SUCC_0(root)->vptr->equals; }
+  {
+    node * lhs, * rhs;
+    bool freelhs = false;
+    #define WHEN_FREE(lhs) freelhs = true;
+    #include "normalize1st.def"
+    #define WHEN_FREE(rhs) \
+      if(freelhs) { printf("equality between free variables"); Cy_Suspend(); }
+    #include "normalize2nd.def"
+    root->vptr = (freelhs ? rhs : lhs)->vptr->equal;
+  }
+
+  void CyPrelude_EqColonEq(node *) __asm__("CyPrelude_=:=");
+  void CyPrelude_EqColonEq(node * root)
+  {
+    node * lhs, * rhs;
+    bool freelhs = false;
+    #define WHEN_FREE(lhs) freelhs = true;
+    #include "normalize1st.def"
+    #define WHEN_FREE(rhs) if(freelhs) return Cy_BindVar(root, rhs, lhs);
+    #include "normalize2nd.def"
+    root->vptr = (freelhs ? rhs : lhs)->vptr->equate;
+  }
+
+  void CyPrelude_EqColonLtEq(node *) __asm__("CyPrelude_=:<=");
+  void CyPrelude_EqColonLtEq(node * root)
+  {
+    node * lhs;
+    #define WHEN_FREE(lhs) return Cy_BindVar(root, lhs, SUCC_1(root));
+    #include "normalize1st.def"
+    root->vptr = lhs->vptr->ns_equate;
+  }
 
   void CyPrelude_compare(node * root)
-    { root->vptr = SUCC_0(root)->vptr->compare; }
+  {
+    node * lhs, * rhs;
+    bool freelhs = false;
+    #define WHEN_FREE(lhs) freelhs = true;
+    #include "normalize1st.def"
+    // By convention:
+    //    "_a < _b | isVar(_a) && isVar(_b) = False"
+    // There seems to be no good answer.  Perhaps gen_Bool is better?  This behavior
+    // matches KiCS2.  It seems to instantiate both variables to ().
+    #define WHEN_FREE(rhs) if(freelhs) return Cy_false(root);
+    #include "normalize2nd.def"
+    root->vptr = (freelhs ? rhs : lhs)->vptr->compare;
+  }
+  
+  static size_t CyFree_NextId = 0;
+  static std::unordered_set<node*> CyFree_Seen;
 
-  void CyPrelude_show(node * root)
-    { root->vptr = SUCC_0(root)->vptr->show; }
+  void CyFree_ResetCounter()
+  {
+    CyFree_NextId = 0;
+    CyFree_Seen.clear();
+  }
+
+  void Cy_Free_show(node * root)
+  {
+    node * arg = SUCC_0(root);
+    if(CyFree_Seen.insert(arg).second)
+    {
+      // If unseen, put the string into the free variable's data region.
+      char * p = &DATA(arg, char);
+      *p++ = '_';
+      size_t id = CyFree_NextId++;
+      if(id<26)
+      {
+        *p++ = 'a' + id;
+        *p = '\0';
+      }
+      else
+      {
+        *p++ = 'a';
+        size_t constexpr maxsize = sizeof(arg->slot0) + sizeof(arg->slot1) - 2;
+        snprintf(p, maxsize, "%zu", (id-25));
+      }
+    }
+    Cy_CStringToCyString(&DATA(arg, char), root);
+  }
 
   void CyPrelude_prim_label(node * root)
   {
     node * arg = SUCC_0(root);
     char const * str = arg->vptr->label(arg);
     Cy_CStringToCyString(str, root);
+  }
+
+  void CyPrelude_show(node * root)
+  {
+    #define WHEN_FREE(lhs) return Cy_Free_show(root);
+    #include "normalize1.def"
+    root->vptr = arg->vptr->show;
   }
 
   // Gives the representation of a char in a double-quoted string.
@@ -678,188 +983,28 @@ extern "C"
     }
   }
   
-  static size_t CyFree_NextId = 0;
-  static std::unordered_set<node*> CyFree_Seen;
-
-  void CyFree_ResetCounter()
-  {
-    CyFree_NextId = 0;
-    CyFree_Seen.clear();
-  }
-
-  // show.freevar
-  void Cy_Free_show(node *) __asm__("CyPrelude_primitive.show.freevar");
-  void Cy_Free_show(node * root)
-  {
-    node * arg = SUCC_0(root);
-    if(CyFree_Seen.insert(arg).second)
-    {
-      // If unseen, put the string into the free variable's data region.
-      char * p = &DATA(arg, char);
-      *p++ = '_';
-      size_t id = CyFree_NextId++;
-      if(id<26)
-      {
-        *p++ = 'a' + id;
-        *p = '\0';
-      }
-      else
-      {
-        *p++ = 'a';
-        size_t constexpr maxsize = sizeof(arg->slot0) + sizeof(arg->slot1) - 2;
-        snprintf(p, maxsize, "%zu", (id-25));
-      }
-    }
-    Cy_CStringToCyString(&DATA(arg, char), root);
-  }
-
-  // ==.fwd
-  void CyPrelude_FwdEq(node *) __asm__("CyPrelude_primitive.==.fwd");
-  void CyPrelude_FwdEq(node * root)
-  {
-    node *& arg0 = SUCC_0(root);
-    arg0 = DATA(arg0, node *);
-    root->vptr = arg0->vptr->equals;
-  }
-
-  // compare.fwd
-  void Cy_Fwd_compare(node *) __asm__("CyPrelude_primitive.compare.fwd");
-  void Cy_Fwd_compare(node * root)
-  {
-    node *& arg0 = SUCC_0(root);
-    arg0 = DATA(arg0, node *);
-    root->vptr = arg0->vptr->compare;
-  }
-
-  // show.fwd
-  void Cy_Fwd_show(node *) __asm__("CyPrelude_primitive.show.fwd");
-  void Cy_Fwd_show(node * root)
-  {
-    node *& arg0 = SUCC_0(root);
-    arg0 = DATA(arg0, node *);
-    root->vptr = arg0->vptr->show;
-  }
-
-  // ==.choice
-  void Cy_Choice_Eq(node *) __asm__("CyPrelude_primitive.==.choice");
-  void Cy_Choice_Eq(node * root)
-  {
-    node * arg0 = SUCC_0(root);
-    node * lhs_choice, * rhs_choice;
-  redo:
-    NODE_ALLOC(lhs_choice, redo);
-    NODE_ALLOC(rhs_choice, redo);
-    lhs_choice->vptr = rhs_choice->vptr = SUCC_0(arg0)->vptr->equals;
-    lhs_choice->tag = rhs_choice->tag = OPER;
-    lhs_choice->slot0 = arg0->slot0;
-    rhs_choice->slot0 = arg0->slot1;
-    lhs_choice->slot1 = rhs_choice->slot1 = root->slot1;
-    root->vptr = &CyVt_Choice;
-    root->tag = CHOICE;
-    root->aux = arg0->aux;
-    root->slot0 = lhs_choice;
-    root->slot1 = rhs_choice;
-  }
-
-  // compare.choice
-  void Cy_Choice_compare(node *) __asm__("CyPrelude_primitive.compare.choice");
-  void Cy_Choice_compare(node * root)
-  {
-    node * arg0 = SUCC_0(root);
-    node * lhs_choice, * rhs_choice;
-  redo:
-    NODE_ALLOC(lhs_choice, redo);
-    NODE_ALLOC(rhs_choice, redo);
-    lhs_choice->vptr = rhs_choice->vptr = SUCC_0(arg0)->vptr->compare;
-    lhs_choice->tag = rhs_choice->tag = OPER;
-    lhs_choice->slot0 = arg0->slot0;
-    rhs_choice->slot0 = arg0->slot1;
-    lhs_choice->slot1 = rhs_choice->slot1 = root->slot1;
-    root->vptr = &CyVt_Choice;
-    root->tag = CHOICE;
-    root->aux = arg0->aux;
-    root->slot0 = lhs_choice;
-    root->slot1 = rhs_choice;
-  }
-
-  // show.choice
-  void Cy_Choice_show(node *) __asm__("CyPrelude_primitive.show.choice");
-  void Cy_Choice_show(node * root)
-  {
-    node * arg0 = SUCC_0(root);
-    node * lhs_choice, * rhs_choice;
-  redo:
-    NODE_ALLOC(lhs_choice, redo);
-    NODE_ALLOC(rhs_choice, redo);
-    lhs_choice->vptr = rhs_choice->vptr = SUCC_0(arg0)->vptr->show;
-    lhs_choice->tag = rhs_choice->tag = OPER;
-    lhs_choice->slot0 = arg0->slot0;
-    rhs_choice->slot0 = arg0->slot1;
-    lhs_choice->slot1 = rhs_choice->slot1 = root->slot1;
-    root->vptr = &CyVt_Choice;
-    root->tag = CHOICE;
-    root->aux = arg0->aux;
-    root->slot0 = lhs_choice;
-    root->slot1 = rhs_choice;
-  }
-
-  // ==.oper
-  void Cy_Oper_Eq(node *) __asm__("CyPrelude_primitive.==.oper");
-  void Cy_Oper_Eq(node * root)
-  {
-    node * arg0 = SUCC_0(root);
-    arg0->vptr->H(arg0);
-    root->vptr = arg0->vptr->equals;
-  }
-
-  // compare.oper
-  void Cy_Oper_compare(node *) __asm__("CyPrelude_primitive.compare.oper");
-  void Cy_Oper_compare(node * root)
-  {
-    node * arg0 = SUCC_0(root);
-    arg0->vptr->H(arg0);
-    root->vptr = arg0->vptr->compare;
-  }
-
-  // show.oper
-  void Cy_Oper_show(node *) __asm__("CyPrelude_primitive.show.oper");
-  void Cy_Oper_show(node * root)
-  {
-    node * arg0 = SUCC_0(root);
-    arg0->vptr->H(arg0);
-    root->vptr = arg0->vptr->show;
-  }
-
-  // ==.Success
-  void Cy_Success_Eq(node *) __asm__("CyPrelude_primitive.==.Success");
-  void Cy_Success_Eq(node * root)
-  {
-    CyPrelude_true(root);
-  }
-
-  // compare.Success
-  void Cy_Success_compare(node *) __asm__("CyPrelude_primitive.compare.Success");
-  void Cy_Success_compare(node * root)
-  {
-    CyPrelude_eq(root);
-  }
-
-  // show.Success
-  void Cy_Success_show(node *) __asm__("CyPrelude_primitive.show.Success");
-  void Cy_Success_show(node * root)
-  {
-    // TODO
-    printf("Showing for success is not implemented");
-    std::exit(1);
-  }
-
   // ==.IO
   void Cy_IO_Eq(node *) __asm__("CyPrelude_primitive.==.IO");
   void Cy_IO_Eq(node * root)
   {
     // TODO
-    printf("Equality for IO is not implemented");
-    std::exit(1);
+    CyErr_Undefined("(==)", "IO");
+  }
+
+  // =:=.IO
+  void Cy_IO_EqColonEq(node *) __asm__("CyPrelude_primitive.=:=.IO");
+  void Cy_IO_EqColonEq(node * root)
+  {
+    // TODO
+    CyErr_Undefined("(=:=)", "IO");
+  }
+
+  // =:<=.IO
+  void Cy_IO_EqColonLtEq(node *) __asm__("CyPrelude_primitive.=:<=.IO");
+  void Cy_IO_EqColonLtEq(node * root)
+  {
+    // TODO
+    CyErr_Undefined("(=:<=)", "IO");
   }
 
   // compare.IO
@@ -867,73 +1012,96 @@ extern "C"
   void Cy_IO_compare(node * root)
   {
     // TODO
-    printf("Comparison for IO is not implemented");
-    std::exit(1);
+    CyErr_Undefined("compare", "IO");
   }
 
   // show.IO
   void Cy_IO_show(node *) __asm__("CyPrelude_primitive.show.IO");
   void Cy_IO_show(node * root)
   {
-    // TODO
-    printf("Show for IO is not implemented");
-    std::exit(1);
+    node * io = SUCC_0(root);
+    SUCC_0(root) = SUCC_0(io);
+    root->vptr = io->vptr->show;
   }
+}
 
-  // ==.T
-  // Creates the lowest-level function implementing equality for a fundamental
-  // type.
-
-  void Cy_Char_Eq(node *) __asm__("CyPrelude_primitive.==.Char");
-  void Cy_Char_Eq(node * root)
+namespace
+{
+  // Implements the lowest-level equality (==, =:=, or =:<=) function for a
+  // fundamental data type.
+  template<typename T>
+  void Cy_Data_Eq(
+      node * root
+    , vtable * vpos, vtable * vneg
+    , tag_t tpos, tag_t tneg
+    , char const * typename_
+    )
   {
+    // FIXME: this can be optimized (maybe?).  The arguments are already
+    // head-normalized from another function such as CyPrelude_Eq.
     #define TAG(arg) arg->tag
-    #define WHEN_FREE(arg) Cy_Suspend()
+    #define WHEN_FREE(arg) return CyErr_NoGenerator(typename_);
     #include "normalize2.def"
-    bool const result = (DATA(lhs, char) == DATA(rhs, char));
+    bool const result = (DATA(lhs, T) == DATA(rhs, T));
     vtable * const vptr = result ? &CyVt_True : &CyVt_False;
-    int64_t const tag = result ? 1 : 0;
+    tag_t const tag = result ? 1 : 0;
     root->vptr = vptr;
     root->tag = tag;
   }
+}
+
+extern "C"
+{
+  // ==.T
+  void Cy_Char_Eq(node *) __asm__("CyPrelude_primitive.==.Char");
+  void Cy_Char_Eq(node * root)
+    { Cy_Data_Eq<char>(root, &CyVt_True, &CyVt_False, 1, 0, "Char"); }
 
   void Cy_Int_Eq(node *) __asm__("CyPrelude_primitive.==.Int");
   void Cy_Int_Eq(node * root)
-  {
-    #define TAG(arg) arg->tag
-    #define WHEN_FREE(arg) Cy_Suspend()
-    #include "normalize2.def"
-    bool const result = (DATA(lhs, int64_t) == DATA(rhs, int64_t));
-    vtable * const vptr = result ? &CyVt_True : &CyVt_False;
-    int64_t const tag = result ? 1 : 0;
-    root->vptr = vptr;
-    root->tag = tag;
-  }
+    { Cy_Data_Eq<int64_t>(root, &CyVt_True, &CyVt_False, 1, 0, "Int"); }
 
   void Cy_Float_Eq(node *) __asm__("CyPrelude_primitive.==.Float");
   void Cy_Float_Eq(node * root)
-  {
-    #define TAG(arg) arg->tag
-    #define WHEN_FREE(arg) Cy_Suspend()
-    #include "normalize2.def"
-    bool const result = (DATA(lhs, double) == DATA(rhs, double));
-    vtable * const vptr = result ? &CyVt_True : &CyVt_False;
-    int64_t const tag = result ? 1 : 0;
-    root->vptr = vptr;
-    root->tag = tag;
-  }
+    { Cy_Data_Eq<double>(root, &CyVt_True, &CyVt_False, 1, 0, "Float"); }
 
-  // compare.T
-  // Creates the lowest-level function implementing comparison for a
-  // fundamental type.
-  void Cy_Char_compare(node *) __asm__("CyPrelude_primitive.compare.Char");
-  void Cy_Char_compare(node * root)
+  // =:=.T
+  void Cy_Char_EqColonEq(node *) __asm__("CyPrelude_primitive.=:=.Char");
+  void Cy_Char_EqColonEq(node * root)
+    { Cy_Data_Eq<char>(root, &CyVt_Success, &CyVt_Failed, CTOR, FAIL, "Char"); }
+
+  void Cy_Int_EqColonEq(node *) __asm__("CyPrelude_primitive.=:=.Int");
+  void Cy_Int_EqColonEq(node * root)
+    { Cy_Data_Eq<int64_t>(root, &CyVt_Success, &CyVt_Failed, CTOR, FAIL, "Int"); }
+
+  void Cy_Float_EqColonEq(node *) __asm__("CyPrelude_primitive.=:=.Float");
+  void Cy_Float_EqColonEq(node * root)
+    { Cy_Data_Eq<double>(root, &CyVt_Success, &CyVt_Failed, CTOR, FAIL, "Float"); }
+
+  // =:<=.T
+  void Cy_Char_EqColonLtEq(node *) __asm__("CyPrelude_primitive.=:<=.Char");
+  void Cy_Char_EqColonLtEq(node * root)
+    { Cy_Data_Eq<char>(root, &CyVt_Success, &CyVt_Failed, CTOR, FAIL, "Char"); }
+
+  void Cy_Int_EqColonLtEq(node *) __asm__("CyPrelude_primitive.=:<=.Int");
+  void Cy_Int_EqColonLtEq(node * root)
+    { Cy_Data_Eq<int64_t>(root, &CyVt_Success, &CyVt_Failed, CTOR, FAIL, "Int"); }
+
+  void Cy_Float_EqColonLtEq(node *) __asm__("CyPrelude_primitive.=:<=.Float");
+  void Cy_Float_EqColonLtEq(node * root)
+    { Cy_Data_Eq<double>(root, &CyVt_Success, &CyVt_Failed, CTOR, FAIL, "Float"); }
+}
+
+namespace
+{
+  template<typename T>
+  void Cy_Data_compare(node * root, char const * typename_)
   {
     #define TAG(arg) arg->tag
-    #define WHEN_FREE(arg) Cy_Suspend()
+    #define WHEN_FREE(arg) return CyErr_NoGenerator(typename_);
     #include "normalize2.def"
-    char const lhs_data = DATA(lhs, char);
-    char const rhs_data = DATA(rhs, char);
+    char const lhs_data = DATA(lhs, T);
+    char const rhs_data = DATA(rhs, T);
     if(lhs_data < rhs_data)
     {
       root->vptr = &CyVt_LT;
@@ -950,60 +1118,24 @@ extern "C"
       root->tag = 1;
     }
   }
+}
+
+extern "C"
+{
+  // compare.T
+  void Cy_Char_compare(node *) __asm__("CyPrelude_primitive.compare.Char");
+  void Cy_Char_compare(node * root)
+    { Cy_Data_compare<char>(root, "Char"); }
 
   void Cy_Int_compare(node *) __asm__("CyPrelude_primitive.compare.Int");
   void Cy_Int_compare(node * root)
-  {
-    #define TAG(arg) arg->tag
-    #define WHEN_FREE(arg) Cy_Suspend()
-    #include "normalize2.def"
-    int64_t const lhs_data = DATA(lhs, int64_t);
-    int64_t const rhs_data = DATA(rhs, int64_t);
-    if(lhs_data < rhs_data)
-    {
-      root->vptr = &CyVt_LT;
-      root->tag = 0;
-    }
-    else if(rhs_data < lhs_data)
-    {
-      root->vptr = &CyVt_GT;
-      root->tag = 2;
-    }
-    else
-    {
-      root->vptr = &CyVt_EQ;
-      root->tag = 1;
-    }
-  }
+    { Cy_Data_compare<int64_t>(root, "Int"); }
 
   void Cy_Float_compare(node *) __asm__("CyPrelude_primitive.compare.Float");
   void Cy_Float_compare(node * root)
-  {
-    #define TAG(arg) arg->tag
-    #define WHEN_FREE(arg) Cy_Suspend()
-    #include "normalize2.def"
-    double const lhs_data = DATA(lhs, double);
-    double const rhs_data = DATA(rhs, double);
-    if(lhs_data < rhs_data)
-    {
-      root->vptr = &CyVt_LT;
-      root->tag = 0;
-    }
-    else if(rhs_data < lhs_data)
-    {
-      root->vptr = &CyVt_GT;
-      root->tag = 2;
-    }
-    else
-    {
-      root->vptr = &CyVt_EQ;
-      root->tag = 1;
-    }
-  }
+    { Cy_Data_compare<double>(root, "Float"); }
 
   // show.T
-  // Creates the lowest-level function implementing comparison for a
-  // fundamental type.  The successors are guaranteed to be normalized.
   void Cy_Char_show(node *) __asm__("CyPrelude_primitive.show.Char");
   void Cy_Char_show(node * root) { CyPrelude_prim_label(root); }
 

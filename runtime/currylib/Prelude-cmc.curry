@@ -108,10 +108,9 @@ f $# x  = f $! (ensureNotFree x)
 --- Aborts the execution with an error message.
 error :: String -> _
 error external
--- error x = prim_error $## x
 
--- prim_error    :: String -> _
--- prim_error external
+prim_error_cmp_fun :: _
+prim_error_cmp_fun = error "comparison is undefined for functions"
 
 --- A non-reducible polymorphic function.
 --- It is useful to express a failure in a search branch of the execution.
@@ -559,7 +558,7 @@ negateFloat :: Float -> Float
 negateFloat external
 
 -- Constraints
-data Success -- = Success
+data Success = Success
 
 --- The equational constraint.
 --- (e1 =:= e2) is satisfiable if both sides e1 and e2 can be

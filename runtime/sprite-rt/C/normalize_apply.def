@@ -15,6 +15,7 @@
 #define WHEN_FREE(arg)
 #endif
 
+  assert(root->tag != FWD);
   static void * table[] =
       { &&t_fail, &&t_free, &&t_fwd, &&t_choice, &&t_oper, &&t_ctor};
   node * arg = SUCC_0(root);

@@ -127,70 +127,113 @@ namespace
     return str;
   }
 
-  // Performs a pull tab at node * src, having the specified arity.  itgt is
-  // the index of the successor that is a choice.
+  // Performs a pull tab at node * src, having the specified arity.  Or, if the
+  // choice in question was previously made in the current fingerprint,
+  // bypasses it.  itgt is the index of the successor that is a choice.
   void exec_pulltab(
       rt_h const & rt, value const & src, value const & tgt, size_t arity
     , size_t itgt, label const & out_of_memory_handler
+    , CompilerOptions const & options
     )
   {
-    value lhs = rt.node_alloc(*rt.node_t, out_of_memory_handler);
-    value rhs = rt.node_alloc(*rt.node_t, out_of_memory_handler);
-    lhs.arrow(ND_VPTR) = src.arrow(ND_VPTR);
-    lhs.arrow(ND_TAG) = src.arrow(ND_TAG);
-    rhs.arrow(ND_VPTR) = src.arrow(ND_VPTR);
-    rhs.arrow(ND_TAG) = src.arrow(ND_TAG);
-    // OK to ignore aux.  The root cannot be a choice because a choice
-    // has no step function.
-
-    if(arity < 3)
+    auto pull_tab_code = [&]
     {
-      for(size_t i=0; i<arity; ++i)
+      value lhs = rt.node_alloc(*rt.node_t, out_of_memory_handler);
+      value rhs = rt.node_alloc(*rt.node_t, out_of_memory_handler);
+      lhs.arrow(ND_VPTR) = src.arrow(ND_VPTR);
+      lhs.arrow(ND_TAG) = src.arrow(ND_TAG);
+      rhs.arrow(ND_VPTR) = src.arrow(ND_VPTR);
+      rhs.arrow(ND_TAG) = src.arrow(ND_TAG);
+      // OK to ignore aux.  The root cannot be a choice because a choice
+      // has no step function.
+
+      if(arity < 3)
       {
-        if(i == itgt)
+        for(size_t i=0; i<arity; ++i)
         {
-          lhs.arrow(ND_SLOT0+i) = tgt.arrow(ND_SLOT0);
-          rhs.arrow(ND_SLOT0+i) = tgt.arrow(ND_SLOT1);
-        }
-        else
-        {
-          value tmp = src.arrow(ND_SLOT0+i);
-          lhs.arrow(ND_SLOT0+i) = tmp;
-          rhs.arrow(ND_SLOT0+i) = tmp;
+          if(i == itgt)
+          {
+            lhs.arrow(ND_SLOT0+i) = tgt.arrow(ND_SLOT0);
+            rhs.arrow(ND_SLOT0+i) = tgt.arrow(ND_SLOT1);
+          }
+          else
+          {
+            value tmp = src.arrow(ND_SLOT0+i);
+            lhs.arrow(ND_SLOT0+i) = tmp;
+            rhs.arrow(ND_SLOT0+i) = tmp;
+          }
         }
       }
-    }
+      else
+      {
+        // The LHS argument array is stolen from the root node.
+        value lhs_children = set_extended_child_array(
+            lhs, src.arrow(ND_SLOT0)
+          );
+        // The RHS argument array is allocated.
+        value rhs_children = set_extended_child_array(
+            rhs, rt.Cy_ArrayAllocTyped(static_cast<aux_t>(arity))
+          );
+
+        for(size_t i=0; i<arity; ++i)
+        {
+          if(i == itgt)
+          {
+            lhs_children[i] = tgt.arrow(ND_SLOT0);
+            rhs_children[i] = tgt.arrow(ND_SLOT1);
+          }
+          else
+          {
+            // Nothing to do for LHS.
+            rhs_children[i] = lhs_children[i];
+          }
+        }
+      }
+      // Do not call this->destroy_target.  The successor list was stolen.
+      src.arrow(ND_VPTR) = rt.choice_vt;
+      src.arrow(ND_TAG) = compiler::CHOICE;
+      src.arrow(ND_AUX) = tgt.arrow(ND_AUX);
+      src.arrow(ND_SLOT0) = bitcast(lhs, *types::char_());
+      src.arrow(ND_SLOT1) = bitcast(rhs, *types::char_());
+    };
+    
+    // Either just generate the pull-tab, or attempt a bypass first, depending
+    // on the option.
+    if(!options.bypass_choices)
+      pull_tab_code();
     else
     {
-      // The LHS argument array is stolen from the root node.
-      value lhs_children = set_extended_child_array(
-          lhs, src.arrow(ND_SLOT0)
+      rt.printf("[C] Running bypass code.\n");
+      if_(
+          rt.Cy_TestChoiceIsMade(tgt.arrow(ND_AUX))
+        , [&]
+          { 
+            rt.printf("[C] Choice is made.\n");
+            if_(
+                rt.Cy_TestChoiceIsLeft(tgt.arrow(ND_AUX))
+              , [&]
+                {
+                  // Bypass left.
+                  rt.printf("[C] Choice is LEFT.\n");
+                  if(arity < 3)
+                    src.arrow(ND_SLOT0+itgt) = tgt.arrow(ND_SLOT0);
+                  else
+                    get_extended_child_array(rt, src)[itgt] = tgt.arrow(ND_SLOT0);
+                }
+              , [&]
+                {
+                  // Bypass right.
+                  rt.printf("[C] Choice is RIGHT.\n");
+                  if(arity < 3)
+                    src.arrow(ND_SLOT0+itgt) = tgt.arrow(ND_SLOT1);
+                  else
+                    get_extended_child_array(rt, src)[itgt] = tgt.arrow(ND_SLOT1);
+                }
+              );
+          }
+        , [&] { pull_tab_code(); }
         );
-      // The RHS argument array is allocated.
-      value rhs_children = set_extended_child_array(
-          rhs, rt.Cy_ArrayAllocTyped(static_cast<aux_t>(arity))
-        );
-
-      for(size_t i=0; i<arity; ++i)
-      {
-        if(i == itgt)
-        {
-          lhs_children[i] = tgt.arrow(ND_SLOT0);
-          rhs_children[i] = tgt.arrow(ND_SLOT1);
-        }
-        else
-        {
-          // Nothing to do for LHS.
-          rhs_children[i] = lhs_children[i];
-        }
-      }
     }
-    // Do not call this->destroy_target.  The successor list was stolen.
-    src.arrow(ND_VPTR) = rt.choice_vt;
-    src.arrow(ND_TAG) = compiler::CHOICE;
-    src.arrow(ND_AUX) = tgt.arrow(ND_AUX);
-    src.arrow(ND_SLOT0) = bitcast(lhs, *types::char_());
-    src.arrow(ND_SLOT1) = bitcast(rhs, *types::char_());
   }
 
   /**
@@ -630,13 +673,13 @@ namespace
         compiler::ModuleSTab const & module_stab_
       , tgt::value const & root_p_
       , curry::Function const * fundef_ = nullptr
-      , bool enable_tracing_ = false
+      , compiler::CompilerOptions const & options_ = compiler::CompilerOptions()
       )
       : Rewriter(module_stab_, root_p_, fundef_)
       , inductive_alloca(tgt::local(node_pointer_type))
-      , enable_tracing(enable_tracing_)
+      , options(options_)
     {
-      if(enable_tracing) trace_step_start(rt, root_p);
+      if(options.enable_tracing) trace_step_start(rt, root_p);
     }
 
   private:
@@ -646,16 +689,23 @@ namespace
     // encountered, so that it can communicate the new target to other sections
     // of code.
     tgt::ref inductive_alloca;
-    bool enable_tracing;
+    compiler::CompilerOptions const & options;
 
     // Emits code to clean up any function-specific allocations and then
     // returns.
     void clean_up_and_return()
     {
       for(size_t i=LOCAL_ID_START; i<next_local_id; ++i)
-        rt.CyMem_PopRoot(enable_tracing);
-      if(enable_tracing) trace_step_end(rt, root_p);
+        rt.CyMem_PopRoot(options.enable_tracing);
+      if(options.enable_tracing) trace_step_end(rt, root_p);
       return_();
+    }
+
+    template<typename...Ts>
+    void error(std::string const & message, Ts const &...ts)
+    {
+      rt.fprintf(rt.stderr_, message.c_str(), std::string(ts).c_str()...);
+      rt.Cy_Suspend();
     }
 
   public:
@@ -671,7 +721,7 @@ namespace
         value p = this->new_(this->resolve_path(next_local_id), condition);
 
         // Add the local allocation, p, as a new root for gc.
-        rt.CyMem_PushRoot(p, enable_tracing);
+        rt.CyMem_PushRoot(p, options.enable_tracing);
         return next_local_id++;
       }
       else
@@ -690,6 +740,24 @@ namespace
       {
         ValueSaver saver(target_p, var);
         auto const & lhs = getlhs(*cases.begin());
+
+        // Sometimes a typename is used where a constructor is needed.  See
+        // show.Int, for instance.  It is used to head-normalize a built-in
+        // type (which has just one constructor).
+        if(auto qn = lhs.getqname())
+        {
+          static const std::string builtins[] =
+              {"Char", "Int", "Float", "Success", "IO"};
+          for(auto const & name: builtins)
+          {
+            if(qn->str() == ("Prelude." + name))
+            {
+              error("No generator for Prelude." + name);
+              return compiler::CTOR; // meaningless
+            }
+          }
+        }
+
         (this->Rewriter::operator())(lhs);
         tag = get_case_tag(lhs, module_stab);
       }
@@ -722,6 +790,7 @@ namespace
           value choice_node = choose_storage();
           choice_node.arrow(ND_VPTR) = rt.choice_vt;
           choice_node.arrow(ND_TAG) = compiler::CHOICE;
+          choice_node.arrow(ND_AUX) = rt.Cy_NextChoiceId++;
           choice_node.arrow(ND_SLOT0) = lhs_node;
           choice_node.arrow(ND_SLOT1) = rhs_node;
 
@@ -823,16 +892,16 @@ namespace
       // FREE case
       {
         tgt::scope _ = labels[TAGOFFSET + FREE];
+        tgt::value inductive = this->inductive_alloca;
+        auto invalid = -(TAGOFFSET+1);
+        compiler::tag_t tag = invalid;
         if(!branch.isflex)
         {
-          rt.Cy_Suspend();
-          clean_up_and_return();
+          tag = instantiate_variable(inductive, branch.cases);
+          tgt::goto_(jumptable[tag+TAGOFFSET], labels);
         }
         else
         {
-          tgt::value inductive = this->inductive_alloca;
-          auto invalid = -(TAGOFFSET+1);
-          compiler::tag_t tag = invalid;
           // Try to look up the available variable expansions if the condition
           // is a variable reference.  If one is not available then the
           // condition variable was constructed only to call an aux function.
@@ -890,7 +959,7 @@ namespace
           root_p.arrow(ND_SLOT1) = bitcast(inductive, *rt.char_t);
           exec_pulltab(
               this->rt, this->root_p, inductive, 2, 1
-            , this->out_of_memory_handler
+            , this->out_of_memory_handler, options
             );
         }
         else
@@ -899,7 +968,7 @@ namespace
           // FIXME: why not zip the choice all the way to the root in one step?
           exec_pulltab(
               this->rt, this->target_p, inductive, this->fundef->arity, itgt
-            , this->out_of_memory_handler
+            , this->out_of_memory_handler, options
             );
         }
         clean_up_and_return();
@@ -947,7 +1016,7 @@ namespace
   void compile_function(
       compiler::ModuleSTab const & module_stab
     , curry::Function const & fun
-    , bool enable_tracing
+    , compiler::CompilerOptions const & options
     )
   {
     try
@@ -960,7 +1029,7 @@ namespace
         label entry_;
         goto_(entry_);
         tgt::scope _ = entry_;
-        ::FunctionCompiler c(module_stab, arg("root_p"), &fun, enable_tracing);
+        ::FunctionCompiler c(module_stab, arg("root_p"), &fun, options);
         return fun.def.visit(c);
       }
     }
@@ -974,7 +1043,7 @@ namespace
   }
 
   void compile_ctor_N_function_body(
-      rt_h const & rt, size_t arity, bool enable_tracing
+      rt_h const & rt, size_t arity, compiler::CompilerOptions const & options
     )
   {
     value root_p = arg("root_p");
@@ -1046,9 +1115,11 @@ namespace
       {
         scope _ = labels[TAGOFFSET + CHOICE];
         label out_of_memory_handler = rt.make_restart_point();
-        if(enable_tracing) trace_step_start(rt, root_p);
-        exec_pulltab(rt, root_p, child, arity, ichild, out_of_memory_handler);
-        if(enable_tracing) trace_step_end(rt, root_p);
+        if(options.enable_tracing) trace_step_start(rt, root_p);
+        exec_pulltab(
+            rt, root_p, child, arity, ichild, out_of_memory_handler, options
+          );
+        if(options.enable_tracing) trace_step_end(rt, root_p);
         return_();
       }
 
@@ -1133,7 +1204,7 @@ namespace
     , curry::DataType const & dtype
     , size_t ictor
     , compiler::ModuleSTab & module_stab
-    , bool enable_tracing
+    , compiler::CompilerOptions const & options
     )
   {
     compiler::rt_h const & rt = module_stab.rt();
@@ -1147,7 +1218,7 @@ namespace
     {
       N = static_<function>(
           rt.stepfun_t, n_name, {"root_p"}
-        , [&]{ compile_ctor_N_function_body(rt, ctor.arity, enable_tracing); }
+        , [&]{ compile_ctor_N_function_body(rt, ctor.arity, options); }
         );
     }
     vt.set_initializer(_t(
@@ -1159,7 +1230,9 @@ namespace
       , &rt.Cy_Succ(ctor.arity)
       , &rt.Cy_Succ(ctor.arity)
       , &rt.Cy_Destroy(ctor.arity)
-      , &rt.CyVt_Equality(module_stab.source->name, dtype.name)
+      , &rt.CyVt_Equal(module_stab.source->name, dtype.name)
+      , &rt.CyVt_Equate(module_stab.source->name, dtype.name)
+      , &rt.CyVt_NsEquate(module_stab.source->name, dtype.name)
       , &rt.CyVt_Compare(module_stab.source->name, dtype.name)
       , &rt.CyVt_Show(module_stab.source->name, dtype.name)
       ));
@@ -1218,9 +1291,11 @@ namespace
       , &rt.Cy_Succ(fun.arity)
       , &rt.Cy_Succ(fun.arity)
       , &rt.Cy_Destroy(fun.arity)
-      , &rt.CyVt_Equality("oper")
-      , &rt.CyVt_Compare("oper")
-      , &rt.CyVt_Show("oper")
+      , &extern_(rt.vtable_t, ".vt.OPER.Prelude.prim_error_cmp_fun")
+      , &extern_(rt.vtable_t, ".vt.OPER.Prelude.prim_error_cmp_fun")
+      , &extern_(rt.vtable_t, ".vt.OPER.Prelude.prim_error_cmp_fun")
+      , &extern_(rt.vtable_t, ".vt.OPER.Prelude.prim_error_cmp_fun")
+      , &extern_(rt.vtable_t, ".vt.OPER.Prelude.prim_label")
       ));
   }
 
@@ -1329,7 +1404,7 @@ namespace
         node_stab.auxvt[&branch] = tmp;
 
         // Compile the aux function.
-        compile_function(module_stab, aux, enable_tracing);
+        compile_function(module_stab, aux, options);
       }
     }
 
@@ -1337,19 +1412,19 @@ namespace
 
     ModuleSTab & module_stab;
     NodeSTab & node_stab;
-    bool enable_tracing;
+    compiler::CompilerOptions const & options;
     size_t counter;
   };
 
   void compile_aux_functions(
       compiler::ModuleSTab & module_stab
     , curry::Function const & fun
-    , bool enable_tracing
+    , compiler::CompilerOptions const & options
     )
   {
     curry::Qname const qname{module_stab.source->name, fun.name};
     compiler::NodeSTab & node_stab = module_stab.lookup(qname);
-    CompileAuxVisitor mkaux{module_stab, node_stab, enable_tracing, 0};
+    CompileAuxVisitor mkaux{module_stab, node_stab, options, 0};
     fun.def.visit(mkaux);
   }
 }
@@ -1369,7 +1444,9 @@ namespace sprite { namespace compiler
     rt.printf("S> --- ");
     rt.CyTrace_ShowIndent();
     rt.Cy_Repr(root_p, rt.stdout_(), true);
-    rt.putchar('\n');
+    rt.printf(" {");
+    rt.Cy_ReprFingerprint(rt.stdout_());
+    rt.printf("}\n");
     rt.fflush(nullptr);
   }
 
@@ -1378,7 +1455,9 @@ namespace sprite { namespace compiler
     rt.printf("S> +++ ");
     rt.CyTrace_ShowIndent();
     rt.Cy_Repr(root_p, rt.stdout_(), true);
-    rt.putchar('\n');
+    rt.printf(" {");
+    rt.Cy_ReprFingerprint(rt.stdout_());
+    rt.printf("}\n");
     rt.fflush(nullptr);
   }
 
@@ -1387,7 +1466,9 @@ namespace sprite { namespace compiler
     rt.printf("T> +++ ");
     rt.CyTrace_ShowIndent();
     rt.Cy_Repr(root_p, rt.stdout_(), true);
-    rt.putchar('\n');
+    rt.printf(" {");
+    rt.Cy_ReprFingerprint(rt.stdout_());
+    rt.printf("}\n");
     rt.fflush(nullptr);
   }
 
@@ -1493,7 +1574,7 @@ namespace sprite { namespace compiler
       curry::Module const & cymodule
     , compiler::LibrarySTab & stab
     , llvm::LLVMContext & context
-    , bool enable_tracing
+    , compiler::CompilerOptions const & options
     )
   {
     // Create a new LLVM module and symbol table entry.
@@ -1529,7 +1610,7 @@ namespace sprite { namespace compiler
           std::string const vtname = ".vt.CTOR." + cymodule.name + "." + ctor.name;
           tgt::global vt = extern_(rt.vtable_t, vtname);
           if(is_primary && !vt.has_initializer())
-            compile_ctor_vtable(vt, dtype, ictor, module_stab, enable_tracing);
+            compile_ctor_vtable(vt, dtype, ictor, module_stab, options);
   
           // Update the symbol tables.
           module_stab.nodes.emplace(
@@ -1560,8 +1641,8 @@ namespace sprite { namespace compiler
       {
         for(auto const & fun: cymodule.functions)
         {
-          compile_aux_functions(module_stab, fun, enable_tracing);
-          compile_function(module_stab, fun, enable_tracing);
+          compile_aux_functions(module_stab, fun, options);
+          compile_function(module_stab, fun, options);
         }
       }
 

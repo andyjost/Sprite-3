@@ -1,0 +1,69 @@
+SEGV:
+casecolor
+equal 
+from 
+hamming 
+take_1 
+
+
+COMPILE ERROR (MODULE IMPORT):
+average
+
+
+SPRITE PARSE ERROR:
+bad1
+case_in_bind
+nested_case
+newline
+no_need_case
+selector_case
+
+
+GOAL SUSPENDED:
+free_
+success_free_amp1
+
+
+EXIT STATUS:
+ensure 
+free3 
+success_free_amp0 
+
+
+NO GENERATOR:
+cond 
+constraint2 
+fcase2 
+oper 
+
+
+ICURRY BUG:
+table_arg5
+table2_1
+table2
+table3
+table5
+table_let5
+
+
+UNSOUND:
+constraint1 
+
+
+INCOMPLETE:
+constraint4 
+
+
+OVEREVALUATED:
+equational_with_choice2 
+
+
+REPR DIFFERENT:
+numbers (!)
+odd_even (!)
+partial (!)
+plain (!)
+show_partial (!)
+func_show  (!)
+io  (!)
+

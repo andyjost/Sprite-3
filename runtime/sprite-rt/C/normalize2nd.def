@@ -1,0 +1,65 @@
+// Normalizes the second successor of a binary node.
+//
+// Variable root must be pre-defined.  The successor must normalize to a data
+// term (i.e., one with exactly one constructor), or TAG must be defined so that
+// the tag is never greater than zero.
+
+// The NORMALIZE macro may be defined to control how to perform normalization.
+#ifndef NORMALIZE
+#define NORMALIZE(rhs) rhs->vptr->H(rhs)
+#endif
+
+// The TAG macro may be defined to control how the tag of the inductive node is
+// obtained.  When the argument being normalized is a type with only one
+// constructor (such as a built-in data type), then the call to min is not needed.
+#ifndef TAG
+#define TAG(rhs) (rhs->tag < 0 ? rhs->tag : 0)
+#endif
+
+// The action to take when a free variable is encountered.  By default, do
+// nothing (i.e., fall through to the constructor case.
+#ifndef WHEN_FREE
+#define WHEN_FREE(rhs)
+#endif
+
+  assert(root->tag != FWD);
+  static void * table2nd[] =
+      { &&t2_fail, &&t2_free, &&t2_fwd, &&t2_choice, &&t2_oper, &&t2_ctor};
+  rhs = SUCC_1(root);
+  goto* (&table2nd[TAGOFFSET])[TAG(rhs)];
+t2_fail:
+  return CyPrelude_failed(root);
+t2_fwd:
+  rhs = reinterpret_cast<node *>(rhs->slot0);
+  goto* (&table2nd[TAGOFFSET])[TAG(rhs)];
+t2_choice:
+{
+  GENERATE_BYPASS_CODE(rhs, slot1)
+  node * lhs_choice, * rhs_choice;
+  NODE_ALLOC(lhs_choice, t2_choice);
+  NODE_ALLOC(rhs_choice, t2_choice);
+  lhs_choice->vptr = root->vptr;
+  lhs_choice->tag = root->tag;
+  lhs_choice->slot0 = root->slot0;
+  lhs_choice->slot1 = rhs->slot0;
+  rhs_choice->vptr = root->vptr;
+  rhs_choice->tag = root->tag;
+  rhs_choice->slot0 = root->slot0;
+  rhs_choice->slot1 = rhs->slot1;
+  root->vptr = &CyVt_Choice;
+  root->tag = CHOICE;
+  root->aux = rhs->aux; // copy choice id
+  root->slot0 = lhs_choice;
+  root->slot1 = rhs_choice;
+  return;
+}
+t2_oper:
+  NORMALIZE(rhs);
+  goto* (&table2nd[TAGOFFSET])[TAG(rhs)];
+t2_free:
+  WHEN_FREE(rhs);
+t2_ctor:
+#undef NORMALIZE
+#undef TAG
+#undef WHEN_FREE
+

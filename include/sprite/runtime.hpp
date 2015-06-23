@@ -78,12 +78,15 @@ namespace sprite { namespace compiler
             , *rangefun_t /*succ*/
             , *rangefun_t /*gcsucc*/
             , *stepfun_t  /*destroy*/
-            , *vtable_t   /*equality*/
-            , *vtable_t   /*comparison*/
+            , *vtable_t   /*equal*/
+            , *vtable_t   /*equate*/
+            , *vtable_t   /*ns_equate*/
+            , *vtable_t   /*compare*/
             , *vtable_t   /*show*/
             }
         #if 0
-        , {"H", "N", "label", "sentinel", "arity", "succ", "destroy", "equality", "comparison", "show"}
+        , {"H", "N", "label", "sentinel", "arity", "succ", "destroy", "equal"
+            , "equate", "ns_equate", "compare", "show"}
         #endif
         );
     }
@@ -94,7 +97,7 @@ namespace sprite { namespace compiler
   {
     enum VtMember {
         VT_H, VT_N, VT_LABEL, VT_SENTINEL, VT_ARITY, VT_SUCC, VT_GCSUCC, VT_DESTROY
-      , VT_EQUALITY, VT_COMPARISON, VT_SHOW
+      , VT_EQUAL, VT_EQUATE, VT_NS_EQUATE, VT_COMPARISON, VT_SHOW
       };
     enum NdMember { ND_VPTR, ND_TAG, ND_MARK, ND_AUX, ND_SLOT0, ND_SLOT1 };
   }
@@ -142,6 +145,7 @@ namespace sprite { namespace compiler
         extern_(void_t(*node_t, FILE_p), "Cy_CyStringToCString");
     function const Cy_NoAction = extern_(void_t(*node_t), "Cy_NoAction");
     function const Cy_Repr = extern_(reprfun_t, "Cy_Repr");
+    function const Cy_ReprFingerprint = extern_(void_t(FILE_p), "Cy_ReprFingerprint");
 
 
     // Returns an arity function for the specified arity.
@@ -160,10 +164,22 @@ namespace sprite { namespace compiler
     // Gets the vtable for equality.  For normal types, str1 is the module name
     // and str2 is the type name.  For built-in types, str1 is the built-in
     // type name and str2 is empty.
-    global CyVt_Equality(
+    global CyVt_Equal(
         std::string const & str1, std::string const & str2 = std::string()
       ) const
     { return CyVt_PolyFunction("==", str1, str2); }
+
+    // Gets the vtable for equate.
+    global CyVt_Equate(
+        std::string const & str1, std::string const & str2 = std::string()
+      ) const
+    { return CyVt_PolyFunction("=:=", str1, str2); }
+
+    // Gets the vtable for non-strict equate.
+    global CyVt_NsEquate(
+        std::string const & str1, std::string const & str2 = std::string()
+      ) const
+    { return CyVt_PolyFunction("=:<=", str1, str2); }
 
     // Gets the vtable for compare.
     global CyVt_Compare(
@@ -185,6 +201,8 @@ namespace sprite { namespace compiler
 
     // The global counter giving the next available choice id.
     globalvar Cy_NextChoiceId = extern_(aux_t, "Cy_NextChoiceId").as_globalvar();
+    function const Cy_TestChoiceIsMade = extern_(bool_t(aux_t), "Cy_TestChoiceIsMade");
+    function const Cy_TestChoiceIsLeft = extern_(bool_t(aux_t), "Cy_TestChoiceIsLeft");
 
     // Free variables are printed as _a, _b, . . .  This function resets the
     // sequence to _a, and is called between producing values.

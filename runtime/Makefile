@@ -54,7 +54,6 @@ uninstall :
 # Preprocess the Prelude and append static content.
 $(LIBINSTALL)/currylib/.curry/Prelude.read : $(LIBINSTALL)/currylib/Prelude.curry
 	$(BININSTALL)/scc -E $(LIBINSTALL)/currylib/Prelude.curry
-	cat Prelude.read.static_content >> $(LIBINSTALL)/currylib/.curry/Prelude.read
 
 # Preprocess the Prelude.
 $(LIBINSTALL)/currylib/.curry/Prelude.bc : $(LIBINSTALL)/currylib/.curry/Prelude.read
