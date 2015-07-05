@@ -111,6 +111,9 @@ namespace sprite { namespace backend
     /// Returns the function return type.
     type return_type() const
       { return type(SPRITE_APICALL(ptr()->getReturnType())); }
+
+    /// Indicates whether the function has a body.
+    bool empty() const { return SPRITE_APICALL(ptr()->empty()); }
   };
 
   inline global module::getglobal(string_ref name) const

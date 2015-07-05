@@ -29,9 +29,10 @@ namespace sprite { namespace compiler
     NodeSTab(
         curry::Constructor const & source_
       , sprite::backend::globalvar const & vtable_
+      , sprite::backend::function const & generator_
       , tag_t tag_
       )
-      : source(&source_), vtable(vtable_), tag(tag_)
+      : source(&source_), vtable(vtable_), generator(generator_), tag(tag_)
     {}
 
     NodeSTab(
@@ -40,7 +41,7 @@ namespace sprite { namespace compiler
       , tag_t tag_
       )
       : source(reinterpret_cast<curry::Constructor const *>(&source_))
-      , vtable(vtable_), tag(tag_)
+      , vtable(vtable_), generator(nullptr), tag(tag_)
     {}
 
     // Disabled because globalvar is a reference.
@@ -54,6 +55,9 @@ namespace sprite { namespace compiler
 
     // The vtable for this node, in LLVM IR.
     sprite::backend::globalvar vtable;
+
+    // The generator for this node.  For constructors only.
+    sprite::backend::function generator;
 
     // The tag associated with the node.  Note: tag==OPER indicates a function;
     // other tag values (i.e., tag>=CTOR) indicate constructors.
@@ -193,7 +197,7 @@ namespace sprite { namespace compiler
     if(node_stab.tag == CHOICE)
       node_p.arrow(ND_AUX) = module_stab.rt().Cy_NextChoiceId++;
   }
-
+  
   // Sets the extended child array to the given value, and returns the same,
   // cast to char**.
   inline value set_extended_child_array(value const & node, value const & array)
@@ -207,8 +211,41 @@ namespace sprite { namespace compiler
   inline value get_extended_child_array(rt_h const & rt, value const & node)
     { return bitcast(node.arrow(ND_SLOT0), **rt.node_t); }
 
+  // Gets a node successor.
+  inline ref get_successor(
+      rt_h const & rt, value const & node, size_t arity, size_t pos
+    )
+  {
+    if(arity < 3)
+      return node.arrow(ND_SLOT0+pos);
+    else
+    {
+      auto children = get_extended_child_array(rt, node);
+      return children[pos];
+    }
+  }
+
+  // Sets a node successor.
+  inline void set_successor(
+      rt_h const & rt, value const & node, value const & replacement
+    , size_t arity, size_t pos
+    )
+  { get_successor(rt, node, arity, pos) = replacement; }
+
   void trace_step_start(rt_h const & rt, value const & root_p);
   void trace_step_end(rt_h const & rt, value const & root_p);
   void trace_step_tmp(rt_h const & rt, value const & root_p);
+
+  // Performs a pull tab at node * src, having the specified arity.  itgt is
+  // the index of the successor that is a choice.
+  void exec_pulltab(
+      rt_h const & rt, value const & src, value const & tgt, size_t arity
+    , size_t itgt
+    );
+
+  void exec_pullbind(
+      rt_h const & rt, value const & src, value const & tgt, size_t arity
+    , size_t itgt
+    );
 }}
 

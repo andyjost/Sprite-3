@@ -5,6 +5,8 @@
 #include "sprite/runtime.hpp"
 #include <algorithm>
 #include <iterator>
+#include <boost/scope_exit.hpp>
+#include <tuple>
 
 // DIAGNOSTIC - this may warrant a command-line option setting.
 #include "llvm/Analysis/Verifier.h"
@@ -88,6 +90,32 @@ namespace
     return lhs.visit(visitor);
   }
 
+  struct GetLhsArity
+  {
+    using result_type = size_t;
+
+    GetLhsArity(compiler::ModuleSTab const & module_stab_)
+      : module_stab(module_stab_)
+    {}
+
+    compiler::ModuleSTab const & module_stab;
+
+    template<typename T>
+    result_type operator()(T) const { return 0; }
+
+    result_type operator()(Qname const & qname) const
+      { return module_stab.lookup(qname).source->arity; }
+  };
+
+  size_t get_lhs_arity(
+      curry::CaseLhs const & lhs, compiler::ModuleSTab const & module_stab
+    )
+  {
+    GetLhsArity visitor(module_stab);
+    return lhs.visit(visitor);
+  }
+
+
   struct GetLhsCaseTag
   {
     using result_type = compiler::tag_t;
@@ -114,6 +142,38 @@ namespace
     return lhs.visit(visitor);
   }
 
+  struct GetGeneratorFromCase
+  {
+    using result_type = function;
+
+    GetGeneratorFromCase(compiler::ModuleSTab const & module_stab_)
+      : module_stab(module_stab_)
+    {}
+
+    compiler::ModuleSTab const & module_stab;
+
+    result_type operator()(char) const
+      { return module_stab.rt().Cy_NoGenerator("Char"); }
+
+    result_type operator()(int64_t) const
+      { return module_stab.rt().Cy_NoGenerator("Int"); }
+
+    result_type operator()(double) const
+      { return module_stab.rt().Cy_NoGenerator("Float"); }
+
+    result_type operator()(Qname const & qname) const
+      { return module_stab.lookup(qname).generator; }
+  };
+
+  function get_generator_from_case(
+      curry::CaseLhs const & lhs, compiler::ModuleSTab const & module_stab
+    )
+  {
+    GetGeneratorFromCase visitor(module_stab);
+    return lhs.visit(visitor);
+  }
+
+
   std::string get_base_function_name(curry::Function const & fun)
   {
     std::string const & str = fun.name;
@@ -125,115 +185,6 @@ namespace
       throw compile_error("badly named aux function");
     }
     return str;
-  }
-
-  // Performs a pull tab at node * src, having the specified arity.  Or, if the
-  // choice in question was previously made in the current fingerprint,
-  // bypasses it.  itgt is the index of the successor that is a choice.
-  void exec_pulltab(
-      rt_h const & rt, value const & src, value const & tgt, size_t arity
-    , size_t itgt, label const & out_of_memory_handler
-    , CompilerOptions const & options
-    )
-  {
-    auto pull_tab_code = [&]
-    {
-      value lhs = rt.node_alloc(*rt.node_t, out_of_memory_handler);
-      value rhs = rt.node_alloc(*rt.node_t, out_of_memory_handler);
-      lhs.arrow(ND_VPTR) = src.arrow(ND_VPTR);
-      lhs.arrow(ND_TAG) = src.arrow(ND_TAG);
-      rhs.arrow(ND_VPTR) = src.arrow(ND_VPTR);
-      rhs.arrow(ND_TAG) = src.arrow(ND_TAG);
-      // OK to ignore aux.  The root cannot be a choice because a choice
-      // has no step function.
-
-      if(arity < 3)
-      {
-        for(size_t i=0; i<arity; ++i)
-        {
-          if(i == itgt)
-          {
-            lhs.arrow(ND_SLOT0+i) = tgt.arrow(ND_SLOT0);
-            rhs.arrow(ND_SLOT0+i) = tgt.arrow(ND_SLOT1);
-          }
-          else
-          {
-            value tmp = src.arrow(ND_SLOT0+i);
-            lhs.arrow(ND_SLOT0+i) = tmp;
-            rhs.arrow(ND_SLOT0+i) = tmp;
-          }
-        }
-      }
-      else
-      {
-        // The LHS argument array is stolen from the root node.
-        value lhs_children = set_extended_child_array(
-            lhs, src.arrow(ND_SLOT0)
-          );
-        // The RHS argument array is allocated.
-        value rhs_children = set_extended_child_array(
-            rhs, rt.Cy_ArrayAllocTyped(static_cast<aux_t>(arity))
-          );
-
-        for(size_t i=0; i<arity; ++i)
-        {
-          if(i == itgt)
-          {
-            lhs_children[i] = tgt.arrow(ND_SLOT0);
-            rhs_children[i] = tgt.arrow(ND_SLOT1);
-          }
-          else
-          {
-            // Nothing to do for LHS.
-            rhs_children[i] = lhs_children[i];
-          }
-        }
-      }
-      // Do not call this->destroy_target.  The successor list was stolen.
-      src.arrow(ND_VPTR) = rt.choice_vt;
-      src.arrow(ND_TAG) = compiler::CHOICE;
-      src.arrow(ND_AUX) = tgt.arrow(ND_AUX);
-      src.arrow(ND_SLOT0) = bitcast(lhs, *types::char_());
-      src.arrow(ND_SLOT1) = bitcast(rhs, *types::char_());
-    };
-    
-    // Either just generate the pull-tab, or attempt a bypass first, depending
-    // on the option.
-    if(!options.bypass_choices)
-      pull_tab_code();
-    else
-    {
-      rt.printf("[C] Running bypass code.\n");
-      if_(
-          rt.Cy_TestChoiceIsMade(tgt.arrow(ND_AUX))
-        , [&]
-          { 
-            rt.printf("[C] Choice is made.\n");
-            if_(
-                rt.Cy_TestChoiceIsLeft(tgt.arrow(ND_AUX))
-              , [&]
-                {
-                  // Bypass left.
-                  rt.printf("[C] Choice is LEFT.\n");
-                  if(arity < 3)
-                    src.arrow(ND_SLOT0+itgt) = tgt.arrow(ND_SLOT0);
-                  else
-                    get_extended_child_array(rt, src)[itgt] = tgt.arrow(ND_SLOT0);
-                }
-              , [&]
-                {
-                  // Bypass right.
-                  rt.printf("[C] Choice is RIGHT.\n");
-                  if(arity < 3)
-                    src.arrow(ND_SLOT0+itgt) = tgt.arrow(ND_SLOT1);
-                  else
-                    get_extended_child_array(rt, src)[itgt] = tgt.arrow(ND_SLOT1);
-                }
-              );
-          }
-        , [&] { pull_tab_code(); }
-        );
-    }
   }
 
   /**
@@ -380,6 +331,7 @@ namespace
             p = this->node_alloc(*rt.node_t);
             p.arrow(ND_VPTR) = rt.freevar_vt;
             p.arrow(ND_TAG) = compiler::FREE;
+            p.arrow(ND_AUX) = rt.Cy_NextChoiceId++;
             this->resolved_path_alloca = p;
           }
           else
@@ -453,12 +405,12 @@ namespace
     result_type operator()(curry::CaseLhs const & rule)
       { rule.visit(*this); }
 
-    // For variable instantiation.
     result_type operator()(curry::Free const &)
     {
       this->destroy_target();
       this->target_p.arrow(ND_VPTR) = rt.freevar_vt;
       this->target_p.arrow(ND_TAG) = compiler::FREE;
+      this->target_p.arrow(ND_AUX) = rt.Cy_NextChoiceId++;
     }
 
     result_type operator()(Qname const & qname)
@@ -689,7 +641,34 @@ namespace
     // encountered, so that it can communicate the new target to other sections
     // of code.
     tgt::ref inductive_alloca;
+
     compiler::CompilerOptions const & options;
+
+    // Assuming a pull tab is now required using the current inductive node
+    // as target, get its parent, the index of the inductive node, and the arity
+    // of the parent.
+    std::tuple<tgt::value, size_t, size_t>
+    get_parent_itgt_arity(size_t pathid) const
+    {
+      // Handle continuations.
+      if(pathid >= LOCAL_ID_START)
+        return std::make_tuple(this->root_p, 1, 2);
+      else
+      {
+        auto const & path = this->fundef->paths.at(pathid);
+        assert(path.base != curry::freevar);
+        assert(path.base != curry::bind);
+        assert(path.base != curry::local);
+        if(path.base == curry::nobase)
+          return std::make_tuple(this->root_p, path.idx, this->fundef->arity);
+        else
+          return std::make_tuple(
+              this->resolve_path(path.base)
+            , path.idx
+            , this->module_stab.lookup(path.typename_).source->arity
+            );
+      }
+    }
 
     // Emits code to clean up any function-specific allocations and then
     // returns.
@@ -728,76 +707,46 @@ namespace
         throw compile_error("Invalid branch condition");
     }
 
-    template<typename Cases>
-    compiler::tag_t instantiate_variable(value var, Cases const & cases)
+    void narrow(value var, size_t pathid, curry::CaseLhs const & example)
     {
       assert(cases.size());
-      // Cases cases = cases_;
-      // std::reverse(cases.begin(), cases.end());
+      // Get the stencil.  Add one to the free variable, if necessary.
+      ref stencil = var.arrow(ND_SLOT0);
+      if_(stencil == (*rt.char_t)(nullptr), [&]{
+        function G = get_generator_from_case(example, module_stab);
+        if(!G.ptr()) return;
+        var.arrow(ND_SLOT0) = G(var, var.arrow(ND_AUX));
+        stencil = var.arrow(ND_SLOT0);
+      });
 
-      compiler::tag_t tag = compiler::CHOICE;
-      if(cases.size() == 1)
-      {
-        ValueSaver saver(target_p, var);
-        auto const & lhs = getlhs(*cases.begin());
+      // Copy the stencil to produce an instance.
+      value instance = rt.CyFree_CopyStencil(stencil);
+      rt.CyMem_PushRoot(instance, options.enable_tracing);
+      BOOST_SCOPE_EXIT((&rt)(&options))
+        { rt.CyMem_PopRoot(options.enable_tracing); }
+      BOOST_SCOPE_EXIT_END;
 
-        // Sometimes a typename is used where a constructor is needed.  See
-        // show.Int, for instance.  It is used to head-normalize a built-in
-        // type (which has just one constructor).
-        if(auto qn = lhs.getqname())
-        {
-          static const std::string builtins[] =
-              {"Char", "Int", "Float", "Success", "IO"};
-          for(auto const & name: builtins)
-          {
-            if(qn->str() == ("Prelude." + name))
-            {
-              error("No generator for Prelude." + name);
-              return compiler::CTOR; // meaningless
-            }
-          }
-        }
+      tgt::value parent; size_t itgt; size_t arity;
+      std::tie(parent, itgt, arity) = get_parent_itgt_arity(pathid);
+      exec_pulltab(rt, parent, instance, itgt, arity);
+    }
 
-        (this->Rewriter::operator())(lhs);
-        tag = get_case_tag(lhs, module_stab);
-      }
-      else
-      {
-        set_out_of_memory_handler_returning_here();
-        ValueSaver saver(target_p);
+    value construct_continuation(curry::Branch const & branch)
+    {
+      set_out_of_memory_handler_returning_here();
+      tgt::value inductive = this->inductive_alloca;
 
-        // size_t i=0;
-        // size_t const n = cases.size();
-        auto current = cases.rbegin();
-        auto const end = cases.rend();
-        auto choose_storage = [&]
-        {
-          if(std::next(current) == end)
-            // No need to destroy var.
-            return var;
-          else
-            return this->node_alloc(*rt.node_t);
-        };
+      // The binding arose from a non-trivial branch discriminator.
+      std::string const name = get_base_function_name(*this->fundef);
+      curry::Qname const qname{module_stab.source->name, name};
+      auto & node_stab = this->module_stab.lookup(qname);
 
-        value rhs_node = choose_storage();
-        target_p = rhs_node;
-        (this->Rewriter::operator())(getlhs(*current));
-
-        for(++current; current!=end; ++current)
-        {
-          value lhs_node = new_(getlhs(*current));
-
-          value choice_node = choose_storage();
-          choice_node.arrow(ND_VPTR) = rt.choice_vt;
-          choice_node.arrow(ND_TAG) = compiler::CHOICE;
-          choice_node.arrow(ND_AUX) = rt.Cy_NextChoiceId++;
-          choice_node.arrow(ND_SLOT0) = lhs_node;
-          choice_node.arrow(ND_SLOT1) = rhs_node;
-
-          rhs_node = choice_node;
-        }
-      }
-      return tag;
+      value copy_of_root = this->node_alloc(*rt.node_t);
+      move(root_p, copy_of_root, this->fundef->arity);
+      root_p.arrow(ND_VPTR) = &*node_stab.auxvt.at(&branch);
+      root_p.arrow(ND_SLOT0) = bitcast(copy_of_root, *rt.char_t);
+      root_p.arrow(ND_SLOT1) = bitcast(inductive, *rt.char_t);
+      return inductive;
     }
 
     result_type operator()(curry::Branch const & branch)
@@ -892,35 +841,11 @@ namespace
       // FREE case
       {
         tgt::scope _ = labels[TAGOFFSET + FREE];
-        tgt::value inductive = this->inductive_alloca;
-        auto invalid = -(TAGOFFSET+1);
-        compiler::tag_t tag = invalid;
-        if(!branch.isflex)
-        {
-          tag = instantiate_variable(inductive, branch.cases);
-          tgt::goto_(jumptable[tag+TAGOFFSET], labels);
-        }
-        else
-        {
-          // Try to look up the available variable expansions if the condition
-          // is a variable reference.  If one is not available then the
-          // condition variable was constructed only to call an aux function.
-          // In that case, the free variable cannot be shared, so a local
-          // expansion is best.
-          if(auto var = branch.condition.getvar())
-          {
-            assert(this->fundef);
-            auto const & expansions = *this->fundef->variable_expansions;
-            auto p = expansions.find(var->pathid);
-            if(p != expansions.end())
-              tag = instantiate_variable(inductive, p->second);
-          }
-          // Consult only the local table to expand the free variable.
-          if(tag == invalid)
-            { tag = instantiate_variable(inductive, branch.cases); }
-
-          tgt::goto_(jumptable[tag+TAGOFFSET], labels);
-        }
+        value inductive = pathid >= LOCAL_ID_START
+            ? construct_continuation(branch)
+            : static_cast<value>(this->inductive_alloca);
+        narrow(inductive, pathid, branch.cases.front()->lhs);
+        clean_up_and_return();
       }
 
       // FWD case
@@ -935,41 +860,41 @@ namespace
         tgt::goto_(jumptable[index], labels);
       }
 
+      // BINDING case
+      {
+        tgt::scope _ = labels[TAGOFFSET + BINDING];
+
+        if(pathid >= LOCAL_ID_START)
+        {
+          value inductive = construct_continuation(branch);
+          exec_pullbind(this->rt, this->root_p, inductive, 1, 2);
+        }
+        else
+        {
+          tgt::value inductive = this->inductive_alloca;
+          tgt::value parent; size_t itgt; size_t arity;
+          std::tie(parent, itgt, arity) = get_parent_itgt_arity(pathid);
+          exec_pullbind(this->rt, parent, inductive, itgt, arity);
+        }
+        clean_up_and_return();
+      }
+
       // CHOICE case
       {
         tgt::scope _ = labels[TAGOFFSET + CHOICE];
 
-        // FIXME: would an allocated branch condition would be reclaimed?
-        // There is a local stack of detached roots.  It would be great to add
-        // the local computation to it only just before the collector runs.
-        set_out_of_memory_handler_returning_here();
-        tgt::value inductive = this->inductive_alloca;
-
         if(pathid >= LOCAL_ID_START)
         {
-          // The choice arose from a non-trivial branch discriminator.
-          std::string const name = get_base_function_name(*this->fundef);
-          curry::Qname const qname{module_stab.source->name, name};
-          auto & node_stab = this->module_stab.lookup(qname);
-
-          value copy_of_root = this->node_alloc(*rt.node_t);
-          move(root_p, copy_of_root, this->fundef->arity);
-          root_p.arrow(ND_VPTR) = &*node_stab.auxvt.at(&branch);
-          root_p.arrow(ND_SLOT0) = bitcast(copy_of_root, *rt.char_t);
-          root_p.arrow(ND_SLOT1) = bitcast(inductive, *rt.char_t);
-          exec_pulltab(
-              this->rt, this->root_p, inductive, 2, 1
-            , this->out_of_memory_handler, options
-            );
+          value inductive = construct_continuation(branch);
+          exec_pulltab(this->rt, this->root_p, inductive, 1, 2);
         }
         else
         {
-          size_t const itgt = this->fundef->paths.at(pathid).idx;
           // FIXME: why not zip the choice all the way to the root in one step?
-          exec_pulltab(
-              this->rt, this->target_p, inductive, this->fundef->arity, itgt
-            , this->out_of_memory_handler, options
-            );
+          tgt::value inductive = this->inductive_alloca;
+          tgt::value parent; size_t itgt; size_t arity;
+          std::tie(parent, itgt, arity) = get_parent_itgt_arity(pathid);
+          exec_pulltab(this->rt, parent, inductive, itgt, arity);
         }
         clean_up_and_return();
       }
@@ -1052,7 +977,7 @@ namespace
 
     auto handle_child = [&](size_t ichild){
       value call;
-      size_t constexpr table_size = 6; // FAIL, FREE, FWD, CHOICE, OPER, CTOR
+      size_t constexpr table_size = 7; // FAIL, FREE, FWD, BINDING, CHOICE, OPER, CTOR
       // The first jump normalizes children.
       label labels[table_size];
       globalvar jumptable1 =
@@ -1082,7 +1007,14 @@ namespace
             case 2:
               goto_(
                   jumptable2[index]
-                , {labels[0], current, labels[0], labels[2], labels[0], current}
+                , {   labels[TAGOFFSET+FAIL]
+                    , current
+                    , labels[TAGOFFSET+FAIL]
+                    , labels[TAGOFFSET+BINDING]
+                    , labels[TAGOFFSET+CHOICE]
+                    , labels[TAGOFFSET+FAIL]
+                    , current
+                    }
                 );
               break;
           }
@@ -1099,8 +1031,16 @@ namespace
 
       // FREE case.
       {
-        // Ignore variables; do the second jump.
+        // If the variable has been narrowed in this computation, then clone
+        // its stencil and perform a pull-tab.  Otherwise, ignore it, since an
+        // unnarrowed variable can be considered part of a data value.
         scope _ = labels[TAGOFFSET + FREE];
+        if_(rt.Cy_TestChoiceIsMade(child.arrow(ND_AUX))
+          , [&]{
+              value instance = rt.CyFree_CopyStencil(child.arrow(ND_SLOT0));
+              exec_pulltab(rt, root_p, instance, ichild, arity);
+              return_();
+          });
         make_jump(2);
       }
 
@@ -1111,14 +1051,20 @@ namespace
         make_jump(1);
       }
 
+      // BINDING case.
+      {
+        scope _ = labels[TAGOFFSET + BINDING];
+        if(options.enable_tracing) trace_step_start(rt, root_p);
+        exec_pullbind(rt, root_p, child, ichild, arity);
+        if(options.enable_tracing) trace_step_end(rt, root_p);
+        return_();
+      }
+
       // CHOICE case.
       {
         scope _ = labels[TAGOFFSET + CHOICE];
-        label out_of_memory_handler = rt.make_restart_point();
         if(options.enable_tracing) trace_step_start(rt, root_p);
-        exec_pulltab(
-            rt, root_p, child, arity, ichild, out_of_memory_handler, options
-          );
+        exec_pulltab(rt, root_p, child, ichild, arity);
         if(options.enable_tracing) trace_step_end(rt, root_p);
         return_();
       }
@@ -1139,19 +1085,20 @@ namespace
 
       // Initialize the jump tables.
       block_address addresses1[table_size] =
-          {&labels[0], &labels[1], &labels[2], &labels[3], &labels[4], &labels[5]};
+          {&labels[0], &labels[1], &labels[2], &labels[3], &labels[4], &labels[5], &labels[6]};
       jumptable1.set_initializer(addresses1);
 
       // The FWD and OPER rules are unreachable, so just put FAIL there.  Treat
       // FREE variables like constructors, since they can appear in a value.
       block_address addresses2[table_size] =
       {
-          &labels[TAGOFFSET+FAIL]   // FAIL
-        , &current                  // FREE
-        , &labels[TAGOFFSET+FAIL]   // FWD
-        , &labels[TAGOFFSET+CHOICE] // CHOICE
-        , &labels[TAGOFFSET+FAIL]   // OPER
-        , &current                  // CTOR
+          &labels[TAGOFFSET+FAIL]    // FAIL
+        , &current                   // FREE
+        , &labels[TAGOFFSET+FAIL]    // FWD
+        , &labels[TAGOFFSET+BINDING] // BINDING
+        , &labels[TAGOFFSET+CHOICE]  // CHOICE
+        , &labels[TAGOFFSET+FAIL]    // OPER
+        , &current                   // CTOR
       };
       jumptable2.set_initializer(addresses2);
 
@@ -1199,6 +1146,76 @@ namespace
     }
   }
 
+  // Compiles the generator function for the specified data type, which belongs
+  // in the given module.
+  function compile_generator(
+      compiler::ModuleSTab & module_stab, curry::Module const & cymodule
+    , curry::DataType const & dtype
+    )
+  {
+    auto const & rt = module_stab.rt();
+    auto & C = dtype.constructors;
+    size_t const N = C.size();
+    assert(N);
+
+    std::string const name = dtype.name + ".gen";
+    function G(module_stab.module_ir->getFunction(name.c_str()));
+    if(!G.ptr())
+    {
+      G = static_<function>(rt.genfun_t, name, {"node_p", "id"});
+      scope _ = G;
+      value node_p = arg("node_p");
+      value id = arg("id");
+      Rewriter rewriter(module_stab, node_p);
+      rewriter.set_out_of_memory_handler_returning_here();
+      // If the (only) constructor has successors, then we must make a choice
+      // between it and "failed" so that the constraint store can be made
+      // aware of the first choice.
+      if(N==1 && C[0].arity > 0)
+      {
+        auto choice = rewriter.node_alloc(*rt.node_t);
+        value lhs = rewriter.new_(Qname{cymodule.name, C[0].name});
+        value rhs = rewriter.new_(curry::Rule()); // failure
+        choice.arrow(ND_VPTR) = rt.choice_vt;
+        choice.arrow(ND_TAG) = compiler::CHOICE;
+        choice.arrow(ND_AUX) = id;
+        choice.arrow(ND_SLOT0) = lhs;
+        choice.arrow(ND_SLOT1) = rhs;
+        return_(choice);
+      }
+      else
+      {
+        using curry::Constructor;
+        std::function<value(Constructor const *, Constructor const *, bool)> mktree =
+            [&](Constructor const * begin, Constructor const * end, bool is_head)
+            {
+              size_t const n = end - begin;
+              assert(n);
+              if(n==1)
+                return rewriter.new_(
+                    Qname{cymodule.name, begin->name}
+                  );
+              else
+              {
+                auto choice = rewriter.node_alloc(*rt.node_t);
+                Constructor const * middle = begin + (end-begin)/2;
+                value lhs = mktree(begin, middle, false);
+                value rhs = mktree(middle, end, false);
+                choice.arrow(ND_VPTR) = rt.choice_vt;
+                choice.arrow(ND_TAG) = compiler::CHOICE;
+                // The head of the tree has the designated choice ID.
+                choice.arrow(ND_AUX) = is_head ? id : rt.Cy_NextChoiceId++;
+                choice.arrow(ND_SLOT0) = lhs;
+                choice.arrow(ND_SLOT1) = rhs;
+                return choice;
+              }
+            };
+        return_(mktree(&*C.begin(), &*C.end(), true));
+      }
+    }
+    return G;
+  }
+  
   void compile_ctor_vtable(
       tgt::global & vt
     , curry::DataType const & dtype
@@ -1431,6 +1448,155 @@ namespace
 
 namespace sprite { namespace compiler
 {
+  // Performs a pull tab at node * src, having the specified arity.  itgt is
+  // the index of the successor that is a choice.
+  void exec_pulltab(
+      rt_h const & rt, value const & src, value const & tgt, size_t itgt
+    , size_t arity
+    )
+  {
+    // Note: this function has been generalized for choice_arity != 2, though
+    // that code is not in use (yet).
+    size_t const choice_arity = 2;
+    assert(choice_arity > 0);
+    label out_of_memory_handler = rt.make_restart_point();
+    std::vector<value> values;
+    for(size_t cid=0; cid<choice_arity; ++cid)
+    {
+      value arg = rt.node_alloc(*rt.node_t, out_of_memory_handler);
+      arg.arrow(ND_VPTR) = src.arrow(ND_VPTR);
+      arg.arrow(ND_TAG) = src.arrow(ND_TAG);
+      // OK to ignore aux.  The root cannot be a choice because a choice
+      // has no step function.
+      values.push_back(arg);
+    }
+
+    if(arity < 3)
+    {
+      for(size_t i=0; i<arity; ++i)
+      {
+        if(i == itgt)
+        {
+          if(choice_arity < 3)
+          {
+            for(size_t cid=0; cid<choice_arity; ++cid)
+              values[cid].arrow(ND_SLOT0+i) = tgt.arrow(ND_SLOT0+cid);
+          }
+          else
+          {
+            value choices = get_extended_child_array(rt, tgt);
+            for(size_t cid=0; cid<choice_arity; ++cid)
+              values[cid].arrow(ND_SLOT0+i) = choices[cid];
+          }
+        }
+        else
+        {
+          value tmp = src.arrow(ND_SLOT0+i);
+          for(auto & arg: values)
+            arg.arrow(ND_SLOT0+i) = tmp;
+        }
+      }
+    }
+    else
+    {
+      std::vector<value> child_arrays;
+      // The first argument array is stolen from the root node.
+      child_arrays.push_back(
+          set_extended_child_array(values[0], src.arrow(ND_SLOT0))
+        );
+      // The others are allocated.
+      for(size_t j=1; j<choice_arity; ++j)
+      {
+        child_arrays.push_back(
+            set_extended_child_array(
+                values[j]
+              , rt.Cy_ArrayAllocTyped(static_cast<aux_t>(arity))
+              )
+          );
+      }
+
+      // The LHS argument array is stolen from the root node.
+      for(size_t i=0; i<arity; ++i)
+      {
+        if(i == itgt)
+        {
+          if(choice_arity < 3)
+          {
+            for(size_t cid=0; cid<choice_arity; ++cid)
+              child_arrays[cid][i] = tgt.arrow(ND_SLOT0+cid);
+          }
+          else
+          {
+            value choices = get_extended_child_array(rt, tgt);
+            for(size_t cid=0; cid<choice_arity; ++cid)
+              child_arrays[cid][i] = choices[cid];
+          }
+        }
+        else
+        {
+          value tmp = child_arrays[0][i];
+          for(size_t j=1; j<choice_arity; ++j)
+            child_arrays[j][i] = tmp;
+        }
+      }
+    }
+    // Do not call this->destroy_target.  The successor list was stolen.
+    src.arrow(ND_VPTR) = rt.choice_vt;
+    src.arrow(ND_TAG) = compiler::CHOICE;
+    src.arrow(ND_AUX) = tgt.arrow(ND_AUX);
+
+    switch(choice_arity)
+    {
+      case 2:
+        src.arrow(ND_SLOT1) = bitcast(values[1], *types::char_());
+      case 1:
+        src.arrow(ND_SLOT0) = bitcast(values[0], *types::char_());
+      case 0:
+        break;
+      default:
+      {
+        value choice_successors = set_extended_child_array(
+            src
+          , rt.Cy_ArrayAllocTyped(static_cast<aux_t>(choice_arity))
+          );
+        for(size_t j=0; j<choice_arity; ++j)
+          choice_successors[j] = bitcast(values[j], *types::char_());
+      }
+    }
+  }
+
+  void exec_pullbind(
+      rt_h const & rt, value const & src, value const & tgt, size_t itgt
+    , size_t arity
+    )
+  {
+    label out_of_memory_handler = rt.make_restart_point();
+    value tmp = rt.node_alloc(*rt.node_t, out_of_memory_handler);
+    tmp.arrow(ND_VPTR) = src.arrow(ND_VPTR);
+    tmp.arrow(ND_TAG) = src.arrow(ND_TAG);
+
+    if(arity < 3)
+    {
+      for(size_t i=0; i<arity; ++i)
+      {
+        if(i == itgt)
+          tmp.arrow(ND_SLOT0+i) = tgt.arrow(ND_SLOT0);
+        else
+          tmp.arrow(ND_SLOT0+i) = src.arrow(ND_SLOT0+i);
+      }
+    }
+    else
+    {
+      value children = set_extended_child_array(tmp, src.arrow(ND_SLOT0));
+      children[itgt] = tgt.arrow(ND_SLOT0);
+    }
+
+    src.arrow(ND_VPTR) = tgt.arrow(ND_VPTR);
+    src.arrow(ND_TAG) = BINDING;
+    src.arrow(ND_SLOT0) = tmp;
+    src.arrow(ND_SLOT1) = tgt.arrow(ND_SLOT1);
+  }
+
   tgt::value vinvoke(tgt::value const & node_p, compiler::VtMember member)
     { return node_p.arrow(compiler::ND_VPTR).arrow(member)(node_p); }
 
@@ -1446,6 +1612,8 @@ namespace sprite { namespace compiler
     rt.Cy_Repr(root_p, rt.stdout_(), true);
     rt.printf(" {");
     rt.Cy_ReprFingerprint(rt.stdout_());
+    rt.printf("} {");
+    rt.Cy_ReprConstraints(rt.stdout_());
     rt.printf("}\n");
     rt.fflush(nullptr);
   }
@@ -1457,6 +1625,8 @@ namespace sprite { namespace compiler
     rt.Cy_Repr(root_p, rt.stdout_(), true);
     rt.printf(" {");
     rt.Cy_ReprFingerprint(rt.stdout_());
+    rt.printf("} {");
+    rt.Cy_ReprConstraints(rt.stdout_());
     rt.printf("}\n");
     rt.fflush(nullptr);
   }
@@ -1468,6 +1638,8 @@ namespace sprite { namespace compiler
     rt.Cy_Repr(root_p, rt.stdout_(), true);
     rt.printf(" {");
     rt.Cy_ReprFingerprint(rt.stdout_());
+    rt.printf("} {");
+    rt.Cy_ReprConstraints(rt.stdout_());
     rt.printf("}\n");
     rt.fflush(nullptr);
   }
@@ -1615,11 +1787,43 @@ namespace sprite { namespace compiler
           // Update the symbol tables.
           module_stab.nodes.emplace(
               curry::Qname{cymodule.name, ctor.name}
-            , compiler::NodeSTab(ctor, vt.as_globalvar(), tag++)
+            , compiler::NodeSTab(ctor, vt.as_globalvar(), nullptr, tag++)
+            );
+        }
+
+        // Circle back and fill in the generator.  It can be compiled only
+        // after all constructors for the type have been added to the symbol
+        // table.
+        function G = compile_generator(module_stab, cymodule, dtype);
+        for(auto const & ctor: dtype.constructors)
+          module_stab.lookup({cymodule.name, ctor.name}).generator = G;
+      }
+
+      // Special cases for the Prelude data types.
+      if(cymodule.name == "Prelude")
+      {
+        auto & rt = module_stab.rt();
+
+        // FIXME: These definitions should probably be added to the Prelude so
+        // that const_cast is not needed.  When this was added, PAKCS was
+        // temporarily unavailable and so the Prelude could not be updated.
+        auto & dts = const_cast<curry::Module &>(cymodule).datatypes;
+        char const * builtins[] = {"Char", "Int", "Float", "IO", "Success"};
+        for(std::string builtin: builtins)
+        {
+          curry::Constructor node; node.name = builtin; node.arity = 0;
+          dts.emplace_back(curry::DataType{builtin, {node}});
+          auto const & ctor = dts.back().constructors.front();
+          module_stab.nodes.emplace(
+              curry::Qname{"Prelude", builtin}
+            , compiler::NodeSTab(
+                  ctor, rt.CyVt_Builtin(builtin).as_globalvar()
+                , rt.Cy_NoGenerator(builtin), ctor.arity
+                )
             );
         }
       }
-  
+
       // Update the symbol tables with the forward declarations of functions.
       for(auto const & fun: cymodule.functions)
       {
@@ -1646,17 +1850,17 @@ namespace sprite { namespace compiler
         }
       }
 
-      // Special cases for the Prelude.
+      // Special cases for the Prelude functions.
       if(cymodule.name == "Prelude")
       {
+        auto & rt = module_stab.rt();
+
         // Update symbol table entries for Prelude.? with the built-in
         // choice implementation.
         {
-          auto choice = module_stab.nodes.find({"Prelude", "?"});
-          if(choice == module_stab.nodes.end())
-            throw compile_error("Prelude.? was not found");
-          choice->second.vtable.reset(module_stab.rt().choice_vt.as_globalvar());
-          choice->second.tag = CHOICE;
+          auto & choice_stab = module_stab.lookup({"Prelude", "?"});
+          choice_stab.vtable.reset(rt.choice_vt.as_globalvar());
+          choice_stab.tag = CHOICE;
         }
       }
 

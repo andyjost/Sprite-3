@@ -1,6 +1,5 @@
 #include "basic_runtime.hpp"
 #include <boost/dynamic_bitset.hpp>
-#include <memory>
 
 extern "C"
 {
@@ -19,12 +18,6 @@ namespace sprite { namespace compiler
   struct Fingerprint
   {
     Fingerprint() : bits() {}
-
-    std::shared_ptr<Fingerprint> clone() const
-    {
-      std::shared_ptr<Fingerprint> copy(new Fingerprint(*this));
-      return copy;
-    }
 
     void set_left(aux_t id) { check_alloc(id); set_left_no_check(id); }
     void set_right(aux_t id) { check_alloc(id); set_right_no_check(id); }

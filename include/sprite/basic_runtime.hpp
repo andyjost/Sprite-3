@@ -9,10 +9,15 @@ namespace sprite { namespace compiler
 {
   struct node;
 
+  using tag_t = int16_t;
+  using mark_t = int16_t;
+  using aux_t = int32_t;
+
   using labelfun_t = char *(node *);
   using arityfun_t = uint64_t(node *);
   using stepfun_t = void(node *);
   using rangefun_t = void(node *, node ***, node ***);
+  using genfun_t = node *(node *, aux_t id);
 
   struct vtable
   {
@@ -32,10 +37,6 @@ namespace sprite { namespace compiler
     vtable     * show;      // Type-specific show function.
   };
 
-  using tag_t = int16_t;
-  using mark_t = int16_t;
-  using aux_t = int32_t;
-
   struct node
   {
     vtable * vptr;  // Pointer to the vtable.
@@ -47,6 +48,6 @@ namespace sprite { namespace compiler
   };
 
   enum Tag : tag_t
-      { FAIL= -5, FREE= -4, FWD= -3, CHOICE= -2, OPER= -1, CTOR=0, TAGOFFSET= -FAIL };
+      { FAIL= -6, FREE= -5, FWD= -4, BINDING= -3, CHOICE= -2, OPER= -1, CTOR=0, TAGOFFSET= -FAIL };
 }}
 

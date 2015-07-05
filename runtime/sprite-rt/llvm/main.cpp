@@ -9,7 +9,6 @@ using sprite::compiler::rt_h;
 
 void build_vt_for_Char(rt_h const & rt);
 void build_vt_for_choice(rt_h const & rt);
-void build_vt_for_choice(rt_h const & rt);
 void build_vt_for_Float(rt_h const & rt);
 void build_vt_for_freevar(rt_h const & rt);
 void build_vt_for_fwd(rt_h const & rt);
@@ -44,6 +43,8 @@ void build_vt_for_trivial_node(
 	  ;
 }
 
+void build_vt_for_binding(rt_h const & rt)
+  { build_vt_for_trivial_node(rt, "binding", 2); }
 void build_vt_for_failed(rt_h const & rt)
   { build_vt_for_trivial_node(rt, "failed", 0); }
 void build_vt_for_success(rt_h const & rt)
@@ -155,6 +156,8 @@ int main()
   // DECLARE_EXTERNAL_STUB(show)
   // DECLARE_EXTERNAL_STUB(prim_label)
   // DECLARE_EXTERNAL_STUB(prim_show_string)
+  // The choice (?) *function* should never be called.  The implementation
+  // always places a special choice node in place of this function.
   DECLARE_EXTERNAL_STUB(?)
   // DECLARE_EXTERNAL_STUB(apply)
   // DECLARE_EXTERNAL_STUB(cond)

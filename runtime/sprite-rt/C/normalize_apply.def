@@ -17,7 +17,7 @@
 
   assert(root->tag != FWD);
   static void * table[] =
-      { &&t_fail, &&t_free, &&t_fwd, &&t_choice, &&t_oper, &&t_ctor};
+      { &&t_fail, &&t_free, &&t_fwd, &&t_binding, &&t_choice, &&t_oper, &&t_ctor};
   node * arg = SUCC_0(root);
   node * lhs_choice, * rhs_choice;
   goto* (&table[TAGOFFSET])[TAG(arg)];
@@ -26,6 +26,17 @@ t_fail:
 t_fwd:
   arg = reinterpret_cast<node *>(arg->slot0);
   goto* (&table[TAGOFFSET])[TAG(arg)];
+t_binding:
+  NODE_ALLOC(lhs_choice, t_binding);
+	lhs_choice->vptr = root->vptr;
+	lhs_choice->tag = root->tag;
+	lhs_choice->slot0 = arg->slot0;
+	lhs_choice->slot1 = root->slot1;
+	root->vptr = &CyVt_Binding;
+	root->tag = BINDING;
+	root->slot0 = lhs_choice;
+	root->slot1 = arg->slot1;
+	return;
 t_choice:
   NODE_ALLOC(lhs_choice, t_choice);
   NODE_ALLOC(rhs_choice, t_choice);

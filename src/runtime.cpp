@@ -3,6 +3,18 @@
 
 namespace sprite { namespace compiler
 {
+  function rt_h::Cy_NoGenerator(std::string const & name) const
+  {
+    function const f = static_(genfun_t, ".nogen." + name);
+    if(f->empty())
+    {
+      scope _ = f;
+      CyErr_NoGenerator(name.c_str());
+      return_(nullptr);
+    }
+    return f;
+  }
+
   function rt_h::Cy_Arity(size_t arity) const
   {
     type const ty = arityfun_t;

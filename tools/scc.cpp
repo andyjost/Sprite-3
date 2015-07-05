@@ -77,10 +77,10 @@ namespace
       << "       Write out the final program as assembly.\n"
       << "   -T, --trace\n"
       << "       Compile tracing output into the program.\n"
-      << "Feature options:\n"
-      << "   --f[no]bypass (Default=OFF)\n"
-      << "       Bypass choices.  Skips some pull-tab steps by rerouting pointers\n"
-      << "       around previously-made choices.\n"
+      // << "Feature options:\n"
+      // << "   --f[no]bypass (Default=OFF)\n"
+      // << "       Bypass choices.  Skips some pull-tab steps by rerouting pointers\n"
+      // << "       around previously-made choices.\n"
       ;
   }
 
@@ -115,8 +115,8 @@ namespace
         {"save-temps",      no_argument, &save_temps, 1},
         {"trace",           no_argument, 0, 'T'},
         // Functional flags
-        {"fbypass",         no_argument, &options.bypass_choices, 1},
-        {"fnobypass",       no_argument, &options.bypass_choices, 0},
+        // {"fbypass",         no_argument, &options.bypass_choices, 1},
+        // {"fnobypass",       no_argument, &options.bypass_choices, 0},
         {0, 0, 0, 0}
       };
 

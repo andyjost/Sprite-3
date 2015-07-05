@@ -5,9 +5,11 @@
 #include <limits>
 #include <list>
 #include "llvm/ADT/SmallVector.h"
+#include <unordered_map>
 #include <unordered_set>
 #include <sstream>
 #include <stack>
+#include <vector>
 #include "stdio.h"
 #include "stdlib.h"
 #include "cymemory.hpp"
@@ -44,21 +46,6 @@
 #define SPRITE_INPLACE_BOUND 3
 #endif
 
-#ifdef NOBYPASS
-#define GENERATE_BYPASS_CODE(arg, pos)
-#else
-#define GENERATE_BYPASS_CODE(arg, pos)  \
-    if(Cy_TestChoiceIsMade(arg->aux))   \
-    {                                   \
-      if(Cy_TestChoiceIsLeft(arg->aux)) \
-        root->pos = arg->slot0;         \
-      else                              \
-        root->pos = arg->slot1;         \
-      return;                           \
-    }                                   \
-  /**/
-#endif
-
 using namespace sprite::compiler;
 
 extern "C"
@@ -91,9 +78,11 @@ namespace sprite { namespace compiler
 extern "C"
 {
   // These are defined in the "LLVM part" of the runtime.
+  extern vtable CyVt_Binding __asm__(".vt.binding");
   extern vtable CyVt_Char __asm__(".vt.Char");
   extern vtable CyVt_Choice __asm__(".vt.choice");
   extern vtable CyVt_Failed __asm__(".vt.failed");
+  extern vtable CyVt_Free __asm__(".vt.freevar");
   extern vtable CyVt_Fwd __asm__(".vt.fwd");
   extern vtable CyVt_Int64 __asm__(".vt.Int64");
   extern vtable CyVt_Float __asm__(".vt.Float");
@@ -108,6 +97,7 @@ extern "C"
   extern vtable CyVt_GT __asm__(".vt.CTOR.Prelude.GT");
   extern vtable CyVt_Tuple0 __asm__(".vt.CTOR.Prelude.()");
   extern vtable CyVt_apply __asm__(".vt.OPER.Prelude.apply");
+  extern vtable CyVt_pair __asm__(".vt.CTOR.Prelude.(,)");
 
   aux_t Cy_NextChoiceId = 0;
 
@@ -141,8 +131,7 @@ extern "C"
   void Cy_Suspend()
   {
     // TODO
-    // I'm not sure how to implement this.  For now, it's a placeholder
-    // that exits the program.
+    // This is probably not needed.  KiCS2 showed how to narrow Int and Char.
     printf("[Fixme] Goal suspended!");
     std::exit(EXIT_FAILURE);
   }
@@ -374,15 +363,317 @@ extern "C"
   FILE * Cy_stdout() { return stdout; }
   FILE * Cy_stderr() { return stderr; }
 
+  // Copy a stencil when instantiating a narrowed variable.
+  node * CyFree_CopyStencil(node * head)
+  {
+    // Activations.
+    std::vector<node *> active;
+    active.reserve(8);
+
+    // Return values.
+    struct Ret { node * p; size_t n; };
+    std::vector<Ret> ret;
+    ret.reserve(8);
+
+    node * copy;
+    node **src_begin;
+    node **src_end;
+    node **dst_begin;
+
+  redo:
+    active.clear();
+    active.push_back(head);
+    ret.clear();
+
+    while(!active.empty())
+    {
+      node * item = active.back();
+      active.pop_back();
+      if(item->tag == CHOICE)
+      {
+        active.push_back(SUCC_1(item));
+        active.push_back(SUCC_0(item));
+        NODE_ALLOC(copy, redo);
+        copy->vptr = &CyVt_Choice;
+        copy->tag = CHOICE;
+        copy->aux = item->aux;
+        ret.push_back(Ret{copy, 0});
+      }
+      else
+      {
+        NODE_ALLOC(copy, redo);
+        copy->vptr = item->vptr;
+        copy->tag = item->tag;
+        
+        item->vptr->succ(item, &src_begin, &src_end);
+        aux_t const N = static_cast<aux_t>(src_end - src_begin);
+        if(N < SPRITE_INPLACE_BOUND)
+          dst_begin = &SUCC_0(copy);
+        else
+        {
+          dst_begin = Cy_ArrayAllocTyped(N);
+          DATA(copy, node**) = dst_begin;
+        }
+        while(src_begin!=src_end)
+          *dst_begin++ = *src_begin++;
+
+        do
+        {
+          auto & r = ret.back();
+          if(r.n == 0)
+          {
+            SUCC_0(r.p) = copy;
+            r.n++;
+            break;
+          }
+          else
+          {
+            SUCC_1(r.p) = copy;
+            copy = r.p;
+            ret.pop_back();
+          }
+        } while(!ret.empty());
+      }
+    }
+    return copy;
+  }
+
+  // Holds bindings between choices and between free variables.
+  //
+  // @p equal stores bindings between choices.  @p eq_var stores bindings
+  // between free variables.  Note that type info may not be available when
+  // free variables are bound.  When a choice of a variable binding reaches the
+  // top of a computation, then the variable must have been narrowed, at which
+  // point the variable binding is converted into a binding between choices.
+  struct ConstraintStore
+  {
+    // The list of bindings between choices.  E.g., {0 -> [1, 2]} says that
+    // choices 0, 1, and 2 must all be made the same way.  This example implies
+    // more entries for keys 1 and 2.  If the list is empty, then there must be
+    // an entry in @p eq_var, below.  The key/value organization is motivated
+    // by the need to process choices as they reach the of a computation.
+    std::unordered_map<aux_t, std::unordered_set<aux_t>> eq_choice;
+
+    // The variable bindings.  These are bindings between free variables (not
+    // choices).  A free variable may narrow to more than one choice (i.e., if
+    // the type has more than two constructors).  Moreover, bindings between
+    // variables imply additional bindings between successor variables.  For
+    // example, if x0=:=x1 for two lists, then after narrowing to x0=([] ?0
+    // (x2:x3)) and x1=([] ?1 (x4:x5)), we also have x2=:=x4 and x3=:=x5.
+    std::unordered_map<aux_t, std::vector<std::pair<node *, node *>>> eq_var;
+  };
+
+  // the current constraints.  Similar to Cy_CurrentFingerprint.
+  ConstraintStore * Cy_CurrentConstraints = nullptr;
+
+  void CyBind_BindVars(node * from, node * to)
+  {
+    auto & store = Cy_CurrentConstraints->eq_var;
+    // from->aux => (from, to)
+    {
+      auto & bucket = store[from->aux];
+      bucket.emplace_back(from, to);
+    }
+    // to->aux => (to, from)
+    {
+      auto & bucket = store[to->aux];
+      bucket.emplace_back(to, from);
+    }
+  }
+
+  // Copy a stencil from one variable so that it may be attached to another
+  // variable.  At the same time, set the proper choice constraints as
+  // corresponding choices are uncovered.  Fresh IDs are used for copied
+  // choices and variables, but the first choice ID is given by the parameter.
+  node * CyFree_CloneStencilAndNarrowConstraints(node * head, aux_t first_id)
+  {
+    ConstraintStore & cons = *Cy_CurrentConstraints;
+
+    // Activations.
+    std::vector<node *> active;
+    active.reserve(8);
+
+    // Return values.
+    struct Ret { node * p; size_t n; };
+    std::vector<Ret> ret;
+    ret.reserve(8);
+
+    node * copy;
+    node **src_begin;
+    node **src_end;
+    node **dst_begin;
+
+  redo:
+    bool first = true;
+    active.clear();
+    active.push_back(head);
+    ret.clear();
+
+    while(!active.empty())
+    {
+      node * item = active.back();
+      active.pop_back();
+      if(item->tag == CHOICE)
+      {
+        active.push_back(SUCC_1(item));
+        active.push_back(SUCC_0(item));
+        NODE_ALLOC(copy, redo);
+        copy->vptr = &CyVt_Choice;
+        copy->tag = CHOICE;
+        if(first)
+        {
+          first = false;
+          copy->aux = first_id;
+        }
+        else
+          copy->aux = Cy_NextChoiceId++;
+        // Add these choice constraints.
+        cons.eq_choice[item->aux].insert(copy->aux);
+        cons.eq_choice[copy->aux].insert(item->aux);
+        ret.push_back(Ret{copy, 0});
+      }
+      else
+      {
+        NODE_ALLOC(copy, redo);
+        copy->vptr = item->vptr;
+        copy->tag = item->tag;
+        
+        item->vptr->succ(item, &src_begin, &src_end);
+        aux_t const N = static_cast<aux_t>(src_end - src_begin);
+        if(N < SPRITE_INPLACE_BOUND)
+          dst_begin = &SUCC_0(copy);
+        else
+        {
+          dst_begin = Cy_ArrayAllocTyped(N);
+          DATA(copy, node**) = dst_begin;
+        }
+        while(src_begin!=src_end)
+        {
+          node * tmp;
+          NODE_ALLOC(tmp, redo);
+          tmp->vptr = &CyVt_Free;
+          tmp->tag = FREE;
+          tmp->aux = Cy_NextChoiceId++;
+          *dst_begin = tmp;
+
+          CyBind_BindVars(*src_begin++, *dst_begin++);
+        }
+
+        do
+        {
+          auto & r = ret.back();
+          if(r.n == 0)
+          {
+            SUCC_0(r.p) = copy;
+            r.n++;
+            break;
+          }
+          else
+          {
+            SUCC_1(r.p) = copy;
+            copy = r.p;
+            ret.pop_back();
+          }
+        } while(!ret.empty());
+      }
+    }
+    return copy;
+  }
+
+  void Cy_ExpandVarConstraints(aux_t id)
+  {
+    ConstraintStore & cons = *Cy_CurrentConstraints;
+    std::unordered_set<aux_t> seen;
+    seen.insert(id);
+    std::vector<aux_t> todo;
+    todo.push_back(id);
+
+    while(!todo.empty())
+    {
+      id = todo.back();
+      todo.pop_back();
+
+      auto it = cons.eq_var.find(id);
+      if(it == cons.eq_var.end())
+        continue;
+      for(auto const & pair: it->second)
+      {
+        node * p = pair.first;
+        node * q = pair.second;
+        if(!seen.count(q->aux))
+        {
+          todo.push_back(q->aux);
+          seen.insert(q->aux);
+        }
+        assert(SUCC_0(p) || SUCC_0(q));
+        if(!SUCC_0(p)) std::swap(p, q);
+        if(SUCC_0(q)) continue;
+        // p has a stencil; q has no stencil.
+        SUCC_0(q) = CyFree_CloneStencilAndNarrowConstraints(SUCC_0(p), q->aux);
+      }
+
+      cons.eq_var.erase(id);
+    }
+  }
+
+  // Validate (and clear) the constraints in the store, updating the
+  // fingerprint as needed.  Return true if the computation fails.
+  bool Cy_ValidateConstraints(Fingerprint & fp, ConstraintStore & cst, aux_t id)
+  {
+    std::vector<aux_t> todo{id};
+    while(!todo.empty())
+    {
+      id = todo.back();
+      todo.pop_back();
+
+      auto it = cst.eq_choice.find(id);
+      if(it == cst.eq_choice.end())
+        continue;
+      auto made = fp.test(id);
+      for(auto id2: it->second)
+      {
+        auto made2 = fp.test(id2);
+        switch(made2)
+        {
+          case ChoiceState::LEFT:
+          case ChoiceState::RIGHT:
+            if(made != made2) return true;
+            break;
+          case ChoiceState::UNDETERMINED:
+            if(made == ChoiceState::LEFT)
+              fp.set_left_no_check(id2);
+            else
+              fp.set_right_no_check(id2);
+            break;
+        }
+
+        // Process chains of bindings.
+        todo.push_back(id2);
+      }
+      // All affected choices are committed, now.  It is safe to clear this
+      // part of the constraint store.
+      cst.eq_choice.erase(id);
+    }
+    return false;
+  }
+
   // A subcomputation.  One entry in a work queue from the Fair Scheme.
   struct Cy_EvalFrame
   {
     node * expr;
-    std::shared_ptr<Fingerprint> fingerprint;
+    Fingerprint fingerprint;
+    ConstraintStore constraints;
 
-    Cy_EvalFrame(node * e, std::shared_ptr<Fingerprint> const & f)
-      : expr(e), fingerprint(f)
+    Cy_EvalFrame(node * e) : expr(e), fingerprint(), constraints()
     {}
+
+    Cy_EvalFrame(node * e, Fingerprint && f, ConstraintStore && c)
+      : expr(e), fingerprint(std::move(f)), constraints(std::move(c))
+    {}
+
+    // Non-copyable.
+    Cy_EvalFrame(Cy_EvalFrame const &) = delete;
+    Cy_EvalFrame & operator=(Cy_EvalFrame const &) = delete;
   };
 
   // The computation of a single involcation of Cy_Eval.  Holds one instance of
@@ -422,6 +713,37 @@ extern "C"
           case ChoiceState::UNDETERMINED:;
         }
       }
+    }
+  }
+
+  // Gets the representation of the current constraint store.
+  void Cy_ReprConstraints(FILE * stream)
+  {
+    auto & store = *Cy_CurrentConstraints;
+    bool first_out = true;
+    for(auto const & kv: store.eq_choice)
+    {
+      if(!first_out) fputc(',', stream); else first_out = false;
+      fprintf(stream, "%d:=:(", kv.first);
+      bool first = true;
+      for(auto id: kv.second)
+      {
+        if(!first) fputc(',', stream); else first = false;
+        fprintf(stream, "%d", id);
+      }
+      fputc(')', stream);
+    }
+    for(auto const & kv: store.eq_var)
+    {
+      if(!first_out) fputc(',', stream); else first_out = false;
+      fprintf(stream, "%d => [", kv.first);
+      bool first = true;
+      for(auto const & pair: kv.second)
+      {
+        if(!first) fputc(',', stream); else first = false;
+        fprintf(stream, "_x%d:=:_x%d", pair.first->aux, pair.second->aux);
+      }
+      fputc(']', stream);
     }
   }
 
@@ -472,9 +794,8 @@ extern "C"
   void Cy_Eval(node * root, void(*yield)(node * root))
   {
     // Set up this computations.
-    std::list<Cy_EvalFrame> computation = {
-        {root, std::shared_ptr<Fingerprint>(new Fingerprint())}
-      };
+    std::list<Cy_EvalFrame> computation;
+    computation.emplace_back(root);
 
     // Link it into the list of global computations.
     Cy_ComputationFrame compframe = { &computation, Cy_GlobalComputations };
@@ -486,7 +807,8 @@ extern "C"
     while(!computation.empty())
     {
       Cy_EvalFrame & frame = computation.front();
-      Cy_CurrentFingerprint = frame.fingerprint.get();
+      Cy_CurrentFingerprint = &frame.fingerprint;
+      Cy_CurrentConstraints = &frame.constraints;
       node * expr = frame.expr;
       expr->vptr->N(expr);
       redo: switch(expr->tag)
@@ -495,12 +817,60 @@ extern "C"
           computation.pop_front();
           break;
         case FWD:
-          computation.front().expr = expr = SUCC_0(expr);
+          frame.expr = expr = SUCC_0(expr);
           goto redo;
+        case FREE:
+        {
+          if(frame.fingerprint.choice_is_made(expr->aux))
+          {
+            node * choice = SUCC_0(expr);
+            frame.expr = expr = CyFree_CopyStencil(choice);
+            goto handle_choice;
+          }
+          goto yield_value;
+        }
+        case BINDING:
+        {
+          node * args = SUCC_1(expr);
+          node * lhs = SUCC_0(args);
+          node * rhs = SUCC_1(args);
+          CyBind_BindVars(lhs, rhs);
+          // Check LHS of constraint.
+          aux_t id = lhs->aux;
+          if(frame.fingerprint.test(id) != ChoiceState::UNDETERMINED)
+          {
+            Cy_ExpandVarConstraints(id);
+            if(Cy_ValidateConstraints(frame.fingerprint, frame.constraints, id))
+            {
+              computation.pop_front();
+              break;
+            }
+          }
+          // Check RHS of constraint.
+          id = rhs->aux;
+          if(frame.fingerprint.test(id) != ChoiceState::UNDETERMINED)
+          {
+            Cy_ExpandVarConstraints(id);
+            if(Cy_ValidateConstraints(frame.fingerprint, frame.constraints, id))
+            {
+              computation.pop_front();
+              break;
+            }
+          }
+
+          frame.expr = expr = SUCC_0(expr);
+          expr->vptr->N(expr);
+          goto redo;
+        }
         case CHOICE:
+        handle_choice:
         {
           aux_t const id = expr->aux;
-          switch(frame.fingerprint->test(id))
+          // Convert constraints over variables into constraints over choices.
+          if(frame.constraints.eq_var.count(id))
+            Cy_ExpandVarConstraints(id);
+
+          switch(frame.fingerprint.test(id))
           {
             case ChoiceState::LEFT:
               // Discard right expression.
@@ -512,13 +882,17 @@ extern "C"
               break;
             case ChoiceState::UNDETERMINED:
             {
-              // Discard no expression.
-              auto left = frame.fingerprint->clone();
-              left->set_left_no_check(id); // note: call to test() dominates.
-              computation.emplace_back(SUCC_0(expr), left);
+              // Keep both left and right (unless constraints are not met).
+              Fingerprint left_fp(frame.fingerprint);
+              left_fp.set_left_no_check(id); // note: call to test() dominates.
+              ConstraintStore left_cst(frame.constraints);
+              if(!Cy_ValidateConstraints(left_fp, left_cst, id))
+                computation.emplace_back(SUCC_0(expr), std::move(left_fp), std::move(left_cst));
+
               frame.expr = SUCC_1(expr);
-              frame.fingerprint->set_right_no_check(id); // note: as above
-              break;
+              frame.fingerprint.set_right_no_check(id); // note: as above
+              if(Cy_ValidateConstraints(frame.fingerprint, frame.constraints, id))
+                continue;
             }
           }
           // Rotate the front frame to the back.
@@ -530,11 +904,13 @@ extern "C"
           computation.pop_front();
           break;
         default:
+        yield_value:
           yield(expr);
           computation.pop_front();
       }
     }
     Cy_CurrentFingerprint = nullptr;
+    Cy_CurrentConstraints = nullptr;
   }
 
   // Note: root is a [Char], already normalized.
@@ -827,39 +1203,24 @@ extern "C"
     root->tag = CTOR;
   }
 
-  // Binds a variable to another node.  In a root expression matching the pattern
-  // (to=:=from), this replaces from with (to ?_i from') where i is a fresh
-  // choice ID and from' is a new free variable.  The computation fingerprints
-  // are also modified to make the appropriate choice for ?_i.
-  void Cy_BindVar(node * root, node * from, node * to)
+  // Creates a binding object between from and to whose value is Success.
+  void CyBind_CreateAsSuccess(node * root, node * from, node * to)
   {
-    // Create a new variable.
-    node * newvar;
-    redo: NODE_ALLOC(newvar, redo);
-    newvar->vptr = from->vptr;
-    newvar->tag = FREE;
-
-    // Replace the second variable (could be either one) with a choice.
-    from->vptr = &CyVt_Choice;
-    from->tag = CHOICE;
-    aux_t const id = Cy_NextChoiceId++;
-    from->aux = id;
-    from->slot0 = reinterpret_cast<char*>(to);
-    from->slot1 = reinterpret_cast<char*>(newvar);
-
-    // Update the fingerprints.  The first eval frame (the current computation)
-    // chooses left, and all others choose right.
-    assert(Cy_GlobalComputations);
-    auto pos = Cy_GlobalComputations->computation->begin();
-    auto end = Cy_GlobalComputations->computation->end();
-    assert(pos!=end);
-    pos->fingerprint->set_left(id);
-    for(++pos; pos!=end; ++pos)
-      pos->fingerprint->set_right(id);
-
-    // Return Success.
-    root->vptr = &CyVt_Success;
-    root->tag = CTOR;
+  redo:
+    node * pair;
+    node * success;
+    NODE_ALLOC(pair, redo);
+    NODE_ALLOC(success, redo);
+    pair->vptr = &CyVt_pair;
+    pair->tag = CTOR;
+    SUCC_0(pair) = from;
+    SUCC_1(pair) = to;
+    success->vptr = &CyVt_Success;
+    success->tag = CTOR;
+    root->vptr = &CyVt_Binding;
+    root->tag = BINDING;
+    SUCC_0(root) = success;
+    SUCC_1(root) = pair;
   }
 
   void CyPrelude_Eq(node *) __asm__("CyPrelude_==");
@@ -882,7 +1243,7 @@ extern "C"
     bool freelhs = false;
     #define WHEN_FREE(lhs) freelhs = true;
     #include "normalize1st.def"
-    #define WHEN_FREE(rhs) if(freelhs) return Cy_BindVar(root, rhs, lhs);
+    #define WHEN_FREE(rhs) if(freelhs) return CyBind_CreateAsSuccess(root, rhs, lhs);
     #include "normalize2nd.def"
     root->vptr = (freelhs ? rhs : lhs)->vptr->equate;
   }
@@ -891,7 +1252,7 @@ extern "C"
   void CyPrelude_EqColonLtEq(node * root)
   {
     node * lhs;
-    #define WHEN_FREE(lhs) return Cy_BindVar(root, lhs, SUCC_1(root));
+    #define WHEN_FREE(lhs) return CyBind_CreateAsSuccess(root, lhs, SUCC_1(root));
     #include "normalize1st.def"
     root->vptr = lhs->vptr->ns_equate;
   }
@@ -911,39 +1272,6 @@ extern "C"
     root->vptr = (freelhs ? rhs : lhs)->vptr->compare;
   }
   
-  static size_t CyFree_NextId = 0;
-  static std::unordered_set<node*> CyFree_Seen;
-
-  void CyFree_ResetCounter()
-  {
-    CyFree_NextId = 0;
-    CyFree_Seen.clear();
-  }
-
-  void Cy_Free_show(node * root)
-  {
-    node * arg = SUCC_0(root);
-    if(CyFree_Seen.insert(arg).second)
-    {
-      // If unseen, put the string into the free variable's data region.
-      char * p = &DATA(arg, char);
-      *p++ = '_';
-      size_t id = CyFree_NextId++;
-      if(id<26)
-      {
-        *p++ = 'a' + id;
-        *p = '\0';
-      }
-      else
-      {
-        *p++ = 'a';
-        size_t constexpr maxsize = sizeof(arg->slot0) + sizeof(arg->slot1) - 2;
-        snprintf(p, maxsize, "%zu", (id-25));
-      }
-    }
-    Cy_CStringToCyString(&DATA(arg, char), root);
-  }
-
   void CyPrelude_prim_label(node * root)
   {
     node * arg = SUCC_0(root);
@@ -953,7 +1281,8 @@ extern "C"
 
   void CyPrelude_show(node * root)
   {
-    #define WHEN_FREE(lhs) return Cy_Free_show(root);
+  redo:
+    #define WHEN_FREE(lhs) { Cy_CStringToCyString(lhs->vptr->label(lhs), root); return; }
     #include "normalize1.def"
     root->vptr = arg->vptr->show;
   }

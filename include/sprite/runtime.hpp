@@ -49,6 +49,11 @@ namespace sprite { namespace compiler
     // The type of a function that converts an expression into a string.
     function_type reprfun_t = void_t(*node_t, FILE_p, bool_t);
 
+    // The type of a generator function.  The first argument is used
+    // when processing FWD nodes.  The second argument indicates
+    // the first choice ID.
+    function_type genfun_t = (*node_t)(*node_t, aux_t);
+
     ir_h()
     {
       /// A node is made up of a pointer-to-vtable, tag, and two data slots.
@@ -146,8 +151,16 @@ namespace sprite { namespace compiler
     function const Cy_NoAction = extern_(void_t(*node_t), "Cy_NoAction");
     function const Cy_Repr = extern_(reprfun_t, "Cy_Repr");
     function const Cy_ReprFingerprint = extern_(void_t(FILE_p), "Cy_ReprFingerprint");
+    function const Cy_ReprConstraints = extern_(void_t(FILE_p), "Cy_ReprConstraints");
 
+    // Errors.
+    // Runtime libarary function to raise a "no generator" error.
+    function const CyErr_NoGenerator = extern_(void_t(*char_t), "CyErr_NoGenerator");
 
+    // Returns a generator function that raises a "no generator" error.
+    function Cy_NoGenerator(std::string const & name) const;
+
+    // Other.
     // Returns an arity function for the specified arity.
     function Cy_Arity(size_t arity) const;
   
@@ -160,6 +173,10 @@ namespace sprite { namespace compiler
 
     // Returns a function that frees the associated successor array, if any.
     function Cy_Destroy(size_t arity) const;
+
+    // Get the vtable of a built-in type.
+    global CyVt_Builtin(std::string const & name) const
+      { return extern_(vtable_t, get_vt_name(name)); }
 
     // Gets the vtable for equality.  For normal types, str1 is the module name
     // and str2 is the type name.  For built-in types, str1 is the built-in
@@ -204,9 +221,13 @@ namespace sprite { namespace compiler
     function const Cy_TestChoiceIsMade = extern_(bool_t(aux_t), "Cy_TestChoiceIsMade");
     function const Cy_TestChoiceIsLeft = extern_(bool_t(aux_t), "Cy_TestChoiceIsLeft");
 
-    // Free variables are printed as _a, _b, . . .  This function resets the
-    // sequence to _a, and is called between producing values.
-    function const CyFree_ResetCounter = extern_(void_t(), "CyFree_ResetCounter");
+    // // Free variables are printed as _a, _b, . . .  This function resets the
+    // // sequence to _a, and is called between producing values.
+    // function const CyFree_ResetCounter = extern_(void_t(), "CyFree_ResetCounter");
+
+    // A stencil is attached to a narrowed free variable.  When one is encountered
+    // in the inductive position, the stencil is copied.
+    function const CyFree_CopyStencil = extern_((*node_t)(*node_t), "CyFree_CopyStencil");
 
     // External functions.
     // void exit(int status);

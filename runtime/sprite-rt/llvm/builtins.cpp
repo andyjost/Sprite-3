@@ -23,8 +23,9 @@ void build_vt_for_freevar(rt_h const & rt)
       rt.labelfun_t, ".name.freevar", {"node_p"}
     , [&] {
         value node_p = arg("node_p");
+        value id = node_p.arrow(ND_AUX);
         value rv = rt.snprintf(
-            &printbuffer(rt), PRINT_BUFFER_SIZE, "_G%x", node_p
+            &printbuffer(rt), PRINT_BUFFER_SIZE, "_x%" PRId32, id
           );
         if_(rv ==(signed_)(0)
           , [&]{

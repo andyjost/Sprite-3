@@ -14,12 +14,10 @@ clean :
 #         =1  Prints a summary of the time spent collecting.
 #         =2  Prints information every time the collector runs.
 #         =3  Prints information about every node during collection.
-#     -DNOBYPASS=1  Disable code to bypass choices in the runtime library.
-#         Note: bypassing appears incomplete and may be removed.
 #     -g Add debug symbols.  Allows debugging into the runtime library.
 #
 # Note: llvm-config is used to access SmallVector.h.  It may add NDEBUG.
-LOCAL_CFLAGS += $(shell $(LLVM-CONFIG) --cppflags) $(RT-CFLAGS) -std=c++11 -I. -DNOBYPASS
+LOCAL_CFLAGS += $(shell $(LLVM-CONFIG) --cppflags) $(RT-CFLAGS) -std=c++11 -I.
 
 .DELETE_ON_ERROR :
 $(STATICLIB) : main.o
