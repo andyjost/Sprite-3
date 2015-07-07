@@ -14,6 +14,7 @@
 #include "stdlib.h"
 #include "cymemory.hpp"
 #include "fingerprint.hpp"
+#include <boost/scope_exit.hpp>
 
 #define SUCC_0(root) reinterpret_cast<node*&>(root->slot0)
 #define SUCC_1(root) reinterpret_cast<node*&>(root->slot1)
@@ -79,6 +80,7 @@ extern "C"
 {
   // These are defined in the "LLVM part" of the runtime.
   extern vtable CyVt_Binding __asm__(".vt.binding");
+  extern vtable CyVt_LazyBinding __asm__(".vt.lazybinding");
   extern vtable CyVt_Char __asm__(".vt.Char");
   extern vtable CyVt_Choice __asm__(".vt.choice");
   extern vtable CyVt_Failed __asm__(".vt.failed");
@@ -98,6 +100,8 @@ extern "C"
   extern vtable CyVt_Tuple0 __asm__(".vt.CTOR.Prelude.()");
   extern vtable CyVt_apply __asm__(".vt.OPER.Prelude.apply");
   extern vtable CyVt_pair __asm__(".vt.CTOR.Prelude.(,)");
+  extern vtable CyVt_cond __asm__(".vt.OPER.Prelude.cond");
+  extern vtable CyVt_amp __asm__(".vt.OPER.Prelude.&");
 
   aux_t Cy_NextChoiceId = 0;
 
@@ -454,13 +458,23 @@ extern "C"
     // by the need to process choices as they reach the of a computation.
     std::unordered_map<aux_t, std::unordered_set<aux_t>> eq_choice;
 
-    // The variable bindings.  These are bindings between free variables (not
-    // choices).  A free variable may narrow to more than one choice (i.e., if
-    // the type has more than two constructors).  Moreover, bindings between
-    // variables imply additional bindings between successor variables.  For
-    // example, if x0=:=x1 for two lists, then after narrowing to x0=([] ?0
-    // (x2:x3)) and x1=([] ?1 (x4:x5)), we also have x2=:=x4 and x3=:=x5.
-    std::unordered_map<aux_t, std::vector<std::pair<node *, node *>>> eq_var;
+    struct BindData
+    {
+      BindData(node * f, node * s, bool l) : first(f), second(s), is_lazy(l) {}
+      node * first;
+      node * second;
+      bool is_lazy;
+    };
+
+    // The variable bindings.  There are two types: lazy and normal.  A lazy
+    // binding is between a variable and an unevaluated expression.  A normal
+    // binding is between two free variables (not choices).  A free variable
+    // may narrow to more than one choice (i.e., if the type has more than two
+    // constructors).  Moreover, bindings between variables imply additional
+    // bindings between successor variables.  For example, if x0=:=x1 for two
+    // lists, then after narrowing to x0=([] ?0 (x2:x3)) and x1=([] ?1
+    // (x4:x5)), we also have x2=:=x4 and x3=:=x5.
+    std::unordered_map<aux_t, std::vector<BindData>> eq_var;
   };
 
   // the current constraints.  Similar to Cy_CurrentFingerprint.
@@ -472,12 +486,23 @@ extern "C"
     // from->aux => (from, to)
     {
       auto & bucket = store[from->aux];
-      bucket.emplace_back(from, to);
+      bucket.emplace_back(from, to, false);
     }
     // to->aux => (to, from)
     {
       auto & bucket = store[to->aux];
-      bucket.emplace_back(to, from);
+      bucket.emplace_back(to, from, false);
+    }
+  }
+
+  // Used to implement =:<=.  The RHS may be an unevaluated expression.
+  void CyBind_LazyBindVar(node * from, node * to)
+  {
+    auto & store = Cy_CurrentConstraints->eq_var;
+    // from->aux => (from, to)
+    {
+      auto & bucket = store[from->aux];
+      bucket.emplace_back(from, to, true);
     }
   }
 
@@ -580,13 +605,60 @@ extern "C"
     return copy;
   }
 
-  void Cy_ExpandVarConstraints(aux_t id)
+  void Cy_ExpandLazyVar(node *& conditions, node * p, node * q)
+  {
+    // It is time to evaluate this, now.  The variable participating in
+    // lazy binding is needed by the current computation.
+    q->vptr->H(q);
+  redo:
+    // Create a new condition.  It will be prepended to the evaluation.
+    node * newc;
+    NODE_ALLOC(newc, redo);
+    newc->vptr = q->vptr->ns_equate; // use the type-specific one.
+    newc->tag = OPER;
+    SUCC_0(newc) = p;
+    SUCC_1(newc) = q;
+   
+    // Create (cond newc nullptr) if conditions does not exist.
+    if(!conditions)
+    {
+      NODE_ALLOC(conditions, redo);
+      CyMem_PushRoot(conditions);
+      conditions->vptr = &CyVt_cond;
+      conditions->tag = OPER;
+      SUCC_0(conditions) = newc;
+      conditions->slot1 = nullptr; // to be filled in by the caller.
+    }
+    // Otherwise, extend the conditions:
+    //     (cond c nullptr) -> (cond (newc & c) nullptr)
+    else
+    {
+      node * amp;
+      NODE_ALLOC(amp, redo);
+      amp->vptr = &CyVt_amp;
+      amp->tag = OPER;
+      SUCC_0(amp) = newc;
+      SUCC_1(amp) = SUCC_0(conditions);
+
+      // This & operation takes the place of the old condition.
+      SUCC_0(conditions) = amp;
+    }
+  }
+
+  node * Cy_ExpandVarConstraints(aux_t id)
   {
     ConstraintStore & cons = *Cy_CurrentConstraints;
     std::unordered_set<aux_t> seen;
     seen.insert(id);
     std::vector<aux_t> todo;
     todo.push_back(id);
+
+    // Capture additional conditions that arise as the result of expanding the
+    // lazy bindings.
+    node * conditions = nullptr;
+    BOOST_SCOPE_EXIT((conditions))
+      { if(conditions) CyMem_PopRoot(); }
+    BOOST_SCOPE_EXIT_END
 
     while(!todo.empty())
     {
@@ -596,24 +668,30 @@ extern "C"
       auto it = cons.eq_var.find(id);
       if(it == cons.eq_var.end())
         continue;
-      for(auto const & pair: it->second)
+      for(auto const & data: it->second)
       {
-        node * p = pair.first;
-        node * q = pair.second;
-        if(!seen.count(q->aux))
+        node * p = data.first;
+        node * q = data.second;
+        if(data.is_lazy)
+          Cy_ExpandLazyVar(conditions, p, q);
+        else
         {
-          todo.push_back(q->aux);
-          seen.insert(q->aux);
+          if(!seen.count(q->aux))
+          {
+            todo.push_back(q->aux);
+            seen.insert(q->aux);
+          }
+          assert(SUCC_0(p) || SUCC_0(q));
+          if(!SUCC_0(p)) std::swap(p, q);
+          if(SUCC_0(q)) continue;
+          // p has a stencil; q has no stencil.
+          SUCC_0(q) = CyFree_CloneStencilAndNarrowConstraints(SUCC_0(p), q->aux);
         }
-        assert(SUCC_0(p) || SUCC_0(q));
-        if(!SUCC_0(p)) std::swap(p, q);
-        if(SUCC_0(q)) continue;
-        // p has a stencil; q has no stencil.
-        SUCC_0(q) = CyFree_CloneStencilAndNarrowConstraints(SUCC_0(p), q->aux);
       }
 
       cons.eq_var.erase(id);
     }
+    return conditions;
   }
 
   // Validate (and clear) the constraints in the store, updating the
@@ -738,10 +816,16 @@ extern "C"
       if(!first_out) fputc(',', stream); else first_out = false;
       fprintf(stream, "%d => [", kv.first);
       bool first = true;
-      for(auto const & pair: kv.second)
+      for(auto const & data: kv.second)
       {
         if(!first) fputc(',', stream); else first = false;
-        fprintf(stream, "_x%d:=:_x%d", pair.first->aux, pair.second->aux);
+        if(data.is_lazy)
+        {
+          fprintf(stream, "_x%d:=<:", data.first->aux);
+          Cy_Repr(data.second, stream, false);
+        }
+        else
+          fprintf(stream, "_x%d:=:_x%d", data.first->aux, data.second->aux);
       }
       fputc(']', stream);
     }
@@ -821,6 +905,36 @@ extern "C"
           goto redo;
         case FREE:
         {
+          // Expand lazy bindings on this variable before accepting it as data.
+          auto it = frame.constraints.eq_var.find(expr->aux);
+          if(it != frame.constraints.eq_var.end())
+          {
+            node * conditions = nullptr;
+            BOOST_SCOPE_EXIT((conditions))
+              { if(conditions) CyMem_PopRoot(); }
+            BOOST_SCOPE_EXIT_END
+
+            for(auto const & data: it->second)
+            {
+              if(data.is_lazy)
+                Cy_ExpandLazyVar(conditions, data.first, data.second);
+            }
+            auto last = std::remove_if(
+                it->second.begin(), it->second.end()
+              , [](ConstraintStore::BindData const & data) { return data.is_lazy; }
+              );
+            it->second.erase(last, it->second.end());
+            if(it->second.empty())
+              frame.constraints.eq_var.erase(it);
+
+            if(conditions)
+            {
+              SUCC_1(conditions) = expr;
+              frame.expr = conditions;
+              break;
+            }
+          }
+
           if(frame.fingerprint.choice_is_made(expr->aux))
           {
             node * choice = SUCC_0(expr);
@@ -834,33 +948,55 @@ extern "C"
           node * args = SUCC_1(expr);
           node * lhs = SUCC_0(args);
           node * rhs = SUCC_1(args);
-          CyBind_BindVars(lhs, rhs);
+          bool const is_lazy = expr->vptr == &CyVt_LazyBinding;
+          if(is_lazy)
+            CyBind_LazyBindVar(lhs, rhs);
+          else // expr->vptr == &CyVt_Binding
+            CyBind_BindVars(lhs, rhs);
+
+          node * next_expr = SUCC_0(expr);
+
           // Check LHS of constraint.
           aux_t id = lhs->aux;
           if(frame.fingerprint.test(id) != ChoiceState::UNDETERMINED)
           {
-            Cy_ExpandVarConstraints(id);
+            node * conditions = Cy_ExpandVarConstraints(id);
             if(Cy_ValidateConstraints(frame.fingerprint, frame.constraints, id))
             {
               computation.pop_front();
-              break;
+              break; // abandon conditions.
             }
-          }
-          // Check RHS of constraint.
-          id = rhs->aux;
-          if(frame.fingerprint.test(id) != ChoiceState::UNDETERMINED)
-          {
-            Cy_ExpandVarConstraints(id);
-            if(Cy_ValidateConstraints(frame.fingerprint, frame.constraints, id))
+
+            if(conditions)
             {
-              computation.pop_front();
-              break;
+              SUCC_1(conditions) = next_expr;
+              next_expr = conditions;
             }
           }
 
-          frame.expr = expr = SUCC_0(expr);
-          expr->vptr->N(expr);
-          goto redo;
+          if(!is_lazy)
+          {
+            // Check RHS of constraint (only for non-lazy bindings).
+            id = rhs->aux;
+            if(frame.fingerprint.test(id) != ChoiceState::UNDETERMINED)
+            {
+              node * conditions = Cy_ExpandVarConstraints(id);
+              if(Cy_ValidateConstraints(frame.fingerprint, frame.constraints, id))
+              {
+                computation.pop_front();
+                break; // abandon conditions.
+              }
+
+              if(conditions)
+              {
+                SUCC_1(conditions) = next_expr;
+                next_expr = conditions;
+              }
+            }
+          }
+
+          frame.expr = next_expr;
+          break;
         }
         case CHOICE:
         handle_choice:
@@ -1204,7 +1340,7 @@ extern "C"
   }
 
   // Creates a binding object between from and to whose value is Success.
-  void CyBind_CreateAsSuccess(node * root, node * from, node * to)
+  void CyBind_CreateAsSuccess(node * root, node * from, node * to, bool is_lazy)
   {
   redo:
     node * pair;
@@ -1217,7 +1353,7 @@ extern "C"
     SUCC_1(pair) = to;
     success->vptr = &CyVt_Success;
     success->tag = CTOR;
-    root->vptr = &CyVt_Binding;
+    root->vptr = is_lazy ? &CyVt_LazyBinding : &CyVt_Binding;
     root->tag = BINDING;
     SUCC_0(root) = success;
     SUCC_1(root) = pair;
@@ -1243,7 +1379,7 @@ extern "C"
     bool freelhs = false;
     #define WHEN_FREE(lhs) freelhs = true;
     #include "normalize1st.def"
-    #define WHEN_FREE(rhs) if(freelhs) return CyBind_CreateAsSuccess(root, rhs, lhs);
+    #define WHEN_FREE(rhs) if(freelhs) return CyBind_CreateAsSuccess(root, rhs, lhs, false);
     #include "normalize2nd.def"
     root->vptr = (freelhs ? rhs : lhs)->vptr->equate;
   }
@@ -1252,8 +1388,11 @@ extern "C"
   void CyPrelude_EqColonLtEq(node * root)
   {
     node * lhs;
-    #define WHEN_FREE(lhs) return CyBind_CreateAsSuccess(root, lhs, SUCC_1(root));
+    #define WHEN_FREE(lhs) return CyBind_CreateAsSuccess(root, lhs, SUCC_1(root), true);
     #include "normalize1st.def"
+    node * rhs;
+    #define WHEN_FREE(rhs) { root->vptr = lhs->vptr->ns_equate; return; }
+    #include "normalize2nd.def"
     root->vptr = lhs->vptr->ns_equate;
   }
 

@@ -1,5 +1,6 @@
 // No include guards desired.
 SPRITE_HANDLE_BUILTIN(binding, 2)
+SPRITE_HANDLE_BUILTIN(lazybinding, 2)
 SPRITE_HANDLE_BUILTIN(Char, 0)
 SPRITE_HANDLE_BUILTIN(choice, 2)
 SPRITE_HANDLE_BUILTIN(Float, 0)

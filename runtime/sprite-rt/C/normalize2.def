@@ -45,7 +45,7 @@ t_binding_lhs:
 	lhs_choice->tag = root->tag;
 	lhs_choice->slot0 = lhs->slot0;
 	lhs_choice->slot1 = root->slot1;
-	root->vptr = &CyVt_Binding;
+	root->vptr = lhs->vptr;
 	root->tag = BINDING;
 	root->slot0 = lhs_choice;
 	root->slot1 = lhs->slot1;
@@ -56,7 +56,7 @@ t_binding_rhs:
 	rhs_choice->tag = root->tag;
 	rhs_choice->slot0 = root->slot0;
 	rhs_choice->slot1 = rhs->slot0;
-	root->vptr = &CyVt_Binding;
+	root->vptr = rhs->vptr;
 	root->tag = BINDING;
 	root->slot0 = rhs_choice;
 	root->slot1 = rhs->slot1;

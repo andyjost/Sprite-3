@@ -45,6 +45,8 @@ void build_vt_for_trivial_node(
 
 void build_vt_for_binding(rt_h const & rt)
   { build_vt_for_trivial_node(rt, "binding", 2); }
+void build_vt_for_lazybinding(rt_h const & rt)
+  { build_vt_for_trivial_node(rt, "lazybinding", 2); }
 void build_vt_for_failed(rt_h const & rt)
   { build_vt_for_trivial_node(rt, "failed", 0); }
 void build_vt_for_success(rt_h const & rt)
