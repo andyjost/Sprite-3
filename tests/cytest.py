@@ -3,11 +3,13 @@ cytest - A module to compare Curry output.
 '''
 
 from __future__ import print_function
+import cStringIO
 import os
 import re
 import shutil
 import subprocess
 import sys
+import tokenize
 import unittest
 
 # OK to change the next value.
@@ -152,17 +154,62 @@ def getAnswers(filename):
 
   return oracle_answer, sprite_answer, oracle_rc, sprite_rc
 
+class Tokenizer(object):
+  '''
+  Tokenizes and compares result strings.
+
+  Implements a loose comparison by:
+    - Converting KiCS2-style free variable strings to PACKS-style ones.
+    - Ignoring differences in whether the whole expression has parens.
+  '''
+
+  def __init__(self):
+    self.symbols = {}
+    self.pat = re.compile('_x\d+')
+    self.nextid = 0
+    self.out = []
+
+  def _show(self, i):
+    if i < 26:
+      return '_' + chr(97 + i)
+    else:
+      return '_a%d' % i
+
+  def finalize(self):
+    '''Ignore differences in outermost parenthesization.'''
+    if self.out[0] == '(' and self.out[-1] == ')':
+      self.out = self.out[1:-1]
+
+  def __call__(self, ty, text, rc_beg, rc_end, lineno):
+    if text == '':
+      return
+
+    if self.pat.match(text):
+      if text not in self.symbols:
+        self.symbols[text] = self.nextid
+        self.nextid += 1
+      self.out.append(self._show(self.symbols[text]))
+    else:
+      self.out.append(text)
+
+  def __eq__(self, rhs):
+    return self.out == rhs.out
+    
+
+def processAnswer(text):
+  tok = Tokenizer()
+  tokenize.tokenize(cStringIO.StringIO(text).readline, tok)
+  tok.finalize()
+  return tok
+
 def equalAnswers(tc, oracle, sprite, oracle_rc, sprite_rc):
   tc.assertEqual(
       len(oracle), len(sprite)
     , msg='len(oracle) != len(sprite)'
     )
   for p,s in zip(oracle, sprite):
-    tc.assertTrue(
-        # Tolerate extra parens surrounding.
-        p == s or ('(%s)' % p) == s
-      , msg='Oracle=%s  Sprite=%s' % (p, s) 
-      )
+    p,s = map(processAnswer, (p,s))
+    tc.assertTrue(p == s, msg='Oracle=%s  Sprite=%s' % (p, s))
   tc.assertEqual(
       oracle_rc, sprite_rc
      , msg='return codes do not agree: Oracle=%s  Sprite=%s' % (oracle_rc, sprite_rc)
