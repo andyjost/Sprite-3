@@ -171,6 +171,10 @@ namespace sprite { namespace compiler
     // a pointer to that function.  The second argument is for internal use only.
     function Cy_Succ(size_t arity, bool=false) const;
 
+    // Returns the gcsucc function for free variable nodes.
+    function CyFree_GcSucc() const
+      { return extern_(rangefun_t, "CyFree_GcSucc"); }
+
     // Returns a function that frees the associated successor array, if any.
     function Cy_Destroy(size_t arity) const;
 

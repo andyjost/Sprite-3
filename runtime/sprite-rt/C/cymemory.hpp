@@ -2,6 +2,7 @@
 #include "boost-pool-1.46/pool.hpp"
 #include "basic_runtime.hpp"
 #include <deque>
+#include "computation_frame.hpp"
 
 #ifdef VERBOSEGC
 #include <iostream>
@@ -19,7 +20,7 @@ extern "C"
   extern sprite::compiler::vtable CyVt_Fwd __asm__(".vt.fwd");
 
   // The computation roots.
-  sprite::compiler::node * CyMem_NextComputationRoot();
+  // sprite::compiler::node * CyMem_NextComputationRoot();
 }
 
 namespace sprite { namespace compiler
@@ -144,10 +145,27 @@ namespace sprite { namespace compiler
     // Mark phase.
     std::deque<node*> roots;
 
-    // Add roots from computations.
-    while(node * p = CyMem_NextComputationRoot())
-      roots.push_back(p);
-    // Add other roots.
+    // Add computation roots.
+    Cy_ComputationFrame * frame = Cy_GlobalComputations;
+    while(frame)
+    {
+      for(auto const & comp: *frame->computation)
+      {
+        roots.push_back(comp.expr);
+        for(auto const & binding: comp.constraints.eq_var)
+        {
+          for(auto const & data: binding.second)
+          {
+            roots.push_back(data.first);
+            roots.push_back(data.second);
+          }
+        }
+      }
+
+      frame = frame->next;
+    }
+
+    // Add roots from the temporary stack.
     for(node * p: CyMem_Roots)
       roots.push_back(p);
 
@@ -155,6 +173,9 @@ namespace sprite { namespace compiler
     {
       node * parent = roots.back();
       roots.pop_back();
+
+      if(parent->mark == 1)
+        continue;
 
       #if VERBOSEGC > 2
         std::cout
@@ -166,7 +187,10 @@ namespace sprite { namespace compiler
         node ** begin, ** end;
         parent->vptr->gcsucc(parent, &begin, &end);
         for(; begin!=end; ++begin)
-          roots.push_back(*begin);
+        {
+          if((*begin)->mark == 0)
+            roots.push_back(*begin);
+        }
     }
 
     #if VERBOSEGC > 1

@@ -332,6 +332,7 @@ namespace
             p.arrow(ND_VPTR) = rt.freevar_vt;
             p.arrow(ND_TAG) = compiler::FREE;
             p.arrow(ND_AUX) = rt.Cy_NextChoiceId++;
+            p.arrow(ND_SLOT0) = nullptr;
             this->resolved_path_alloca = p;
           }
           else
@@ -411,6 +412,8 @@ namespace
       this->target_p.arrow(ND_VPTR) = rt.freevar_vt;
       this->target_p.arrow(ND_TAG) = compiler::FREE;
       this->target_p.arrow(ND_AUX) = rt.Cy_NextChoiceId++;
+      this->target_p.arrow(ND_SLOT0) = nullptr;
+
     }
 
     result_type operator()(Qname const & qname)

@@ -45,7 +45,7 @@ void build_vt_for_freevar(rt_h const & rt)
 				, &rt.Cy_Sentinel()
         , &rt.Cy_Arity(0)
         , &rt.Cy_Succ(0)
-        , &rt.Cy_Succ(0)
+        , &rt.CyFree_GcSucc()
         , &rt.Cy_Destroy(0)
         , nullptr // unreachable
         , nullptr

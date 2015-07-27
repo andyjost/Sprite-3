@@ -1,3 +1,4 @@
+#pragma once
 #include "basic_runtime.hpp"
 #include <boost/dynamic_bitset.hpp>
 
