@@ -86,8 +86,8 @@ extern "C"
 {
   // Global variables (initialization).
   Cy_ComputationFrame * Cy_GlobalComputations = nullptr;
-  Fingerprint * Cy_CurrentFingerprint = nullptr;
-  ConstraintStore * Cy_CurrentConstraints = nullptr;
+  Shared<Fingerprint> * Cy_CurrentFingerprint = nullptr;
+  Shared<ConstraintStore> * Cy_CurrentConstraints = nullptr;
 
   // These are defined in the "LLVM part" of the runtime.
   extern vtable CyVt_Binding __asm__(".vt.binding");
@@ -99,7 +99,7 @@ extern "C"
   extern vtable CyVt_Fwd __asm__(".vt.fwd");
   extern vtable CyVt_Int64 __asm__(".vt.Int64");
   extern vtable CyVt_Float __asm__(".vt.Float");
-  extern vtable CyVt_Success __asm__(".vt.success");
+  extern vtable CyVt_Success __asm__(".vt.Success");
   extern vtable CyVt_PartialSpine __asm__(".vt.PartialSpine");
   extern vtable CyVt_True __asm__(".vt.CTOR.Prelude.True");
   extern vtable CyVt_False __asm__(".vt.CTOR.Prelude.False");
@@ -133,7 +133,7 @@ extern "C"
     { return reinterpret_cast<node**>(Cy_ArrayPool[n].malloc()); }
 
   void Cy_ArrayDealloc(aux_t n, void * px)
-    { Cy_ArrayPool[n].free(px); }
+    { if(px) Cy_ArrayPool[n].free(px); }
 
   node * Cy_SkipFwd(node * root)
   {
@@ -455,30 +455,14 @@ extern "C"
 
   void CyBind_BindVars(node * from, node * to)
   {
-    auto & vstore = Cy_CurrentConstraints->eq_var;
-    auto & cstore = Cy_CurrentConstraints->eq_choice;
-    // from->aux => (from, to)
-    {
-      vstore[from->aux].emplace_back(from, to, false);
-      cstore[from->aux].insert(to->aux);
-    }
-    // to->aux => (to, from)
-    {
-      vstore[to->aux].emplace_back(to, from, false);
-      cstore[to->aux].insert(from->aux);
-    }
+    auto & constraints = Cy_CurrentConstraints->write();
+    constraints.add_var_constraints(from, to, false);
+    constraints.add_choice_constraints(from->aux, to->aux);
   }
 
   // Used to implement =:<=.  The RHS may be an unevaluated expression.
   void CyBind_LazyBindVar(node * from, node * to)
-  {
-    auto & store = Cy_CurrentConstraints->eq_var;
-    // from->aux => (from, to)
-    {
-      auto & bucket = store[from->aux];
-      bucket.emplace_back(from, to, true);
-    }
-  }
+    { Cy_CurrentConstraints->write().add_var_constraints(from, to, true); }
 
   // Clone a stencil from one variable to be attached to another variable.
   // Fresh IDs are used for copied choices and variables, but the first choice
@@ -577,7 +561,7 @@ extern "C"
   // Set the proper choice and variable constraints between corresponding stencils.
   void CyFree_NarrowConstraints(node * head0, node * head1)
   {
-    ConstraintStore & cons = *Cy_CurrentConstraints;
+    ConstraintStore * constraints = nullptr;
 
     // Activations.
     std::vector<std::pair<node *, node *>> active;
@@ -597,8 +581,9 @@ extern "C"
       {
         active.emplace_back(SUCC_1(lhs), SUCC_1(rhs));
         active.emplace_back(SUCC_0(lhs), SUCC_0(rhs));
-        cons.eq_choice[lhs->aux].insert(rhs->aux);
-        cons.eq_choice[rhs->aux].insert(lhs->aux);
+        if(!constraints)
+          constraints = &Cy_CurrentConstraints->write();
+        constraints->add_choice_constraints(lhs->aux, rhs->aux);
       }
       else
       {
@@ -651,7 +636,7 @@ extern "C"
     }
   }
 
-  node * Cy_ExpandVarConstraints(ConstraintStore & cons, aux_t id) // DEBUG: , bool lazy_only=false)
+  node * Cy_ExpandVarConstraints(ConstraintStore & constraints, aux_t id)
   {
     std::unordered_set<aux_t> seen;
     seen.insert(id);
@@ -665,19 +650,22 @@ extern "C"
       { if(conditions) CyMem_PopRoot(); }
     BOOST_SCOPE_EXIT_END
 
+    // Scratch space.  Only used in rare cases.
+    std::vector<ConstraintStore::BindData> scratch;
+
     while(!todo.empty())
     {
       id = todo.back();
       todo.pop_back();
 
-      auto it = cons.eq_var.find(id);
-      if(it == cons.eq_var.end())
+      auto const & vstore = constraints.eq_var.read();
+      auto it = vstore.find(id);
+      if(it == vstore.end())
         continue;
       DPRINTF("Processing id=%d\n", id);
-      auto & constraints = it->second;
-      auto in = constraints.begin();
-      auto out = in;
-      auto end = constraints.end();
+      auto const & bucket = it->second.read();
+      auto in = bucket.begin();
+      auto end = bucket.end();
       for(; in!=end; ++in)
       {
         node * p = in->first;
@@ -705,7 +693,7 @@ extern "C"
           switch(code)
           {
             case 0: // !sp && !sq
-              *out++ = *in;
+              scratch.emplace_back(*in);
               continue;
             case 1: // !sp && sq
               sp = CyFree_CloneStencil(sq, p->aux);
@@ -722,26 +710,34 @@ extern "C"
       }
 
       // Erase elements that were not kept, and remove the container, if empty.
-      constraints.erase(out, constraints.end());
-      if(constraints.empty())
+      // Local variable scratch contains the retained contents.
+      if(scratch.empty())
       {
-        DPRINTF("Erasing because it's empty\n");
-        cons.eq_var.erase(it);
+        // Reuse the iterator, if possible.
+        if(constraints.eq_var.needs_copy())
+          constraints.eq_var.write().erase(id);
+        else
+          constraints.eq_var.write().erase(it);
       }
       else
-        DPRINTF("Not erasing because it has items\n");
+      {
+        constraints.eq_var.write()[id] = std::move(scratch);
+        scratch.clear();
+      }
     }
     return conditions;
   }
 
   // Validate (and clear) the constraints in the store, updating the
   // fingerprint as needed.  Return true if the computation fails.
-  bool Cy_ValidateConstraints(Fingerprint & fp, ConstraintStore & cst, aux_t id)
+  bool Cy_ValidateConstraints(
+      Shared<Fingerprint> & fp, Shared<ConstraintStore> & constraints, aux_t id
+    )
   {
     DPRINTF("Now validating constraints for %d\n", id);
     DPRINTF("The eq_choice keys are:");
     #ifdef DIAGNOSTICS
-    for(auto ii: cst.eq_choice)
+    for(auto ii: constraints->eq_choice.read())
       DPRINTF(" %d", ii.first);
     #endif
     DPRINTF("\n");
@@ -753,17 +749,18 @@ extern "C"
       todo.pop_back();
       DPRINTF("Checking id=%d\n", id);
 
-      auto it = cst.eq_choice.find(id);
-      if(it == cst.eq_choice.end())
+      auto const & cstore = constraints->eq_choice.read();
+      auto it = cstore.find(id);
+      if(it == cstore.end())
       {
         DPRINTF("Not found\n");
         continue;
       }
-      auto made = fp.test(id);
-      for(auto id2: it->second)
+      auto made = fp->test(id);
+      for(auto id2: it->second.read())
       {
         DPRINTF("Checking id2=%d\n", id2);
-        auto made2 = fp.test(id2);
+        auto made2 = fp->test(id2);
         switch(made2)
         {
           case ChoiceState::LEFT:
@@ -780,12 +777,12 @@ extern "C"
             if(made == ChoiceState::LEFT)
             {
               DPRINTF("Setting ?%d to LEFT\n", id2);
-              fp.set_left_no_check(id2);
+              fp.write().set_left_no_check(id2);
             }
             else
             {
               DPRINTF("Setting ?%d to RIGHT\n", id2);
-              fp.set_right_no_check(id2);
+              fp.write().set_right_no_check(id2);
             }
             break;
         }
@@ -795,7 +792,7 @@ extern "C"
       }
       // All affected choices are committed, now.  It is safe to clear this
       // part of the constraint store.
-      cst.eq_choice.erase(id);
+      constraints.write().eq_choice.write().erase(id);
     }
     return false;
   }
@@ -805,7 +802,7 @@ extern "C"
   {
     if(Cy_CurrentFingerprint)
     {
-      auto & fp = *Cy_CurrentFingerprint;
+      auto & fp = Cy_CurrentFingerprint->read();
       size_t const n = fp.size();
       bool first = true;
       for(size_t i=0; i<n; ++i)
@@ -829,24 +826,24 @@ extern "C"
   {
     auto & store = *Cy_CurrentConstraints;
     bool first_out = true;
-    for(auto const & kv: store.eq_choice)
+    for(auto const & kv: store->eq_choice.read())
     {
       if(!first_out) fputc(',', stream); else first_out = false;
       fprintf(stream, "%d:=:(", kv.first);
       bool first = true;
-      for(auto id: kv.second)
+      for(auto id: kv.second.read())
       {
         if(!first) fputc(',', stream); else first = false;
         fprintf(stream, "%d", id);
       }
       fputc(')', stream);
     }
-    for(auto const & kv: store.eq_var)
+    for(auto const & kv: store->eq_var.read())
     {
       if(!first_out) fputc(',', stream); else first_out = false;
       fprintf(stream, "%d => [", kv.first);
       bool first = true;
-      for(auto const & data: kv.second)
+      for(auto const & data: kv.second.read())
       {
         if(!first) fputc(',', stream); else first = false;
         if(data.is_lazy)
@@ -864,11 +861,11 @@ extern "C"
   // Tests the indicated choice in the current fingerprint.  Precondition:
   // Cy_Eval is on the stack, so that Cy_CurrentFingerprint is non-null.
   bool Cy_TestChoiceIsMade(aux_t id)
-    { return Cy_CurrentFingerprint->choice_is_made(id); }
+    { return Cy_CurrentFingerprint->read().choice_is_made(id); }
 
   // Indicates whether a made choice is LEFT or RIGHT.  Precondition: Cy_TestChoiceIsMade(id).
   bool Cy_TestChoiceIsLeft(aux_t id)
-    { return Cy_CurrentFingerprint->choice_is_left_no_check(id); }
+    { return Cy_CurrentFingerprint->read().choice_is_left_no_check(id); }
 
   void CyFree_GcSucc(node * root, node *** begin, node *** end)
   {
@@ -896,53 +893,57 @@ extern "C"
       Cy_CurrentFingerprint = &frame.fingerprint;
       Cy_CurrentConstraints = &frame.constraints;
       node * expr = frame.expr;
-      DPRINTF("Q> WORKING_ON %p\n", expr); // DEBUG
+      DPRINTF("Q> WORKING_ON %p\n", expr);
       expr->vptr->N(expr);
       redo: switch(expr->tag)
       {
         handle_failure:
         case FAIL:
-          DPRINTF("Q> FAILED %p\n", expr); // DEBUG
+          DPRINTF("Q> FAILED %p\n", expr);
           computation.pop_front();
           break;
         case FWD:
-          DPRINTF("Q> REBASE %p -> %p\n", expr, SUCC_0(expr)); // DEBUG
+          DPRINTF("Q> REBASE %p -> %p\n", expr, SUCC_0(expr));
           frame.expr = expr = SUCC_0(expr);
           goto redo;
         case FREE:
         {
           // Expand lazy bindings on this variable before accepting it as data.
-          auto it = frame.constraints.eq_var.find(expr->aux);
-          if(it != frame.constraints.eq_var.end())
+          if(frame.constraints->eq_var->count(expr->aux))
           {
-            node * conditions = nullptr; // DEBUG
+            // Trigger a copy-on-write.
+            auto & vstore = frame.constraints.write().eq_var.write();
+            auto pbucket = vstore.find(expr->aux);
+            auto & bucket = pbucket->second.write();
+
+            node * conditions = nullptr; 
             BOOST_SCOPE_EXIT((conditions))
               { if(conditions) CyMem_PopRoot(); }
             BOOST_SCOPE_EXIT_END
 
-            for(auto const & data: it->second)
+            for(auto const & data: bucket)
             {
               if(data.is_lazy)
                 Cy_ExpandLazyVar(conditions, data.first, data.second);
             }
             auto last = std::remove_if(
-                it->second.begin(), it->second.end()
+                bucket.begin(), bucket.end()
               , [](ConstraintStore::BindData const & data) { return data.is_lazy; }
               );
-            it->second.erase(last, it->second.end());
-            if(it->second.empty())
-              frame.constraints.eq_var.erase(it);
+            bucket.erase(last, bucket.end());
+            if(bucket.empty())
+              vstore.erase(pbucket);
 
             if(conditions)
             {
               SUCC_1(conditions) = expr;
               frame.expr = conditions;
-              DPRINTF("Q> ADD_CONDITIONS %p\n", frame.expr); // DEBUG
+              DPRINTF("Q> ADD_CONDITIONS %p\n", frame.expr);
               break;
             }
           }
 
-          if(frame.fingerprint.choice_is_made(expr->aux))
+          if(frame.fingerprint->choice_is_made(expr->aux))
           {
             node * choice = SUCC_0(expr);
             frame.expr = expr = CyFree_CopyStencil(choice);
@@ -968,10 +969,10 @@ extern "C"
 
             // Check LHS of constraint.
             aux_t id = lhs->aux;
-            if(frame.fingerprint.test(id) != ChoiceState::UNDETERMINED)
+            if(frame.fingerprint->test(id) != ChoiceState::UNDETERMINED)
             {
               DPRINTF("Processing LEFT\n");
-              node * conditions = Cy_ExpandVarConstraints(frame.constraints, id);
+              node * conditions = Cy_ExpandVarConstraints(frame.constraints.write(), id);
               if(Cy_ValidateConstraints(frame.fingerprint, frame.constraints, id))
                 goto handle_failure;
               if(conditions)
@@ -987,8 +988,8 @@ extern "C"
 
             DPRINTF("Processing LEFT\n");
             aux_t id = lhs->aux;
-            node * conditions = Cy_ExpandVarConstraints(frame.constraints, id); // DEBUG, true);
-            if(frame.fingerprint.test(id) != ChoiceState::UNDETERMINED)
+            node * conditions = Cy_ExpandVarConstraints(frame.constraints.write(), id);
+            if(frame.fingerprint->test(id) != ChoiceState::UNDETERMINED)
             {
               if(Cy_ValidateConstraints(frame.fingerprint, frame.constraints, id))
                 goto handle_failure;
@@ -1002,8 +1003,8 @@ extern "C"
             // Check RHS of constraint (only for non-lazy bindings).
             DPRINTF("Processing RIGHT\n");
             id = rhs->aux;
-            conditions = Cy_ExpandVarConstraints(frame.constraints, id); // DEBUG, true);
-            if(frame.fingerprint.test(id) != ChoiceState::UNDETERMINED)
+            conditions = Cy_ExpandVarConstraints(frame.constraints.write(), id);
+            if(frame.fingerprint->test(id) != ChoiceState::UNDETERMINED)
             {
               if(Cy_ValidateConstraints(frame.fingerprint, frame.constraints, id))
                 goto handle_failure;
@@ -1030,7 +1031,7 @@ extern "C"
           // Convert constraints over variables into constraints over choices.
           // If new conditions are uncovered, process them before this choice.
           DPRINTF("Expanding vars\n");
-          node * conditions = Cy_ExpandVarConstraints(frame.constraints, id); // DEBUG: , true);
+          node * conditions = Cy_ExpandVarConstraints(frame.constraints.write(), id);
           if(conditions)
           {
             SUCC_1(conditions) = expr;
@@ -1040,7 +1041,7 @@ extern "C"
           }
           DPRINTF("Done expanding vars\n");
 
-          switch(frame.fingerprint.test(id))
+          switch(frame.fingerprint->test(id))
           {
             case ChoiceState::LEFT:
               // Discard right expression.
@@ -1058,32 +1059,31 @@ extern "C"
               auto head = computation.begin();
 
               // LEFT
-              Fingerprint left_fp(frame.fingerprint);
-              left_fp.set_left_no_check(id); // note: call to test() dominates.
-              ConstraintStore left_cst(frame.constraints);
+              Shared<Fingerprint> left_fp(frame.fingerprint);
+              left_fp.write().set_left_no_check(id); // note: call to test() dominates.
+              Shared<ConstraintStore> left_cst(frame.constraints);
               if(!Cy_ValidateConstraints(left_fp, left_cst, id))
               {
-                //computation.emplace_back(SUCC_0(expr), std::move(left_fp), std::move(left_cst));
                 computation.emplace(
                     head
                   , SUCC_0(expr), std::move(left_fp), std::move(left_cst)
                   );
-                DPRINTF("Q> FORK +> %p\n", SUCC_0(expr)); // DEBUG
+                DPRINTF("Q> FORK +> %p\n", SUCC_0(expr));
               }
               else
-                DPRINTF("Q> LHS_CONSTRAINTS_FAILED\n"); // DEBUG
+                DPRINTF("Q> LHS_CONSTRAINTS_FAILED\n");
 
               // RIGHT
               frame.expr = SUCC_1(expr);
-              frame.fingerprint.set_right_no_check(id); // note: as above
+              frame.fingerprint.write().set_right_no_check(id); // note: as above
               if(!Cy_ValidateConstraints(frame.fingerprint, frame.constraints, id))
               {
-                DPRINTF("Q> REBASE %p -> %p\n", expr, SUCC_1(expr)); // DEBUG
+                DPRINTF("Q> REBASE %p -> %p\n", expr, SUCC_1(expr));
                 frame.expr = SUCC_1(expr);
               }
               else
               {
-                DPRINTF("Q> RHS CONSTRAINTS FAILED\n"); // DEBUG
+                DPRINTF("Q> RHS CONSTRAINTS FAILED\n");
                 computation.erase(head);
                 break;
               }
@@ -1102,8 +1102,6 @@ extern "C"
           DPRINTF("Q> DONE %p\n", expr); // DEBUG
       }
     }
-    Cy_CurrentFingerprint = nullptr;
-    Cy_CurrentConstraints = nullptr;
   }
 
   // Note: root is a [Char], already normalized.
@@ -1334,12 +1332,12 @@ extern "C"
           break;
         case 1:
           root->vptr = DATA(arg, vtable*);
-          root->tag = OPER;
+          root->tag = root->vptr->tag;
           root->slot0 = root->slot1;
           break;
         case 2:
           root->vptr = DATA(SUCC_0(arg), vtable*);
-          root->tag = OPER;
+          root->tag = root->vptr->tag;
           root->slot0 = arg->slot1;
           // The second argument is already in the proper place.
           break;
@@ -1355,7 +1353,7 @@ extern "C"
           }
 
           root->vptr = DATA(current, vtable*);
-          root->tag = OPER;
+          root->tag = root->vptr->tag;
           root->slot0 = args;
           root->slot1 = 0;
         }
@@ -1389,11 +1387,20 @@ extern "C"
   void CyPrelude_Amp(node * root) __asm__("CyPrelude_&");
   void CyPrelude_Amp(node * root)
   {
-    // FIXME: normalize sequentially. if LHS is a var, then try the RHS.
-    #define WHEN_FREE(arg) Cy_Suspend()
-    #include "normalize2.def"
-    root->vptr = &CyVt_Success;
-    root->tag = CTOR;
+    node * lhs, * rhs;
+    #define WHEN_FREE(lhs) goto try_rhs;
+    #include "normalize1st.def"
+    // If the LHS is a constructor (i.e., Success), then just return the RHS.
+    root->vptr = &CyVt_Fwd;
+    root->tag = FWD;
+    SUCC_0(root) = SUCC_1(root);
+    return;
+  try_rhs:
+    #define WHEN_FREE(rhs) Cy_Suspend(); // both sides are free
+    #include "normalize2nd.def"
+    // If the RHS is a constructor return the LHS.
+    root->vptr = &CyVt_Fwd;
+    root->tag = FWD;
   }
 
   // Creates a binding object between from and to whose value is Success.
@@ -1624,8 +1631,8 @@ namespace
     #define TAG(arg) arg->tag
     #define WHEN_FREE(arg) return CyErr_NoGenerator(typename_);
     #include "normalize2.def"
-    char const lhs_data = DATA(lhs, T);
-    char const rhs_data = DATA(rhs, T);
+    T const & lhs_data = DATA(lhs, T);
+    T const & rhs_data = DATA(rhs, T);
     if(lhs_data < rhs_data)
     {
       root->vptr = &CyVt_LT;

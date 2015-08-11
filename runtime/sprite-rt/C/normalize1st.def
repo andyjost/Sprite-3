@@ -30,7 +30,7 @@
 t1_fail:
   return CyPrelude_failed(root);
 t1_fwd:
-  lhs = reinterpret_cast<node *>(lhs->slot0);
+  SUCC_0(root) = lhs = reinterpret_cast<node *>(lhs->slot0);
   goto* (&table1st[TAGOFFSET])[TAG(lhs)];
 t1_binding:
 {

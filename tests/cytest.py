@@ -161,11 +161,13 @@ class Tokenizer(object):
   Implements a loose comparison by:
     - Converting KiCS2-style free variable strings to PACKS-style ones.
     - Ignoring differences in whether the whole expression has parens.
+    - Ignoring differences between 'success' and 'Success'.
   '''
 
   def __init__(self):
     self.symbols = {}
-    self.pat = re.compile('_x\d+')
+    self.pat_free = re.compile('^_x\d+$')
+    self.pat_success = re.compile(r'(.*)\bsuccess\b(.*)')
     self.nextid = 0
     self.out = []
 
@@ -184,16 +186,25 @@ class Tokenizer(object):
     if text == '':
       return
 
-    if self.pat.match(text):
+    if self.pat_free.match(text):
       if text not in self.symbols:
         self.symbols[text] = self.nextid
         self.nextid += 1
       self.out.append(self._show(self.symbols[text]))
+    elif self.pat_success.match(text):
+      m = self.pat_success.match(text)
+      self.out.append(m.group(1) + 'Success' + m.group(2))
     else:
       self.out.append(text)
 
   def __eq__(self, rhs):
     return self.out == rhs.out
+
+  def __repr__(self):
+    return ' '.join(self.out)
+
+  def __str__(self):
+    return ' '.join(self.out)
     
 
 def processAnswer(text):

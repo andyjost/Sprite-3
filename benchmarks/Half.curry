@@ -1,5 +1,4 @@
--- KICS2 --
-module Foo where
+module Half where
 
 data Peano = O | S Peano
 
@@ -16,12 +15,7 @@ add :: Peano -> Peano -> Peano
 add O     p = p
 add (S p) q = S (add p q)
 
--- half y | equal (add x x) y = x where x free 
-ite True t _ = t
-ite False _ f = f
-half y = ite (equal (add x x) y) x failed where x free
+half y | equal (add x x) y = x where x free 
 
 
--- main = equal (toPeano 1) (half (toPeano 2))
-main = equal (S O) (half (S (S O)))
-
+main = equal (toPeano 5000) (half (toPeano 10000))

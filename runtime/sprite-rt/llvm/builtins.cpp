@@ -42,7 +42,8 @@ void build_vt_for_freevar(rt_h const & rt)
           &rt.Cy_NoAction
         , &rt.Cy_NoAction
         , &freevar_name
-				, &rt.Cy_Sentinel()
+        , &rt.Cy_Sentinel()
+        , sprite::compiler::FREE
         , &rt.Cy_Arity(0)
         , &rt.Cy_Succ(0)
         , &rt.CyFree_GcSucc()
@@ -53,7 +54,7 @@ void build_vt_for_freevar(rt_h const & rt)
         , nullptr
         , nullptr
         ))
-	  ;
+    ;
 }
 
 void build_vt_for_Char(rt_h const & rt)
@@ -78,7 +79,8 @@ void build_vt_for_Char(rt_h const & rt)
           &rt.Cy_NoAction
         , &rt.Cy_NoAction
         , &Char_name
-				, &rt.Cy_Sentinel()
+        , &rt.Cy_Sentinel()
+        , sprite::compiler::CTOR
         , &rt.Cy_Arity(0)
         , &rt.Cy_Succ(0)
         , &rt.Cy_Succ(0)
@@ -89,7 +91,7 @@ void build_vt_for_Char(rt_h const & rt)
         , &rt.CyVt_Compare("Char")
         , &rt.CyVt_Show("Char")
         ))
-		;
+    ;
 }
 void build_vt_for_Int64(rt_h const & rt)
 {
@@ -124,7 +126,8 @@ void build_vt_for_Int64(rt_h const & rt)
           &rt.Cy_NoAction
         , &rt.Cy_NoAction
         , &Int64_name
-				, &rt.Cy_Sentinel()
+        , &rt.Cy_Sentinel()
+        , sprite::compiler::CTOR
         , &rt.Cy_Arity(0)
         , &rt.Cy_Succ(0)
         , &rt.Cy_Succ(0)
@@ -135,7 +138,7 @@ void build_vt_for_Int64(rt_h const & rt)
         , &rt.CyVt_Compare("Int")
         , &rt.CyVt_Show("Int")
         ))
-		;
+    ;
 }
 
 void build_vt_for_Float(rt_h const & rt)
@@ -170,7 +173,8 @@ void build_vt_for_Float(rt_h const & rt)
           &rt.Cy_NoAction
         , &rt.Cy_NoAction
         , &Float_name
-				, &rt.Cy_Sentinel()
+        , &rt.Cy_Sentinel()
+        , sprite::compiler::CTOR
         , &rt.Cy_Arity(0)
         , &rt.Cy_Succ(0)
         , &rt.Cy_Succ(0)
@@ -181,7 +185,7 @@ void build_vt_for_Float(rt_h const & rt)
         , &rt.CyVt_Compare("Float")
         , &rt.CyVt_Show("Float")
         ))
-		;
+    ;
 }
 
 void build_vt_for_choice(rt_h const & rt)
@@ -208,7 +212,8 @@ void build_vt_for_choice(rt_h const & rt)
           &rt.Cy_NoAction
         , &rt.Cy_NoAction
         , &choice_name
-				, &rt.Cy_Sentinel()
+        , &rt.Cy_Sentinel()
+        , sprite::compiler::CHOICE
         , &rt.Cy_Arity(2)
         , &rt.Cy_Succ(2)
         , &rt.Cy_Succ(2)
@@ -219,7 +224,7 @@ void build_vt_for_choice(rt_h const & rt)
         , nullptr
         , nullptr
         ))
-		;
+    ;
 }
 
 void build_vt_for_fwd(rt_h const & rt)
@@ -285,6 +290,7 @@ void build_vt_for_fwd(rt_h const & rt)
         , &fwd_N
         , &fwd_name
         , &rt.Cy_Sentinel()
+        , sprite::compiler::FWD
         , &fwd_arity
         , &fwd_succ
         , &rt.Cy_Succ(1)
@@ -295,5 +301,5 @@ void build_vt_for_fwd(rt_h const & rt)
         , nullptr
         , nullptr
         ))
-		;
+    ;
 }

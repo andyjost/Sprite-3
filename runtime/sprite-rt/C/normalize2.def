@@ -34,10 +34,10 @@
 t_fail:
   return CyPrelude_failed(root);
 t_fwd_lhs:
-  lhs = reinterpret_cast<node *>(lhs->slot0);
+  SUCC_0(root) = lhs = reinterpret_cast<node *>(lhs->slot0);
   goto* (&table_lhs[TAGOFFSET])[TAG(lhs)];
 t_fwd_rhs:
-  rhs = reinterpret_cast<node *>(rhs->slot0);
+  SUCC_1(root) = rhs = reinterpret_cast<node *>(rhs->slot0);
   goto* (&table_rhs[TAGOFFSET])[TAG(rhs)];
 t_binding_lhs:
   NODE_ALLOC(lhs_choice, t_binding_lhs);

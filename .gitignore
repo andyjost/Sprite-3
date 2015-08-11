@@ -24,4 +24,5 @@ tests/*.exe
 tests/*.result
 tests/*/*.exe
 tests/*/*.result
-
+benchmarks/*.kics2*
+benchmarks/*.sprit*

@@ -7,6 +7,7 @@
 #include <iterator>
 #include <boost/scope_exit.hpp>
 #include <tuple>
+#include "sprite/tree_utils.hpp"
 
 // DIAGNOSTIC - this may warrant a command-line option setting.
 #include "llvm/Analysis/Verifier.h"
@@ -302,8 +303,8 @@ namespace
     }
 
     // Looks up a node using the function paths and path reference.  The result
-    // is a referent to node_t* in the target.  If the variable referenced is a
-    // free variable, then space for it will be allocated if necessary.
+    // is a node_t* in the target.  If the variable referenced is a free
+    // variable, then space for it will be allocated if necessary.
     tgt::value resolve_path(size_t pathid) const
     {
       static curry::Function::PathElem const local_path{curry::local, 0, {}};
@@ -393,6 +394,7 @@ namespace
                   ==(tgt::signed_) (static_cast<tag_t>(FWD));
             }
         , [&]{
+              // rt.printf("Fwd\n"); // DEBUG
               this->resolved_path_alloca = bitcast(
                   this->resolved_path_alloca.arrow(ND_SLOT0), node_pointer_type
                 );
@@ -471,10 +473,9 @@ namespace
 
     // Rewrites the root as a partial node.
     // 
-    // The final "apply" in a partial evaluation is shown below.  The terms
-    // beginning with "P." are the partial nodes created by this function.
-    //
-    // Expression: (f a0 ... ak) an
+    // The final "apply" in a partial evaluation is shown below.
+    // 
+    // Expression: apply (f a0 ... ak) an
     /*
                            apply
                          /       \
@@ -734,7 +735,7 @@ namespace
       exec_pulltab(rt, parent, instance, itgt, arity);
     }
 
-    value construct_continuation(curry::Branch const & branch)
+    std::pair<value, size_t> construct_continuation(curry::Branch const & branch)
     {
       set_out_of_memory_handler_returning_here();
       tgt::value inductive = this->inductive_alloca;
@@ -744,12 +745,31 @@ namespace
       curry::Qname const qname{module_stab.source->name, name};
       auto & node_stab = this->module_stab.lookup(qname);
 
+      // Begin to construct the replacement.  Successors are set below.
       value copy_of_root = this->node_alloc(*rt.node_t);
       move(root_p, copy_of_root, this->fundef->arity);
       root_p.arrow(ND_VPTR) = &*node_stab.auxvt.at(&branch);
-      root_p.arrow(ND_SLOT0) = bitcast(copy_of_root, *rt.char_t);
-      root_p.arrow(ND_SLOT1) = bitcast(inductive, *rt.char_t);
-      return inductive;
+
+      // See if any additional arguments are required and add them, if necessary.
+      auto pathid_args = find_pathids_that_are_aux_arguments(*this->fundef, branch);
+      size_t arity = 2 + pathid_args.size();
+      if(pathid_args.empty())
+      {
+        root_p.arrow(ND_SLOT0) = bitcast(copy_of_root, *rt.char_t);
+        root_p.arrow(ND_SLOT1) = bitcast(inductive, *rt.char_t);
+      }
+      else
+      {
+        value successors = set_extended_child_array(
+            root_p
+          , rt.Cy_ArrayAllocTyped(static_cast<aux_t>(arity))
+          );
+        successors[0] = copy_of_root;
+        successors[1] = inductive;
+        for(size_t i=2; i<arity; ++i)
+          successors[i] = this->resolve_path(pathid_args.at(i-2));
+      }
+      return std::make_pair(inductive, arity);
     }
 
     result_type operator()(curry::Branch const & branch)
@@ -844,9 +864,14 @@ namespace
       // FREE case
       {
         tgt::scope _ = labels[TAGOFFSET + FREE];
-        value inductive = pathid >= LOCAL_ID_START
-            ? construct_continuation(branch)
-            : static_cast<value>(this->inductive_alloca);
+        value inductive;
+        if(pathid >= LOCAL_ID_START)
+        {
+          size_t arity;
+          std::tie(inductive, arity) = construct_continuation(branch);
+        }
+        else
+          inductive = static_cast<value>(this->inductive_alloca);
         narrow(inductive, pathid, branch.cases.front()->lhs);
         clean_up_and_return();
       }
@@ -854,6 +879,7 @@ namespace
       // FWD case
       {
         tgt::scope _ = labels[TAGOFFSET + FWD];
+        // rt.printf("Fwd\n"); // DEBUG
         // Advance to the target of the FWD node and repeat the jump.
         tgt::value const inductive = bitcast(
             this->inductive_alloca.arrow(ND_SLOT0), node_pointer_type
@@ -869,8 +895,10 @@ namespace
 
         if(pathid >= LOCAL_ID_START)
         {
-          value inductive = construct_continuation(branch);
-          exec_pullbind(this->rt, this->root_p, inductive, 1, 2);
+          value inductive;
+          size_t arity;
+          std::tie(inductive, arity) = construct_continuation(branch);
+          exec_pullbind(this->rt, this->root_p, inductive, 1, arity);
         }
         else
         {
@@ -888,8 +916,10 @@ namespace
 
         if(pathid >= LOCAL_ID_START)
         {
-          value inductive = construct_continuation(branch);
-          exec_pulltab(this->rt, this->root_p, inductive, 1, 2);
+          value inductive;
+          size_t arity;
+          std::tie(inductive, arity) = construct_continuation(branch);
+          exec_pulltab(this->rt, this->root_p, inductive, 1, arity);
         }
         else
         {
@@ -1050,6 +1080,7 @@ namespace
       // FWD case.
       {
         scope _ = labels[TAGOFFSET + FWD];
+        // rt.printf("Fwd\n"); // DEBUG
         child = bitcast(child.arrow(ND_SLOT0), *rt.node_t);
         make_jump(1);
       }
@@ -1246,6 +1277,7 @@ namespace
       , &N
       , &rt.Cy_Label(ctor.name)
       , &rt.Cy_Sentinel()
+      , ictor
       , &rt.Cy_Arity(ctor.arity)
       , &rt.Cy_Succ(ctor.arity)
       , &rt.Cy_Succ(ctor.arity)
@@ -1307,6 +1339,7 @@ namespace
       , &N
       , &rt.Cy_Label(fun.name)
       , &rt.Cy_Sentinel()
+      , sprite::compiler::OPER
       , &rt.Cy_Arity(fun.arity)
       , &rt.Cy_Succ(fun.arity)
       , &rt.Cy_Succ(fun.arity)
@@ -1324,26 +1357,30 @@ namespace
    * the specified branch.
    *
    * An aux function is used when a non-trivial branch discriminator evaluates to
-   * a choice.  For example, in the sign function:
+   * a choice, free variable, or binding..  For example, in the sign function:
    *
    *   sign a = if a<0 then -1 else if a>0 then 1 else 0
    *
-   * either expression a<0 or a>0 could produce a choice.  (Actualy, with some
-   * analysis we could prove that the second expression cannot produce a choice
-   * if the first did not, but the compiler does not attempt that analysis.)
-   * The problem in that case is that the result after pull-tabbing cannot be
-   * written in terms of the original function.  To execute a pull-tab step,
-   * the remainder of the function, starting with the branch where the choice
-   * was encountered, must be compiled.  The result can be written in terms of
-   * that function.  For sign, there are two aux functions.
+   * either expression a<0 or a>0 could produce one of those values.  (Actualy,
+   * with some analysis we could prove that the second expression cannot
+   * produce a choice if the first did not, but the compiler does not attempt
+   * that analysis.) The problem in that case is that the result after
+   * pull-tabbing cannot be written in terms of the original function.  To
+   * execute a pull-tab step, the remainder of the function, starting with the
+   * branch where the choice was encountered, must be compiled.  The result can
+   * be written in terms of that function.  For sign, there are two aux
+   * functions.
    *
    *     sign#branch0 (sign a) c = if c then -1 else if a>0 then 1 else 0
    *     sign#branch1 (sign a) c = if c then 1 else 0
    *
-   * An aux function always has two successors: (1) the original root node
-   * (which must be an application of the main function), and (2) the bound
-   * expression.  Note that, due to (1), this is a somewhat irregular case in
-   * that normally a function would never pattern-match against a function.
+   * An aux function always has at least two successors: (1) the original root
+   * node (which must be an application of the main function), and (2) the
+   * bound expression.  In addition, any free variables allocated within the
+   * bound expression that are subsequently used are appended to the argument
+   * list and changed to regular variables in the definition of the aux
+   * function.  Note that due to (1), this is a somewhat irregular case in that
+   * normally a function would never pattern-match against a function.
    *
    * To define an aux function, we do the following:
    *
@@ -1352,16 +1389,20 @@ namespace
    *   2. Rebase every variable reference, adding an initial index of 0.  This
    *      is because the original root is moved to the first argument position.
    *   3. Replace the branch discriminator with a reference to index 1.
-   *   4. Copy the function from the given branch to the end.
+   *   4. Identify and tranform free variables that must appear as arguments to
+   *      the aux function.
+   *   5. Copy the function from the given branch to the end.
    */
   curry::Function build_aux_function(
       curry::Function const & fun, curry::Branch b, size_t id
     )
   {
+    auto pathid_args = find_pathids_that_are_aux_arguments(fun, b);
+
     curry::Function aux;
     aux.is_aux = true;
     aux.name = fun.name + "#branch" + std::to_string(id);
-    aux.arity = 2;
+    aux.arity = 2 + pathid_args.size();
     aux.paths = fun.paths;
     aux.variable_expansions = fun.variable_expansions;
 
@@ -1374,12 +1415,24 @@ namespace
       if(pathelem.base == curry::nobase)
         pathelem.base = newbase;
     }
+    // Use a representative tuple with the correct arity for baseless paths.
+    Qname const tuple_typename =
+      {"Prelude", "(," + std::string(pathid_args.size(), ',') + ")"};
     aux.paths.emplace_back(
-        curry::Function::PathElem{curry::nobase, 0, Qname{"Prelude","(,)"}}
+        curry::Function::PathElem{curry::nobase, 0, tuple_typename}
       );
     aux.paths.emplace_back(
-        curry::Function::PathElem{curry::nobase, 1, Qname{"Prelude","(,)"}}
+        curry::Function::PathElem{curry::nobase, 1, tuple_typename}
       );
+
+    // Transform the free variables that require it into normal variables to be
+    // passed as args.
+    size_t next = 2;
+    for(size_t i: pathid_args)
+    {
+      aux.paths.at(i) =
+        curry::Function::PathElem{curry::nobase, next++, tuple_typename};
+    }
 
     // Copy the branch, but share everything under it (because the cases are
     // stored in shared_ptrs).  Then modify the discriminator.  It is just a
@@ -1467,11 +1520,18 @@ namespace sprite { namespace compiler
     for(size_t cid=0; cid<choice_arity; ++cid)
     {
       value arg = rt.node_alloc(*rt.node_t, out_of_memory_handler);
+      values.push_back(arg);
+    }
+    // Done allocating everything. Now it's okay to partially initialize the nodes.
+    for(size_t cid=0; cid<choice_arity; ++cid)
+    {
+      auto & arg = values[cid];
       arg.arrow(ND_VPTR) = src.arrow(ND_VPTR);
       arg.arrow(ND_TAG) = src.arrow(ND_TAG);
+      // arg.arrow(ND_SLOT0) = nullptr; // DEBUG
+      // arg.arrow(ND_SLOT1) = nullptr; // DEBUG
       // OK to ignore aux.  The root cannot be a choice because a choice
       // has no step function.
-      values.push_back(arg);
     }
 
     if(arity < 3)
@@ -1543,6 +1603,7 @@ namespace sprite { namespace compiler
         }
       }
     }
+
     // Do not call this->destroy_target.  The successor list was stolen.
     src.arrow(ND_VPTR) = rt.choice_vt;
     src.arrow(ND_TAG) = compiler::CHOICE;

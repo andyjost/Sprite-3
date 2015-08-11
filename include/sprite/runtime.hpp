@@ -79,6 +79,7 @@ namespace sprite { namespace compiler
             , *stepfun_t  /*N*/
             , *labelfun_t /*label*/
             , *vtable_t   /*sentinel -- must be fourth!*/
+            , tag_t       /*tag*/
             , *arityfun_t /*arity*/
             , *rangefun_t /*succ*/
             , *rangefun_t /*gcsucc*/
@@ -90,8 +91,8 @@ namespace sprite { namespace compiler
             , *vtable_t   /*show*/
             }
         #if 0
-        , {"H", "N", "label", "sentinel", "arity", "succ", "destroy", "equal"
-            , "equate", "ns_equate", "compare", "show"}
+        , {"H", "N", "label", "sentinel", "tag", "arity", "succ", "destroy"
+            , "equal", "equate", "ns_equate", "compare", "show"}
         #endif
         );
     }
@@ -101,8 +102,8 @@ namespace sprite { namespace compiler
   namespace member_labels
   {
     enum VtMember {
-        VT_H, VT_N, VT_LABEL, VT_SENTINEL, VT_ARITY, VT_SUCC, VT_GCSUCC, VT_DESTROY
-      , VT_EQUAL, VT_EQUATE, VT_NS_EQUATE, VT_COMPARISON, VT_SHOW
+        VT_H, VT_N, VT_LABEL, VT_SENTINEL, VT_TAG, VT_ARITY, VT_SUCC, VT_GCSUCC
+      , VT_DESTROY , VT_EQUAL, VT_EQUATE, VT_NS_EQUATE, VT_COMPARISON, VT_SHOW
       };
     enum NdMember { ND_VPTR, ND_TAG, ND_MARK, ND_AUX, ND_SLOT0, ND_SLOT1 };
   }

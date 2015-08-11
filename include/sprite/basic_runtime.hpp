@@ -25,6 +25,7 @@ namespace sprite { namespace compiler
     stepfun_t  * N;         // Normalization function.
     labelfun_t * label;     // Gives the string representation of the label.
     vtable     * sentinel;  // Used to determine node memory state.
+    tag_t        tag;       // The node tag.
     arityfun_t * arity;     // Gives the arity.
     rangefun_t * succ;      // Gives the range containing the successors.
     rangefun_t * gcsucc;    // Range function that does not skip fwd nodes.

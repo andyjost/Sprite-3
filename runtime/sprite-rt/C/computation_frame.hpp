@@ -2,10 +2,57 @@
 #pragma once
 #include "basic_runtime.hpp"
 #include "fingerprint.hpp"
+#include <list>
+#include <memory>
 #include <unordered_map>
 #include <unordered_set>
-#include <list>
 #include <vector>
+
+namespace sprite { namespace compiler
+{
+  // Manages an instance of T using copy-on-write semantics.
+  //
+  // Read access produces the object directly.  Write access triggers a copy if
+  // the object is not unique.  Follow the never-empty rule.
+  template<typename T> struct Shared
+  {
+    // Construct a new managed object.
+    template<typename...Args>
+    Shared(Args&&...args)
+      : data(std::make_shared<T>(std::forward<Args>(args)...))
+    {}
+
+    // Copy/assign/move.
+    template<typename U> Shared(Shared<U> const & arg) : data(arg.data) {}
+    template<typename U> Shared(Shared<U> & arg) : data(arg.data) {}
+    template<typename U> Shared & operator=(Shared<U> const & arg)
+      { data = arg.data; }
+    template<typename U> Shared & operator=(Shared<U> & arg)
+      { data = arg.data; }
+    template<typename U> Shared(Shared<U> && arg) : data(std::move(arg.data))
+      {}
+    template<typename U> Shared & operator=(Shared<U> && arg)
+      { data = std::move(arg.data); }
+
+    // Data access.
+    T const & read() const { return *data; }
+    T & write()
+    {
+      if(!data.unique())
+        data = std::make_shared<T>(*data);
+      return *data;
+    }
+    bool needs_copy() const { return !data.unique(); }
+    T const * operator->() const { return &read(); } // implied read
+
+    // The GC gets special write access without triggering a copy.
+    T & gc_write() const { return const_cast<T&>(*data); }
+
+  private:
+
+    mutable std::shared_ptr<T> data;
+  };
+}}
 
 extern "C"
 {
@@ -25,7 +72,29 @@ extern "C"
     // more entries for keys 1 and 2.  If the list is empty, then there must be
     // an entry in @p eq_var, below.  The key/value organization is motivated
     // by the need to process choices as they reach the of a computation.
-    std::unordered_map<aux_t, std::unordered_set<aux_t>> eq_choice;
+    using eq_choice_set_t = std::unordered_set<aux_t>;
+    using eq_choice_map_t = std::unordered_map<aux_t, Shared<eq_choice_set_t>>;
+    Shared<eq_choice_map_t> eq_choice;
+
+    void add_choice_constraints(aux_t a, aux_t b)
+    {
+      _add_one_choice_constraint(a, b);
+      _add_one_choice_constraint(b, a);
+    }
+
+  private:
+
+    void _add_one_choice_constraint(aux_t a, aux_t b)
+    {
+      auto & cstore = this->eq_choice.write();
+      auto p = cstore.find(a);
+      if(p == cstore.end())
+        this->eq_choice.write()[a].write().insert(b);
+      else if(!p->second.read().count(b))
+        p->second.write().insert(b);
+    }
+
+  public:
 
     struct BindData
     {
@@ -38,25 +107,47 @@ extern "C"
     // The variable bindings.  There are two types: lazy and normal.  A lazy
     // binding is between a variable and an unevaluated expression.  A normal
     // binding is between two free variables (not choices).  A free variable
-    // may narrow to more than one choice (i.e., if the type has more than two
-    // constructors).  Moreover, bindings between variables imply additional
-    // bindings between successor variables.  For example, if x0=:=x1 for two
-    // lists, then after narrowing to x0=([] ?0 (x2:x3)) and x1=([] ?1
-    // (x4:x5)), we also have x2=:=x4 and x3=:=x5.
-    std::unordered_map<aux_t, std::vector<BindData>> eq_var;
+    // may narrow to more than one choice (i.e., if the type has more than
+    // two constructors).  Moreover, bindings between variables imply
+    // additional bindings between successor variables.  For example, if
+    // x0=:=x1 for two lists, then after narrowing to x0=([] ?0 (x2:x3)) and
+    // x1=([] ?1 (x4:x5)), we also have x2=:=x4 and x3=:=x5.
+    using eq_var_vector_t = std::vector<BindData>;
+    using eq_var_map_t = std::unordered_map<aux_t, Shared<eq_var_vector_t>>;
+    Shared<eq_var_map_t> eq_var;
+
+  private:
+
+    void _add_one_var_constriant(node * from, node * to, bool is_lazy)
+    {
+      auto & vstore = eq_var.write();
+      auto bucket = vstore.find(from->aux);
+      auto & slot = (bucket == vstore.end()) ? vstore[from->aux] : bucket->second;
+      slot.write().emplace_back(from, to, is_lazy);
+    }
+
+  public:
+
+    void add_var_constraints(node * from, node * to, bool is_lazy)
+    {
+      this->_add_one_var_constriant(from, to, is_lazy);
+      if(!is_lazy)
+        this->_add_one_var_constriant(to, from, is_lazy);
+    }
   };
 
   // A subcomputation.  One entry in a work queue from the Fair Scheme.
   struct Cy_EvalFrame
   {
     node * expr;
-    Fingerprint fingerprint;
-    ConstraintStore constraints;
+    Shared<Fingerprint> fingerprint;
+    Shared<ConstraintStore> constraints;
 
-    Cy_EvalFrame(node * e) : expr(e), fingerprint(), constraints()
-    {}
+    Cy_EvalFrame(node * e) : expr(e), fingerprint(), constraints() {}
 
-    Cy_EvalFrame(node * e, Fingerprint && f, ConstraintStore && c)
+    Cy_EvalFrame(
+        node * e, Shared<Fingerprint> && f, Shared<ConstraintStore> && c
+      )
       : expr(e), fingerprint(std::move(f)), constraints(std::move(c))
     {}
 
@@ -79,8 +170,8 @@ extern "C"
 
   // The current fingerprint.  Accessible through Cy_GlobalComputations, but duplicated
   // here for faster access.
-  extern Fingerprint * Cy_CurrentFingerprint;
+  extern Shared<Fingerprint> * Cy_CurrentFingerprint;
 
   // The cucrrent constraint store.
-  extern ConstraintStore * Cy_CurrentConstraints;
+  extern Shared<ConstraintStore> * Cy_CurrentConstraints;
 }

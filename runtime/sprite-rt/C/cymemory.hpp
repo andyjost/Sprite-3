@@ -18,9 +18,6 @@ extern "C"
   // The head of the free list.
   void * CyMem_FreeList = nullptr;
   extern sprite::compiler::vtable CyVt_Fwd __asm__(".vt.fwd");
-
-  // The computation roots.
-  // sprite::compiler::node * CyMem_NextComputationRoot();
 }
 
 namespace sprite { namespace compiler
@@ -150,24 +147,16 @@ namespace sprite { namespace compiler
     while(frame)
     {
       for(auto const & comp: *frame->computation)
-      {
         roots.push_back(comp.expr);
-        for(auto const & binding: comp.constraints.eq_var)
-        {
-          for(auto const & data: binding.second)
-          {
-            roots.push_back(data.first);
-            roots.push_back(data.second);
-          }
-        }
-      }
-
       frame = frame->next;
     }
 
     // Add roots from the temporary stack.
     for(node * p: CyMem_Roots)
       roots.push_back(p);
+
+    // Use this to remember which IDs were reachable.
+    std::unordered_set<aux_t> used_ids;
 
     while(!roots.empty())
     {
@@ -183,6 +172,9 @@ namespace sprite { namespace compiler
             << std::endl;
       #endif
 
+        if(parent->tag == CHOICE || parent->tag == FREE)
+          used_ids.insert(parent->aux);
+
         parent->mark = 1;
         node ** begin, ** end;
         parent->vptr->gcsucc(parent, &begin, &end);
@@ -197,8 +189,56 @@ namespace sprite { namespace compiler
       ticks tm = getticks();
       std::cout << "Mark phase takes " << (tm-t0) << " ticks." << std::endl;
     #endif
-  
-    // Sweep phase.
+
+    // Sweep phase.  Sweep bindings first.  Eliminate bindings for IDs that
+    // don't appear anywhere in the program.
+    std::unordered_set<void const *> done;
+    std::vector<aux_t> to_erase;
+
+    frame = Cy_GlobalComputations;
+    while(frame)
+    {
+      for(auto const & comp: *frame->computation)
+      {
+        auto & constraints = comp.constraints.gc_write();
+        for(auto & binding: constraints.eq_var.gc_write())
+        {
+          if(done.insert(&binding).second)
+          {
+            auto & bucket = binding.second.gc_write();
+            auto p = bucket.begin();
+            auto out = p;
+            auto end = bucket.end();
+            for(; p!=end; ++p)
+            {
+              if(done.insert(&*p).second)
+              {
+                if(used_ids.count(p->first->aux) && used_ids.count(p->second->aux))
+                  *out++ = *p;
+              }
+            }
+            bucket.erase(out, end);
+            if(bucket.empty())
+              to_erase.push_back(binding.first);
+          }
+          else
+          {
+          }
+        }
+        for(auto id: to_erase)
+          constraints.eq_var.gc_write().erase(id);
+        to_erase.clear();
+      }
+      frame = frame->next;
+    }
+
+    used_ids.clear();
+    done.clear();
+
+    #if VERBOSEGC > 1
+      ticks tsb = getticks();
+      std::cout << "Sweep bindings phase takes " << (tsb-tm) << " ticks." << std::endl;
+    #endif
     #if VERBOSEGC > 0
       size_t total = 0;
     #endif
@@ -232,13 +272,12 @@ namespace sprite { namespace compiler
           // word is a vtable pointer, or it came from the free list, in which
           // case the first word points to another chunk.  In either case it is
           // always possible to access the fourth word of the dereferenced
-          // pointer -- i.e., the position that would be slot0 if the pointer
+          // pointer -- i.e., the position that would be slot1 if the pointer
           // is to a node, or the fourth entry in the vtable if the pointer is
           // to a vtable.  Since nodes may only contain pointers to other nodes
           // in slot1, we can discriminate by placing an arbitrary sentinel
           // value that is NOT a valid node pointer at the proper position of
           // the vtable.  This implementation uses &CyVt_Fwd.
-          // std::cout << "a" << std::endl;
           if(node_p->vptr && node_p->vptr->sentinel == &CyVt_Fwd)
             node_p->vptr->destroy(node_p);
           this->free(node_p);
@@ -246,9 +285,9 @@ namespace sprite { namespace compiler
         else
         {
           #if VERBOSEGC > 2
-            std::cout
-                << "   [keep] @" << node_p << " " << node_p->vptr->label(node_p)
-                << std::endl;
+            std::cout << "   [keep] @" << node_p << " "
+              << node_p->vptr->label(node_p)
+              << std::endl;
           #endif
           node_p->mark = 0;
         }
@@ -263,7 +302,7 @@ namespace sprite { namespace compiler
     #endif
 
     #if VERBOSEGC > 1
-      std::cout << "Sweep phase takes " << (t1-tm) << " ticks." << std::endl;
+      std::cout << "Sweep phase takes " << (t1-tsb) << " ticks." << std::endl;
       std::cout << "Done collecting: freed " << n << " out of "
         << total << " chunks (" << pct << "%); " << (total-n) << " remain."
         << std::endl;

@@ -20,8 +20,8 @@ void build_vt_for_PartialTerminus(rt_h const & rt);
 // A trivial node is one with label and arity, but no meaningful action for H
 // or N.
 void build_vt_for_trivial_node(
-    rt_h const & rt
-  , std::string const & name, size_t arity
+    rt_h const & rt, std::string const & name, size_t arity
+  , sprite::compiler::tag_t tag
   )
 {
   extern_(rt.vtable_t, sprite::compiler::get_vt_name(name))
@@ -29,7 +29,8 @@ void build_vt_for_trivial_node(
           &rt.Cy_NoAction
         , &rt.Cy_NoAction
         , &rt.Cy_Label(name)
-				, &rt.Cy_Sentinel()
+        , &rt.Cy_Sentinel()
+        , tag
         , &rt.Cy_Arity(arity)
         , &rt.Cy_Succ(arity)
         , &rt.Cy_Succ(arity)
@@ -40,20 +41,20 @@ void build_vt_for_trivial_node(
         , &extern_(rt.vtable_t, ".vt.OPER.Prelude.prim_error_cmp_fun")
         , &extern_(rt.vtable_t, ".vt.OPER.Prelude.prim_label")
         ))
-	  ;
+    ;
 }
 
 void build_vt_for_binding(rt_h const & rt)
-  { build_vt_for_trivial_node(rt, "binding", 2); }
+  { build_vt_for_trivial_node(rt, "binding", 2, sprite::compiler::BINDING); }
 void build_vt_for_lazybinding(rt_h const & rt)
-  { build_vt_for_trivial_node(rt, "lazybinding", 2); }
+  { build_vt_for_trivial_node(rt, "lazybinding", 2, sprite::compiler::BINDING); }
 void build_vt_for_failed(rt_h const & rt)
-  { build_vt_for_trivial_node(rt, "failed", 0); }
+  { build_vt_for_trivial_node(rt, "failed", 0, sprite::compiler::FAIL); }
 void build_vt_for_success(rt_h const & rt)
-  { build_vt_for_trivial_node(rt, "success", 0); }
+  { build_vt_for_trivial_node(rt, "Success", 0, sprite::compiler::CTOR); }
 // FIXME: using a polymorphic function on a partial application will SEGV!
 void build_vt_for_PartialSpine(rt_h const & rt)
-  { build_vt_for_trivial_node(rt, "PartialSpine", 2); }
+  { build_vt_for_trivial_node(rt, "PartialSpine", 2, sprite::compiler::FAIL /*not used*/); }
 void build_vt_for_PartialTerminus(rt_h const & rt)
 {
   // The PartialTerminus reports the label of the bound function.
@@ -71,7 +72,8 @@ void build_vt_for_PartialTerminus(rt_h const & rt)
           &rt.Cy_NoAction
         , &rt.Cy_NoAction
         , &label
-				, &rt.Cy_Sentinel()
+        , &rt.Cy_Sentinel()
+        , 0 /* not used */
         , &rt.Cy_Arity(0)
         , &rt.Cy_Succ(0)
         , &rt.Cy_Succ(0)
@@ -82,14 +84,14 @@ void build_vt_for_PartialTerminus(rt_h const & rt)
         , &extern_(rt.vtable_t, ".vt.OPER.Prelude.prim_error_cmp_fun")
         , &extern_(rt.vtable_t, ".vt.OPER.Prelude.prim_label")
         ))
-	  ;
+    ;
 }
 
 int main()
 {
-	module module_b("sprite_runtime_llvm_part");
-	scope _ = module_b;
-	rt_h rt;
+  module module_b("sprite_runtime_llvm_part");
+  scope _ = module_b;
+  rt_h rt;
   sprite::backend::testing::clib_h clib;
 
   // Declare the predefined arity and successor functions.

@@ -31,7 +31,7 @@
 t_fail:
   return CyPrelude_failed(root);
 t_fwd:
-  arg = reinterpret_cast<node *>(arg->slot0);
+  SUCC_0(root) = arg = reinterpret_cast<node *>(arg->slot0);
   goto* (&table[TAGOFFSET])[TAG(arg)];
 t_binding:
   NODE_ALLOC(lhs_choice, t_binding);
