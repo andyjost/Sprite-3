@@ -13,7 +13,6 @@
 #include "stdio.h"
 #include "stdlib.h"
 #include "cymemory.hpp"
-#include "fingerprint.hpp"
 #include <boost/scope_exit.hpp>
 
 #define SUCC_0(root) reinterpret_cast<node*&>(root->slot0)
@@ -80,6 +79,30 @@ namespace sprite { namespace compiler
 
   // The memory roots, used for gc.
   std::deque<node*> CyMem_Roots;
+
+  namespace fingerprints
+  {
+    // The memory pool used for fingerprint branches.
+    boost::pool<> branch_pool(sizeof(Branch));
+
+    #if defined(USE_FP_CACHE) && defined(VERBOSEFP)
+    size_t cache_tries = 0;
+    size_t cache_hits = 0;
+    size_t cache_total_depth = 0;
+
+    static struct FpCacheReporter
+    {
+      ~FpCacheReporter()
+      {
+        float const pct = (100.0 * cache_hits) / cache_tries;
+        float const avg_depth = 1.0 * cache_total_depth / cache_tries;
+        std::cout
+            << "Fingerprint cache " << pct
+            << "% hit rate.  Average depth " << avg_depth << "\n";
+      }
+    } _fp_cache_reporter;
+    #endif
+  }
 }}
 
 extern "C"

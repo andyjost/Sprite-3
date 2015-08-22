@@ -5,6 +5,8 @@ BENCHMARKS :=      \
     Last           \
     LastFunPats    \
     PaliFunPats    \
+    PermSort       \
+    PermSortPeano  \
     Primes         \
     PrimesBuiltin  \
     PrimesPeano    \
@@ -21,10 +23,6 @@ BENCHMARKS :=      \
 
   ## Giving junk output:
     # ExpSimpFunPats
-
-  ## A bit to slow:
-    #  PermSortPeano
-    # PermSort
 
   ## Not compiling:
     #  NDNums

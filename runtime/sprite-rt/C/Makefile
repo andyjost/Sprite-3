@@ -16,6 +16,7 @@ clean :
 #         =3  Prints information about every node during collection.
 #     -g Add debug symbols.  Allows debugging into the runtime library.
 #     -DDIAGNOSTICS  Print lots of diagnostic information.
+#     -DVERBOSEFP  Verbose fingerprints.
 #
 # Note: llvm-config is used to access SmallVector.h.  It may add NDEBUG.
 LOCAL_CFLAGS += $(shell $(LLVM-CONFIG) --cppflags) $(RT-CFLAGS) -std=c++11 -I. -Wall -Werror

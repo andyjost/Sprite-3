@@ -8,6 +8,7 @@
 #include <unordered_set>
 #include <vector>
 
+
 namespace sprite { namespace compiler
 {
   // Manages an instance of T using copy-on-write semantics.
