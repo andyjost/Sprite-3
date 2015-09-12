@@ -4,6 +4,8 @@
 all :
 	$(MAKE) -C sprite-rt all
 
+-include ../Make.include
+
 clean :
 	$(MAKE) -C sprite-rt clean
 
@@ -36,6 +38,12 @@ install :
 	ln -s `which $(LIB-PARSECURRY)` $(LIBINSTALL)/parsecurry
 	@test -e $(LIBINSTALL)/parsecurry
 	@
+ifdef LIB-BOOST-LIB-DIR
+	@rm -f $(LIBINSTALL)/boost_lib_dir 2> /dev/null
+	ln -s $(LIB-BOOST-LIB-DIR) $(LIBINSTALL)/boost_lib_dir
+	@test -e $(LIBINSTALL)/boost_lib_dir
+	@
+endif
 	rsync -a currylib $(LIBINSTALL)
 	$(MAKE) currylibs
 
@@ -48,8 +56,7 @@ uninstall :
 	-rm -rf $(LIBINSTALL)/currylib
 	-rm -rf $(LIBINSTALL)/pakcs
 	-rm -rf $(LIBINSTALL)/parsecurry
-
--include ../Make.include
+	-rm -rf $(LIBINSTALL)/boost_lib_dir
 
 # Preprocess the Prelude and append static content.
 $(LIBINSTALL)/currylib/.curry/Prelude.read : $(LIBINSTALL)/currylib/Prelude.curry

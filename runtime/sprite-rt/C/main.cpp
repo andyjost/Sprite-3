@@ -1,5 +1,6 @@
 #include "basic_runtime.hpp"
 #include "computation_frame.hpp"
+// #include "context_switch.hpp"
 #include <algorithm>
 #include <cassert>
 #include <iostream>
@@ -14,6 +15,7 @@
 #include "stdlib.h"
 #include "cymemory.hpp"
 #include <boost/scope_exit.hpp>
+#include <boost/timer/timer.hpp>
 
 #define SUCC_0(root) reinterpret_cast<node*&>(root->slot0)
 #define SUCC_1(root) reinterpret_cast<node*&>(root->slot1)
@@ -103,6 +105,18 @@ namespace sprite { namespace compiler
     } _fp_cache_reporter;
     #endif
   }
+
+  // boost::timer::cpu_timer & Cy_Timer()
+  // {
+  //   static boost::timer::cpu_timer timer;
+  //   return timer;
+  // }
+
+	std::jmp_buf & Cy_JmpBuf()
+  {
+    static std::jmp_buf buf;
+    return buf;
+  }
 }}
 
 extern "C"
@@ -150,7 +164,35 @@ extern "C"
 
   void CyMem_PushRoot(node * p) { CyMem_Roots.push_back(p); }
   void CyMem_PopRoot() { CyMem_Roots.pop_back(); }
-  void CyMem_Collect() { CyMem_NodePool->collect(); }
+
+	struct Cy_ContextSwitch {};
+  void Cy_PrintWorkQueue(FILE * stream);
+  void CyMem_Collect()
+  {
+		// Perform a context switch, if it is time for one.  Only check if there
+		// are at least two computations.
+		if(Cy_GlobalComputations)
+		{
+		  auto & computation = *Cy_GlobalComputations->computation;
+		  assert(!computation.empty());
+		  if(++computation.begin() != computation.end())
+		  {
+		    static size_t gc_cycles = 0;
+		  	if(++gc_cycles >= computation.front().time_allotment)
+		  	{
+		  		gc_cycles = 0;
+          #ifdef VERBOSECS
+					printf("Switching context (element 0 will go to the end):\n");
+          Cy_PrintWorkQueue(stdout);
+          #endif
+					throw Cy_ContextSwitch();
+		  	}
+		  }
+		}
+
+    // Cy_PrintWorkQueue(stdout); // DEBUG
+    CyMem_NodePool->collect();
+  }
 
   node ** Cy_ArrayAllocTyped(aux_t n)
     { return reinterpret_cast<node**>(Cy_ArrayPool[n].malloc()); }
@@ -321,6 +363,92 @@ extern "C"
     Cy_Repr(root, stdout, true);
     fputs("\n", stdout);
     fflush(NULL);
+  }
+
+  // Gets the representation of the current fingerprint.
+  void Cy_ReprFingerprint(FILE * stream)
+  {
+    if(Cy_CurrentFingerprint)
+    {
+      auto & fp = Cy_CurrentFingerprint->read();
+      size_t const n = fp.size();
+      bool first = true;
+      for(size_t i=0; i<n; ++i)
+      {
+        switch(fp.test_no_check(i))
+        {
+          case ChoiceState::LEFT:
+            if(!first) fputc(',', stream); else first = false;
+            fprintf(stream, "%zu:L", i); break;
+          case ChoiceState::RIGHT:
+            if(!first) fputc(',', stream); else first = false;
+            fprintf(stream, "%zu:R", i); break;
+          case ChoiceState::UNDETERMINED:;
+        }
+      }
+    }
+  }
+
+  // Gets the representation of the current constraint store.
+  void Cy_ReprConstraints(FILE * stream)
+  {
+    auto & store = *Cy_CurrentConstraints;
+    bool first_out = true;
+    for(auto const & kv: store->eq_choice.read())
+    {
+      if(!first_out) fputc(',', stream); else first_out = false;
+      fprintf(stream, "%d:=:(", kv.first);
+      bool first = true;
+      for(auto id: kv.second.read())
+      {
+        if(!first) fputc(',', stream); else first = false;
+        fprintf(stream, "%d", id);
+      }
+      fputc(')', stream);
+    }
+    for(auto const & kv: store->eq_var.read())
+    {
+      if(!first_out) fputc(',', stream); else first_out = false;
+      fprintf(stream, "%d => [", kv.first);
+      bool first = true;
+      for(auto const & data: kv.second.read())
+      {
+        if(!first) fputc(',', stream); else first = false;
+        if(data.is_lazy)
+        {
+          fprintf(stream, "_x%d:=<:", data.first->aux);
+          Cy_Repr(data.second, stream, false);
+        }
+        else
+          fprintf(stream, "_x%d:=:_x%d", data.first->aux, data.second->aux);
+      }
+      fputc(']', stream);
+    }
+  }
+
+  // Outputs the expression, fingerprint, and constraint store representation.
+  void Cy_ReprFull(node * root_p, FILE * stream)
+  {
+    Cy_Repr(root_p, stream, true);
+    fprintf(stream, " {");
+    Cy_ReprFingerprint(stream);
+    fprintf(stream, "} {");
+    Cy_ReprConstraints(stream);
+    fprintf(stream, "}\n");
+  }
+
+  // Prints out the work queue (for debugging).
+  void Cy_PrintWorkQueue(FILE * stream)
+  {
+		if(Cy_GlobalComputations)
+		{
+      size_t i = 0;
+      for(auto const & eval_frame: *Cy_GlobalComputations->computation)
+      {
+        printf("  [%zu] ", i++);
+        Cy_ReprFull(eval_frame.expr, stream);
+      }
+    }
   }
 
   // Converts a C-string to a Curry string (list of Char).  Rewrites root to be
@@ -820,67 +948,6 @@ extern "C"
     return false;
   }
 
-  // Gets the representation of the current fingerprint.
-  void Cy_ReprFingerprint(FILE * stream)
-  {
-    if(Cy_CurrentFingerprint)
-    {
-      auto & fp = Cy_CurrentFingerprint->read();
-      size_t const n = fp.size();
-      bool first = true;
-      for(size_t i=0; i<n; ++i)
-      {
-        switch(fp.test_no_check(i))
-        {
-          case ChoiceState::LEFT:
-            if(!first) fputc(',', stream); else first = false;
-            fprintf(stream, "%zu:L", i); break;
-          case ChoiceState::RIGHT:
-            if(!first) fputc(',', stream); else first = false;
-            fprintf(stream, "%zu:R", i); break;
-          case ChoiceState::UNDETERMINED:;
-        }
-      }
-    }
-  }
-
-  // Gets the representation of the current constraint store.
-  void Cy_ReprConstraints(FILE * stream)
-  {
-    auto & store = *Cy_CurrentConstraints;
-    bool first_out = true;
-    for(auto const & kv: store->eq_choice.read())
-    {
-      if(!first_out) fputc(',', stream); else first_out = false;
-      fprintf(stream, "%d:=:(", kv.first);
-      bool first = true;
-      for(auto id: kv.second.read())
-      {
-        if(!first) fputc(',', stream); else first = false;
-        fprintf(stream, "%d", id);
-      }
-      fputc(')', stream);
-    }
-    for(auto const & kv: store->eq_var.read())
-    {
-      if(!first_out) fputc(',', stream); else first_out = false;
-      fprintf(stream, "%d => [", kv.first);
-      bool first = true;
-      for(auto const & data: kv.second.read())
-      {
-        if(!first) fputc(',', stream); else first = false;
-        if(data.is_lazy)
-        {
-          fprintf(stream, "_x%d:=<:", data.first->aux);
-          Cy_Repr(data.second, stream, false);
-        }
-        else
-          fprintf(stream, "_x%d:=:_x%d", data.first->aux, data.second->aux);
-      }
-      fputc(']', stream);
-    }
-  }
-
   // Tests the indicated choice in the current fingerprint.  Precondition:
   // Cy_Eval is on the stack, so that Cy_CurrentFingerprint is non-null.
   bool Cy_TestChoiceIsMade(aux_t id)
@@ -896,10 +963,62 @@ extern "C"
     *end = SUCC_0(root) ? &SUCC_1(root) : &SUCC_0(root);
   }
 
+  // Fiber & Fiber::main_fiber()
+  // {
+  //   static Fiber f = Fiber(main_fiber_tag());
+  //   return f;
+  // }
+
+  // void make_context(void * context, void * stack_pointer)
+  // {
+  //   auto & slot = *reinterpret_cast<boost::context::fcontext_t*>(context);
+  //   slot = *boost::context::make_fcontext(
+  //       stack_pointer, Fiber::stack_size(), &CyContext_SubcomputationMain
+  //     );
+  // }
+
+  // // Declared in context_switch.hpp.
+  // // boost::context::fcontext_t CyContext_MainFiber;
+
+  // void CyContext_SubcomputationMain(intptr_t arg)
+  // {
+  //   Cy_EvalFrame * frame = *reinterpret_cast<Cy_EvalFrame **>(&arg);
+  //   frame->expr->vptr->N(frame->expr);
+  //   // When the call to N returns, switch back to the main fiber to process the
+  //   // switch in Cy_Eval.
+  //   frame->fiber.switch_to(Fiber::main_fiber());
+  // }
+
+  // std::stack<void *> CyContext_StackPool;
+
+  // void * alloc_stack()
+  // {
+  //   if(!CyContext_StackPool.empty())
+  //   {
+  //     void * sp = CyContext_StackPool.top();
+  //     CyContext_StackPool.pop();
+  //     return sp;
+  //   }
+  //   return malloc(Fiber::stack_size());
+  // }
+
+  // void dealloc_stack(void * sp)
+  // {
+  //   CyContext_StackPool.push(sp);
+  // }
+
+  // void CyContext_ActivateFrame(Fiber & current_fiber, Cy_EvalFrame & frame)
+  // {
+  //   Cy_CurrentFingerprint = &frame.fingerprint;
+  //   Cy_CurrentConstraints = &frame.constraints;
+  //   DPRINTF("Q> WORKING_ON %p\n", frame.expr);
+  //   current_fiber.switch_to(frame.fiber);
+  // }
+
   // Evaluates an expression.  Calls yield(x) for each result x.
   void Cy_Eval(node * root, void(*yield)(node * root))
   {
-    // Set up this computations.
+    // Set up this computation.
     std::list<Cy_EvalFrame> computation;
     computation.emplace_back(root);
 
@@ -910,14 +1029,35 @@ extern "C"
       { ~Cleanup() { Cy_GlobalComputations = Cy_GlobalComputations->next; } }
       _cleanup;
 
+    // The next section handles context switches.  The first time through,
+    // there is no context switch, of course.
+    size_t original_depth;
+    int64_t original_indent;
+    if(false)
+    {
+    switch_context:
+      computation.front().time_allotment *= 2;
+      computation.splice(computation.end(), computation, computation.begin());
+      CyMem_Roots.resize(original_depth);
+      CyTrace_IndentLvl = original_indent;
+      // The context switches are triggered right before the collector runs.
+      // Finish up by running the collection cycle.
+      CyMem_NodePool->collect();
+    }
+
     while(!computation.empty())
     {
       Cy_EvalFrame & frame = computation.front();
       Cy_CurrentFingerprint = &frame.fingerprint;
       Cy_CurrentConstraints = &frame.constraints;
       node * expr = frame.expr;
-      DPRINTF("Q> WORKING_ON %p\n", expr);
-      expr->vptr->N(expr);
+      original_depth = CyMem_Roots.size();
+      original_indent = CyTrace_IndentLvl;
+      try
+        { expr->vptr->N(expr); }
+      catch(Cy_ContextSwitch const &)
+        { goto switch_context; }
+
       redo: switch(expr->tag)
       {
         handle_failure:
@@ -1070,11 +1210,13 @@ extern "C"
               // Discard right expression.
               DPRINTF("Q> CHOOSE_LEFT %p\n", SUCC_0(expr)); // DEBUG
               frame.expr = SUCC_0(expr);
+              // computation.splice(computation.end(), computation, computation.begin()); // DEBUG
               break;
             case ChoiceState::RIGHT:
               // Discard left expression.
               DPRINTF("Q> CHOOSE_RIGHT %p\n", SUCC_1(expr)); // DEBUG
               frame.expr = SUCC_1(expr);
+              // computation.splice(computation.end(), computation, computation.begin()); // DEBUG
               break;
             case ChoiceState::UNDETERMINED:
             {
@@ -1087,9 +1229,8 @@ extern "C"
               Shared<ConstraintStore> left_cst(frame.constraints);
               if(!Cy_ValidateConstraints(left_fp, left_cst, id))
               {
-                computation.emplace(
-                    head
-                  , SUCC_0(expr), std::move(left_fp), std::move(left_cst)
+                computation.emplace_front(
+                    SUCC_0(expr), std::move(left_fp), std::move(left_cst)
                   );
                 DPRINTF("Q> FORK +> %p\n", SUCC_0(expr));
               }
@@ -1103,12 +1244,15 @@ extern "C"
               {
                 DPRINTF("Q> REBASE %p -> %p\n", expr, SUCC_1(expr));
                 frame.expr = SUCC_1(expr);
+                // If the computation split into two new expression, move the RHS to the back
+                // of the work queue.
+                if(computation.begin() != head)
+                  computation.splice(computation.end(), computation, head);
               }
               else
               {
                 DPRINTF("Q> RHS CONSTRAINTS FAILED\n");
                 computation.erase(head);
-                break;
               }
             }
           }

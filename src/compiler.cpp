@@ -1673,12 +1673,7 @@ namespace sprite { namespace compiler
   {
     rt.printf("S> --- ");
     rt.CyTrace_ShowIndent();
-    rt.Cy_Repr(root_p, rt.stdout_(), true);
-    rt.printf(" {");
-    rt.Cy_ReprFingerprint(rt.stdout_());
-    rt.printf("} {");
-    rt.Cy_ReprConstraints(rt.stdout_());
-    rt.printf("}\n");
+    rt.Cy_ReprFull(root_p, rt.stdout_());
     rt.fflush(nullptr);
   }
 
@@ -1686,12 +1681,7 @@ namespace sprite { namespace compiler
   {
     rt.printf("S> +++ ");
     rt.CyTrace_ShowIndent();
-    rt.Cy_Repr(root_p, rt.stdout_(), true);
-    rt.printf(" {");
-    rt.Cy_ReprFingerprint(rt.stdout_());
-    rt.printf("} {");
-    rt.Cy_ReprConstraints(rt.stdout_());
-    rt.printf("}\n");
+    rt.Cy_ReprFull(root_p, rt.stdout_());
     rt.fflush(nullptr);
   }
 
@@ -1699,15 +1689,9 @@ namespace sprite { namespace compiler
   {
     rt.printf("T> +++ ");
     rt.CyTrace_ShowIndent();
-    rt.Cy_Repr(root_p, rt.stdout_(), true);
-    rt.printf(" {");
-    rt.Cy_ReprFingerprint(rt.stdout_());
-    rt.printf("} {");
-    rt.Cy_ReprConstraints(rt.stdout_());
-    rt.printf("}\n");
+    rt.Cy_ReprFull(root_p, rt.stdout_());
     rt.fflush(nullptr);
   }
-
 
   ModuleSTab::ModuleSTab(
       curry::Module const & src, llvm::LLVMContext & context

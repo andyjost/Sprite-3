@@ -31,3 +31,7 @@ $(SPRITE_LIB) : $(TOPDIR)/src
 
 $(CONFIG_HPP) : $(TOPDIR)/include/sprite
 	$(MAKE) -C $(TOPDIR)/include/sprite config.hpp
+
+# Libraries that are linked into executables built by scc.  Specified as a link option
+# passed to LIB-CC (i.e., with a -l prefix).
+LINKED_LIBS := -lboost_timer -lboost_system

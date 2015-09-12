@@ -310,6 +310,15 @@ namespace sprite
     return cc;
   }
 
+  std::string const & get_link_dirs()
+  {
+    // Note: if $(SPRITE_LIBINSTALL)/boost_lib_dir does not exist (because the
+    // Boost libs are installed system-wide), the compiler must ignore its -L.
+    static std::string lib_dir =
+        "-L" + join_path(SPRITE_LIBINSTALL, "boost_lib_dir");
+    return lib_dir;
+  }
+
   void make_readable_file(std::string const & inputfile)
   {
     std::string const curryfile = sprite::get_curryfile(inputfile);
@@ -380,7 +389,8 @@ namespace sprite
   {
     std::stringstream cmd;
     std::string const & cc = sprite::get_cc();
-    cmd << cc << " " << assemblyfile << " -o " << executablefile;
+    cmd << cc << " " << assemblyfile << " -o " << executablefile
+        << " " << get_link_dirs() << " " << SPRITE_LINKED_LIBS;
     int ok = std::system(cmd.str().c_str());
     cmd.str("");
     if(remove_source && !remove_file(cmd, assemblyfile) && ok != 0)

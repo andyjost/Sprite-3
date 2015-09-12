@@ -47,7 +47,7 @@ namespace sprite { namespace compiler
     function_type rangefun_t = void_t(*node_t, ***node_t, ***node_t);
 
     // The type of a function that converts an expression into a string.
-    function_type reprfun_t = void_t(*node_t, FILE_p, bool_t);
+    function_type reprfun_t = void_t(*node_t, FILE_p);
 
     // The type of a generator function.  The first argument is used
     // when processing FWD nodes.  The second argument indicates
@@ -150,9 +150,9 @@ namespace sprite { namespace compiler
     function const Cy_CyStringToCString =
         extern_(void_t(*node_t, FILE_p), "Cy_CyStringToCString");
     function const Cy_NoAction = extern_(void_t(*node_t), "Cy_NoAction");
-    function const Cy_Repr = extern_(reprfun_t, "Cy_Repr");
-    function const Cy_ReprFingerprint = extern_(void_t(FILE_p), "Cy_ReprFingerprint");
-    function const Cy_ReprConstraints = extern_(void_t(FILE_p), "Cy_ReprConstraints");
+    function const Cy_ReprFull = extern_(reprfun_t, "Cy_ReprFull");
+    // function const Cy_ReprFingerprint = extern_(void_t(FILE_p), "Cy_ReprFingerprint");
+    // function const Cy_ReprConstraints = extern_(void_t(FILE_p), "Cy_ReprConstraints");
 
     // Errors.
     // Runtime libarary function to raise a "no generator" error.

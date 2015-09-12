@@ -170,8 +170,11 @@ namespace sprite
   /// Gets the path to the opt program.
   std::string const & get_opt();
 
-  /// Gets the path to a C compiler.
+  /// Gets the path to a C++ compiler.
   std::string const & get_cc();
+
+  /// Gets the -L compiler options needed to add link dirs.
+  std::string const & get_link_dirs();
 
   /// Gets the colon-separated list of Curry library paths.
   std::string const & get_currylib_path();

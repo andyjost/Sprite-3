@@ -1,6 +1,7 @@
 // Defines Cy_ComputationFrame and related data structures.
 #pragma once
 #include "basic_runtime.hpp"
+// #include "context_switch.hpp"
 #include "fingerprint.hpp"
 #include <list>
 #include <memory>
@@ -143,6 +144,10 @@ extern "C"
     node * expr;
     Shared<Fingerprint> fingerprint;
     Shared<ConstraintStore> constraints;
+    // The number of GC cycles before this is rotated to the end of the queue.
+    size_t time_allotment = 1;
+    // Interval time_interval;
+    // Fiber fiber;
 
     Cy_EvalFrame(node * e) : expr(e), fingerprint(), constraints() {}
 
@@ -157,7 +162,7 @@ extern "C"
     Cy_EvalFrame & operator=(Cy_EvalFrame const &) = delete;
   };
 
-  // The computation of a single involcation of Cy_Eval.  Holds one instance of
+  // The computation of a single invocation of Cy_Eval.  Holds one instance of
   // a work queue from the Fair Scheme.
   struct Cy_ComputationFrame
   {

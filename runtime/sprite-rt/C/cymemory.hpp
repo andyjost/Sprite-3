@@ -3,6 +3,8 @@
 #include "basic_runtime.hpp"
 #include <deque>
 #include "computation_frame.hpp"
+#include <boost/timer/timer.hpp>
+#include <csetjmp>
 
 #ifdef VERBOSEGC
 #include <iostream>
@@ -22,6 +24,9 @@ extern "C"
 
 namespace sprite { namespace compiler
 {
+  // struct ContextSwitch {};
+  // boost::timer::cpu_timer & Cy_Timer();
+  // std::jmp_buf & Cy_JmpBuf();
   extern std::deque<node*> CyMem_Roots;
 
   #ifdef VERBOSEGC
@@ -195,6 +200,10 @@ namespace sprite { namespace compiler
     std::unordered_set<void const *> done;
     std::vector<aux_t> to_erase;
 
+    #if VERBOSEGC > 1
+    size_t bindings_removed = 0;
+    size_t buckets_removed = 0;
+    #endif
     frame = Cy_GlobalComputations;
     while(frame)
     {
@@ -217,14 +226,17 @@ namespace sprite { namespace compiler
                   *out++ = *p;
               }
             }
+            #if VERBOSEGC > 1
+            bindings_removed += (end - out);
+            #endif
             bucket.erase(out, end);
             if(bucket.empty())
               to_erase.push_back(binding.first);
           }
-          else
-          {
-          }
         }
+        #if VERBOSEGC > 1
+        buckets_removed += to_erase.size();
+        #endif
         for(auto id: to_erase)
           constraints.eq_var.gc_write().erase(id);
         to_erase.clear();
@@ -237,7 +249,9 @@ namespace sprite { namespace compiler
 
     #if VERBOSEGC > 1
       ticks tsb = getticks();
-      std::cout << "Sweep bindings phase takes " << (tsb-tm) << " ticks." << std::endl;
+      std::cout << "Sweep bindings phase takes " << (tsb-tm) << " ticks.  Removed "
+        << bindings_removed << " bindings and " << buckets_removed << " buckets."
+        << std::endl;
     #endif
     #if VERBOSEGC > 0
       size_t total = 0;
@@ -257,8 +271,21 @@ namespace sprite { namespace compiler
         node * const node_p = reinterpret_cast<node *>(i);
         if(node_p->mark == 0)
         {
+          bool const is_node =
+              node_p->vptr && node_p->vptr->sentinel == &CyVt_Fwd;
           #if VERBOSEGC > 2
-            std::cout << "   [free] @" << node_p << std::endl;
+            std::cout << "   [free] @" << node_p << " ";
+            if(is_node)
+            {
+              if(node_p->vptr == &CyVt_Fwd)
+                std::cout << "<fwd>" << std::endl;
+              else
+                std::cout << node_p->vptr->label(node_p) << std::endl;
+            }
+            else
+              std::cout << "<uninitialized>" << std::endl;
+
+
           #endif
           ++n;
           if(!last) last = node_p;
@@ -278,7 +305,7 @@ namespace sprite { namespace compiler
           // in slot1, we can discriminate by placing an arbitrary sentinel
           // value that is NOT a valid node pointer at the proper position of
           // the vtable.  This implementation uses &CyVt_Fwd.
-          if(node_p->vptr && node_p->vptr->sentinel == &CyVt_Fwd)
+          if(is_node)
             node_p->vptr->destroy(node_p);
           this->free(node_p);
         }
