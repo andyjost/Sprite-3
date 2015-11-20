@@ -8,7 +8,7 @@ STATICLIB = sprite-rt-llvm-part.bc
 all : $(STATICLIB)
 
 clean :
-	rm -f *.bc $(OBJECTS) $(EXECUTABLE) *.ll *.d
+	rm -f *.bc $(OBJECTS) $(EXECUTABLE) $(EXECUTABLE).copy *.ll *.d
 
 -include ../../../Make.include
 
@@ -26,6 +26,9 @@ CFLAGS += -I.
 $(EXECUTABLE) : $(OBJECTS) $(SPRITE_LIB)
 	$(CC) $^ $(LDFLAGS) -o $@
 
+# This copy avoids a "Text file busy" error on Ubuntu 14.02.
 $(STATICLIB) : $(EXECUTABLE)
-	./$< > $@
+	mv $< $(EXECUTABLE).copy
+	./$(EXECUTABLE).copy > $@
+	rm $(EXECUTABLE).copy
 
