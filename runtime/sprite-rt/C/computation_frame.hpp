@@ -60,44 +60,16 @@ extern "C"
 {
   using namespace sprite::compiler;
 
-  // Holds bindings between choices and between free variables.
+  // Holds bindings between choices and free variables.
   //
-  // @p equal stores bindings between choices.  @p eq_var stores bindings
-  // between free variables.  Note that type info may not be available when
-  // free variables are bound.  When a choice of a variable binding reaches the
-  // top of a computation, then the variable must have been narrowed, at which
-  // point the variable binding is converted into a binding between choices.
+  // @p eq_var stores bindings between free variables.  @p eq_choice stores
+  // bindings between choices.  When a choice ?_i reaches the top of a
+  // computation, then we know variable x_i (if it exists) must have been
+  // instantiated.  In that case, we use @p eq_var to find every variable x_j
+  // equivalent to x_i, then (1) annotate x_j, and (2) convert the variable
+  // binding x_i :=: x_j into the choice binding i :=: j.
   struct ConstraintStore
   {
-    // The list of bindings between choices.  E.g., {0 -> [1, 2]} says that
-    // choices 0, 1, and 2 must all be made the same way.  This example implies
-    // more entries for keys 1 and 2.  If the list is empty, then there must be
-    // an entry in @p eq_var, below.  The key/value organization is motivated
-    // by the need to process choices as they reach the of a computation.
-    using eq_choice_set_t = std::unordered_set<aux_t>;
-    using eq_choice_map_t = std::unordered_map<aux_t, Shared<eq_choice_set_t>>;
-    Shared<eq_choice_map_t> eq_choice;
-
-    void add_choice_constraints(aux_t a, aux_t b)
-    {
-      _add_one_choice_constraint(a, b);
-      _add_one_choice_constraint(b, a);
-    }
-
-  private:
-
-    void _add_one_choice_constraint(aux_t a, aux_t b)
-    {
-      auto & cstore = this->eq_choice.write();
-      auto p = cstore.find(a);
-      if(p == cstore.end())
-        this->eq_choice.write()[a].write().insert(b);
-      else if(!p->second.read().count(b))
-        p->second.write().insert(b);
-    }
-
-  public:
-
     struct BindData
     {
       BindData(node * f, node * s, bool l) : first(f), second(s), is_lazy(l) {}
@@ -106,14 +78,16 @@ extern "C"
       bool is_lazy;
     };
 
-    // The variable bindings.  There are two types: lazy and normal.  A lazy
-    // binding is between a variable and an unevaluated expression.  A normal
-    // binding is between two free variables (not choices).  A free variable
-    // may narrow to more than one choice (i.e., if the type has more than
-    // two constructors).  Moreover, bindings between variables imply
-    // additional bindings between successor variables.  For example, if
-    // x0=:=x1 for two lists, then after narrowing to x0=([] ?0 (x2:x3)) and
-    // x1=([] ?1 (x4:x5)), we also have x2=:=x4 and x3=:=x5.
+    // @p eq_var.
+    //
+    // Holds the variable bindings.  There are two types: lazy and normal.  A
+    // lazy binding is between a variable and an unevaluated expression, used
+    // to implement =:<= for functional patterns.  A normal binding is between
+    // two free variables, used to implement =:=.  These bindings imply
+    // additional bindings between successor variables.  For example, if x_0
+    // :=: x_1 for two list variables, then after annotating x_0 = ([] ?_0
+    // (x_2:x_3)) and x_1 = ([] ?_1 (x_4:x_5)), we have two new bindings x_2
+    // :=: x_4 and x_3 :=: x_5.
     using eq_var_vector_t = std::vector<BindData>;
     using eq_var_map_t = std::unordered_map<aux_t, Shared<eq_var_vector_t>>;
     Shared<eq_var_map_t> eq_var;
@@ -135,6 +109,36 @@ extern "C"
       this->_add_one_var_constriant(from, to, is_lazy);
       if(!is_lazy)
         this->_add_one_var_constriant(to, from, is_lazy);
+    }
+
+    // @p eq_choice.
+    //
+    // Holds choice bindings.  This is a mapping ID->[ID] relating choice IDs
+    // to equivalent choice IDs.  As an example, {0 -> [1, 2], 1 -> [0, 2], 2
+    // -> [0, 1]} says that choices 0, 1, and 2 are all equivalent.  If any of
+    // them is set in the fingerprint, then the others must also be
+    // (consistently) set.  The redundancy is motivated by the need to quickly
+    // process choices in whatever order they reach the root.
+    using eq_choice_set_t = std::unordered_set<aux_t>;
+    using eq_choice_map_t = std::unordered_map<aux_t, Shared<eq_choice_set_t>>;
+    Shared<eq_choice_map_t> eq_choice;
+
+    void add_choice_constraints(aux_t a, aux_t b)
+    {
+      _add_one_choice_constraint(a, b);
+      _add_one_choice_constraint(b, a);
+    }
+
+  private:
+
+    void _add_one_choice_constraint(aux_t a, aux_t b)
+    {
+      auto & cstore = this->eq_choice.write();
+      auto p = cstore.find(a);
+      if(p == cstore.end())
+        this->eq_choice.write()[a].write().insert(b);
+      else if(!p->second.read().count(b))
+        p->second.write().insert(b);
     }
   };
 
