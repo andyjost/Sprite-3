@@ -35,14 +35,14 @@ t_fwd:
   goto* (&table[TAGOFFSET])[TAG(arg)];
 t_binding:
   NODE_ALLOC(lhs_choice, t_binding);
-	lhs_choice->vptr = root->vptr;
-	lhs_choice->tag = root->tag;
-	lhs_choice->slot0 = arg->slot0;
-	root->vptr = arg->vptr;
-	root->tag = BINDING;
-	root->slot0 = lhs_choice;
-	root->slot1 = arg->slot1;
-	return;
+  lhs_choice->vptr = root->vptr;
+  lhs_choice->tag = root->tag;
+  lhs_choice->slot0 = arg->slot0;
+  root->vptr = arg->vptr;
+  root->tag = BINDING;
+  root->slot0 = lhs_choice;
+  root->slot1 = arg->slot1;
+  return;
 t_choice:
   NODE_ALLOC(lhs_choice, t_choice);
   NODE_ALLOC(rhs_choice, t_choice);

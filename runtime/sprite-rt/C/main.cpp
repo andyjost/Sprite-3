@@ -112,7 +112,7 @@ namespace sprite { namespace compiler
   //   return timer;
   // }
 
-	std::jmp_buf & Cy_JmpBuf()
+  std::jmp_buf & Cy_JmpBuf()
   {
     static std::jmp_buf buf;
     return buf;
@@ -165,30 +165,30 @@ extern "C"
   void CyMem_PushRoot(node * p) { CyMem_Roots.push_back(p); }
   void CyMem_PopRoot() { CyMem_Roots.pop_back(); }
 
-	struct Cy_ContextSwitch {};
+  struct Cy_ContextSwitch {};
   void Cy_PrintWorkQueue(FILE * stream);
   void CyMem_Collect()
   {
-		// Perform a context switch, if it is time for one.  Only check if there
-		// are at least two computations.
-		if(Cy_GlobalComputations)
-		{
-		  auto & computation = *Cy_GlobalComputations->computation;
-		  assert(!computation.empty());
-		  if(++computation.begin() != computation.end())
-		  {
-		    static size_t gc_cycles = 0;
-		  	if(++gc_cycles >= computation.front().time_allotment)
-		  	{
-		  		gc_cycles = 0;
+    // Perform a context switch, if it is time for one.  Only check if there
+    // are at least two computations.
+    if(Cy_GlobalComputations)
+    {
+      auto & computation = *Cy_GlobalComputations->computation;
+      assert(!computation.empty());
+      if(++computation.begin() != computation.end())
+      {
+        static size_t gc_cycles = 0;
+        if(++gc_cycles >= computation.front().time_allotment)
+        {
+          gc_cycles = 0;
           #ifdef VERBOSECS
-					printf("Switching context (element 0 will go to the end):\n");
+          printf("Switching context (element 0 will go to the end):\n");
           Cy_PrintWorkQueue(stdout);
           #endif
-					throw Cy_ContextSwitch();
-		  	}
-		  }
-		}
+          throw Cy_ContextSwitch();
+        }
+      }
+    }
 
     // Cy_PrintWorkQueue(stdout); // DEBUG
     CyMem_NodePool->collect();
@@ -440,8 +440,8 @@ extern "C"
   // Prints out the work queue (for debugging).
   void Cy_PrintWorkQueue(FILE * stream)
   {
-		if(Cy_GlobalComputations)
-		{
+    if(Cy_GlobalComputations)
+    {
       size_t i = 0;
       for(auto const & eval_frame: *Cy_GlobalComputations->computation)
       {

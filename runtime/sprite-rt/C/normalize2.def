@@ -1,4 +1,4 @@
-// Normalizes a binary node.
+V
 //
 // Variable root must be pre-defined.  The successors must normalize to data
 // terms (i.e., ones with exactly one constructor), or TAG must be defined so
@@ -41,26 +41,26 @@ t_fwd_rhs:
   goto* (&table_rhs[TAGOFFSET])[TAG(rhs)];
 t_binding_lhs:
   NODE_ALLOC(lhs_choice, t_binding_lhs);
-	lhs_choice->vptr = root->vptr;
-	lhs_choice->tag = root->tag;
-	lhs_choice->slot0 = lhs->slot0;
-	lhs_choice->slot1 = root->slot1;
-	root->vptr = lhs->vptr;
-	root->tag = BINDING;
-	root->slot0 = lhs_choice;
-	root->slot1 = lhs->slot1;
-	return;
+  lhs_choice->vptr = root->vptr;
+  lhs_choice->tag = root->tag;
+  lhs_choice->slot0 = lhs->slot0;
+  lhs_choice->slot1 = root->slot1;
+  root->vptr = lhs->vptr;
+  root->tag = BINDING;
+  root->slot0 = lhs_choice;
+  root->slot1 = lhs->slot1;
+  return;
 t_binding_rhs:
   NODE_ALLOC(rhs_choice, t_binding_rhs);
-	rhs_choice->vptr = root->vptr;
-	rhs_choice->tag = root->tag;
-	rhs_choice->slot0 = root->slot0;
-	rhs_choice->slot1 = rhs->slot0;
-	root->vptr = rhs->vptr;
-	root->tag = BINDING;
-	root->slot0 = rhs_choice;
-	root->slot1 = rhs->slot1;
-	return;
+  rhs_choice->vptr = root->vptr;
+  rhs_choice->tag = root->tag;
+  rhs_choice->slot0 = root->slot0;
+  rhs_choice->slot1 = rhs->slot0;
+  root->vptr = rhs->vptr;
+  root->tag = BINDING;
+  root->slot0 = rhs_choice;
+  root->slot1 = rhs->slot1;
+  return;
 t_choice_lhs:
   NODE_ALLOC(lhs_choice, t_choice_lhs);
   NODE_ALLOC(rhs_choice, t_choice_lhs);

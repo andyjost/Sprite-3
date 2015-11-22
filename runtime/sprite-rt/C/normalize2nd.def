@@ -34,17 +34,17 @@ t2_fwd:
   goto* (&table2nd[TAGOFFSET])[TAG(rhs)];
 t2_binding:
 {
-	node * rhs_choice;
+  node * rhs_choice;
   NODE_ALLOC(rhs_choice, t2_binding);
-	rhs_choice->vptr = root->vptr;
-	rhs_choice->tag = root->tag;
-	rhs_choice->slot0 = rhs->slot0;
-	rhs_choice->slot1 = root->slot1;
-	root->vptr = rhs->vptr;
-	root->tag = BINDING;
-	root->slot0 = rhs_choice;
-	root->slot1 = rhs->slot1;
-	return;
+  rhs_choice->vptr = root->vptr;
+  rhs_choice->tag = root->tag;
+  rhs_choice->slot0 = rhs->slot0;
+  rhs_choice->slot1 = root->slot1;
+  root->vptr = rhs->vptr;
+  root->tag = BINDING;
+  root->slot0 = rhs_choice;
+  root->slot1 = rhs->slot1;
+  return;
 }
 t2_choice:
 {
