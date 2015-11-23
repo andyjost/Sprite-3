@@ -1,4 +1,4 @@
-V
+// Normalizes a binary node.
 //
 // Variable root must be pre-defined.  The successors must normalize to data
 // terms (i.e., ones with exactly one constructor), or TAG must be defined so
