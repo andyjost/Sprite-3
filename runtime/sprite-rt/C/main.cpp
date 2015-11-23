@@ -1507,6 +1507,11 @@ extern "C"
           root->tag = root->vptr->tag;
           root->slot0 = arg->slot1;
           // The second argument is already in the proper place.
+
+          // If the operation is a choice, assign the choice ID here, when the
+          // function is finally applied.
+          if(root->vptr == &CyVt_Choice)
+            root->aux = Cy_NextChoiceId++;
           break;
         default:
         {

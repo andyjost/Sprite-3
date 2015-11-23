@@ -194,14 +194,27 @@ void build_vt_for_choice(rt_h const & rt)
       rt.labelfun_t, ".name.choice", {"node_p"}
     , [&] {
         value node_p = arg("node_p");
-        value id = node_p.arrow(ND_AUX);
-        value rv = rt.snprintf(
-            &printbuffer(rt), PRINT_BUFFER_SIZE, "?%" PRId32, id
-          );
-        if_(rv ==(signed_)(0)
+        if_(node_p == (*rt.node_t)(nullptr)
           , [&]{
-              rt.perror("Error converting Choice ID to string");
-              rt.exit(1);
+              value rv = rt.snprintf(&printbuffer(rt), PRINT_BUFFER_SIZE, "?");
+              if_(rv ==(signed_)(0)
+                , [&]{
+                    rt.perror("Error rendering an anonymous choice");
+                    rt.exit(1);
+                  }
+                );
+            }
+          , [&]{
+              value id = node_p.arrow(ND_AUX);
+              value rv = rt.snprintf(
+                  &printbuffer(rt), PRINT_BUFFER_SIZE, "?%" PRId32, id
+                );
+              if_(rv ==(signed_)(0)
+                , [&]{
+                    rt.perror("Error converting Choice ID to string");
+                    rt.exit(1);
+                  }
+                );
             }
           );
         return_(&printbuffer(rt));
