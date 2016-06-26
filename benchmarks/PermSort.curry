@@ -17,16 +17,18 @@ sortmain n = psort (2:[n,n-1 .. 3]++[1])
 main = sortmain 15
 
 {-
-  N   KICS2   SPRITE
-  10  0.20    0.06
-  11  0.54    0.38
-  12  1.57    3.25
-  15 42.93    3841.   (2672.74)
+  N   KICS2   SPRITE*   SPRITE
+  10  0.20    0.06      0.04
+  11  0.54    0.38      0.11
+  12  1.57    3.25      0.32
+  13  4.81   36.79      0.92
+  14 14.63       -      2.75
+  15 42.72*   3841.     8.15*
 
-redstar:~/sprite3/sprite.main/benchmarks> \time ./a.out
-[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
-1550.51user 1124.28system 44:32.74elapsed 100%CPU (0avgtext+0avgdata 634692maxresident)k
-0inputs+0outputs (0major+1042342196minor)pagefaults 0swaps
+  SPRITE* = prior to copy-on-write fingerprints
+  SPRITE = with copy-on-write fingerprints.
 
-
+  - Note: omitted data for SPRITE* were never collected.
+  - Two values marked * were spliced in from the benchmark data taken in a
+    separate run.  Same machine, different date.
 -}
